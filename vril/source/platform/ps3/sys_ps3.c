@@ -371,6 +371,26 @@ MAIN
 ===============================================================================
 */
 
+// "Welcome, <name>" on the main menu and the in-game name: the signed-in
+// PS3 user's name, unless the player has chosen one of their own.
+static void PS3_SetPlayerName(void)
+{
+	extern cvar_t cl_name;
+	char user[SYSUTIL_SYSTEMPARAM_CURRENT_USERNAME_SIZE + 1];
+	s32 rc;
+
+	if (Q_strcasecmp(cl_name.string, "player") && cl_name.string[0])
+		return;
+	memset(user, 0, sizeof(user));
+	rc = sysUtilGetSystemParamString(SYSUTIL_SYSTEMPARAM_ID_CURRENT_USERNAME, user, sizeof(user) - 1);
+	if (rc != 0 || !user[0]) {
+		PS3_Log("PS3 user name not available (0x%08x)", (unsigned)rc);
+		return;
+	}
+	Cvar_Set("_cl_name", user);
+	PS3_Log("player name: %s (the PS3 user)", user);
+}
+
 static void PS3_GameThread(void *arg)
 {
 	static char *argv[16];
@@ -415,6 +435,10 @@ static void PS3_GameThread(void *arg)
 		music_update();
 		oldtime = now;
 		PS3_Heartbeat();
+		// The PS3 account's name instead of the default "player", once the
+		// configs (run in the first frames) have set theirs.
+		if (host_framecount == 10)
+			PS3_SetPlayerName();
 		// Host_Frame returns at once until a frame's time has gone by: don't
 		// spin the PPU (the audio thread shares it) while waiting
 		if (host_framecount == frames_before)
