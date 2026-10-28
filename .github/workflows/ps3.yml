@@ -1,0 +1,224 @@
+name: PS3 build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      full_pkg:
+        description: "Also build the full PKG (EBOOT + ~90 MB of game data)"
+        type: boolean
+        default: true
+
+env:
+  # Pinned so the cached toolchain only rebuilds when these are bumped on purpose
+  # (the same refs as thug-ps3's workflow).
+  PS3TOOLCHAIN_REF: de85d7d5d11dc0a99d823ece3d440eea46c34d0f
+  PSL1GHT_REF: f649a08fd536a9e27c08c7db2d93a2d7ee4c3bbe
+  TOOLCHAIN_CACHE_KEY: ps3dev-v1-de85d7d5-f649a08f
+  # NZ:P's game code and data, at the revisions this port was made against
+  # (vril/ holds the engine, vendored from nzp-team/vril-engine 7a31c3d).
+  QUAKEC_REPO: nzp-team/quakec
+  QUAKEC_REF: cc260a86dfbea2aea4708da63d67ae52adf722d6
+  ASSETS_REPO: nzp-team/assets
+  ASSETS_REF: f59187789f3d83f0502ac61dbc8bf7105daa4ff0
+
+jobs:
+  toolchain:
+    name: PS3 toolchain (cached)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - name: Look for the cached toolchain
+        id: cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/ps3dev
+          key: ${{ env.TOOLCHAIN_CACHE_KEY }}
+          lookup-only: true
+
+      - name: Install build requirements
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get -y install \
+            autoconf automake bison flex gcc g++ libelf-dev make texinfo \
+            libncurses-dev patch python3 python-is-python3 python3-dev \
+            wget zlib1g-dev libtool-bin bzip2 libgmp-dev pkg-config libssl-dev
+
+      - name: Fetch ps3toolchain and PSL1GHT
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          git clone https://github.com/ps3dev/ps3toolchain "$RUNNER_TEMP/ps3toolchain"
+          git -C "$RUNNER_TEMP/ps3toolchain" checkout "$PS3TOOLCHAIN_REF"
+          git clone https://github.com/ps3dev/PSL1GHT "$RUNNER_TEMP/psl1ght"
+          git -C "$RUNNER_TEMP/psl1ght" checkout "$PSL1GHT_REF"
+
+      - name: Set up environment
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          echo "PS3DEV=$RUNNER_TEMP/ps3dev" >> "$GITHUB_ENV"
+          echo "PSL1GHT=$RUNNER_TEMP/ps3dev" >> "$GITHUB_ENV"
+          echo "BUILD_PS3TOOLCHAIN_ONLY=1" >> "$GITHUB_ENV"
+          echo "NO_SAVANNAH=1" >> "$GITHUB_ENV"
+          echo "$RUNNER_TEMP/ps3dev/bin" >> "$GITHUB_PATH"
+          echo "$RUNNER_TEMP/ps3dev/ppu/bin" >> "$GITHUB_PATH"
+          echo "$RUNNER_TEMP/ps3dev/spu/bin" >> "$GITHUB_PATH"
+          mkdir -p "$RUNNER_TEMP/ps3dev"
+
+      - name: Download toolchain sources
+        if: steps.cache.outputs.cache-hit != 'true'
+        working-directory: ${{ runner.temp }}/ps3toolchain
+        run: mkdir -p build && cd build && ../download.sh
+
+      - name: Binutils (PPU)
+        if: steps.cache.outputs.cache-hit != 'true'
+        working-directory: ${{ runner.temp }}/ps3toolchain
+        run: ./toolchain.sh 001
+      - name: GCC + newlib (PPU)
+        if: steps.cache.outputs.cache-hit != 'true'
+        working-directory: ${{ runner.temp }}/ps3toolchain
+        run: ./toolchain.sh 002
+      - name: Symlinks (PPU)
+        if: steps.cache.outputs.cache-hit != 'true'
+        working-directory: ${{ runner.temp }}/ps3toolchain
+        run: ./toolchain.sh 004
+      - name: Binutils (SPU)
+        if: steps.cache.outputs.cache-hit != 'true'
+        working-directory: ${{ runner.temp }}/ps3toolchain
+        run: ./toolchain.sh 005
+      - name: GCC + newlib (SPU)
+        if: steps.cache.outputs.cache-hit != 'true'
+        working-directory: ${{ runner.temp }}/ps3toolchain
+        run: ./toolchain.sh 006
+
+      - name: PSL1GHT
+        if: steps.cache.outputs.cache-hit != 'true'
+        working-directory: ${{ runner.temp }}/psl1ght
+        run: make install-ctrl && make && make install
+
+      - name: Save toolchain to cache
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/ps3dev
+          key: ${{ env.TOOLCHAIN_CACHE_KEY }}
+
+  shaders:
+    name: RSX programs assemble (cgcomp -a)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build PSL1GHT's cgcomp (assembler mode needs no NVIDIA Cg)
+        run: |
+          git clone -q https://github.com/ps3dev/PSL1GHT "$RUNNER_TEMP/psl1ght"
+          git -C "$RUNNER_TEMP/psl1ght" checkout -q "$PSL1GHT_REF"
+          make -s -C "$RUNNER_TEMP/psl1ght/tools/cgcomp"
+      - name: Assemble every program, checking instruction counts
+        run: |
+          python3 vril/source/platform/ps3/tools/build_shaders.py \
+            "$RUNNER_TEMP/psl1ght/tools/cgcomp/cgcomp" "$RUNNER_TEMP/ps3gl_shader_data.h" \
+            vril/source/platform/ps3/rsx/shaders
+          grep -c '_fpo\[\]\|_vpo\[\]' "$RUNNER_TEMP/ps3gl_shader_data.h"
+
+  game:
+    name: NZ:P PS3 EBOOT + PKG
+    needs: toolchain
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore toolchain
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/ps3dev
+          key: ${{ env.TOOLCHAIN_CACHE_KEY }}
+          fail-on-cache-miss: true
+
+      - name: Set up environment
+        run: |
+          sudo apt-get update && sudo apt-get -y install libelf-dev python3 zip
+          echo "PS3DEV=$RUNNER_TEMP/ps3dev" >> "$GITHUB_ENV"
+          echo "PSL1GHT=$RUNNER_TEMP/ps3dev" >> "$GITHUB_ENV"
+          echo "$RUNNER_TEMP/ps3dev/bin" >> "$GITHUB_PATH"
+          echo "$RUNNER_TEMP/ps3dev/ppu/bin" >> "$GITHUB_PATH"
+
+      - name: cgcomp
+        run: |
+          if [ ! -x "$RUNNER_TEMP/ps3dev/bin/cgcomp" ]; then
+            git clone -q https://github.com/ps3dev/PSL1GHT "$RUNNER_TEMP/psl1ght-src"
+            git -C "$RUNNER_TEMP/psl1ght-src" checkout -q "$PSL1GHT_REF"
+            make -s -C "$RUNNER_TEMP/psl1ght-src/tools/cgcomp"
+            echo "CGCOMP_BIN=$RUNNER_TEMP/psl1ght-src/tools/cgcomp/cgcomp" >> "$GITHUB_ENV"
+          else
+            echo "CGCOMP_BIN=$RUNNER_TEMP/ps3dev/bin/cgcomp" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build
+        working-directory: vril
+        run: |
+          set -o pipefail
+          ppu-gcc --version | head -1
+          make -f Makefile.ps3 CGCOMP_BIN="$CGCOMP_BIN" -k -j"$(nproc)" self 2>&1 | tee build.log
+
+      - name: Report errors
+        if: failure()
+        working-directory: vril
+        run: grep -E 'error|undefined reference|multiple definition' build.log | head -80 || true
+
+      - name: Link checks (TOC, sizes)
+        working-directory: vril
+        run: |
+          elf=build/ps3/nzportable.elf
+          echo "::notice title=r2off TOC-split stubs (must be 0)::$(ppu-nm $elf | grep -c r2off || true)"
+          echo "::notice title=.got size::$(ppu-readelf -SW $elf | awk '$2==".got"{print $6}')"
+          ppu-size $elf
+          ppu-nm -C --defined-only $elf | sort > nzportable.map
+
+      - name: EBOOT-only PKG (installs over the full one)
+        working-directory: vril
+        run: |
+          make -f Makefile.ps3 CGCOMP_BIN="$CGCOMP_BIN" pkg
+          cp build/ps3/nzportable.gnpdrm.pkg ../nzp-ps3-eboot-only.pkg
+
+      - name: Game data
+        if: github.event_name == 'workflow_dispatch' && inputs.full_pkg || startsWith(github.ref, 'refs/tags/')
+        run: |
+          git clone -q --filter=blob:none "https://github.com/$QUAKEC_REPO" "$RUNNER_TEMP/quakec"
+          git -C "$RUNNER_TEMP/quakec" checkout -q "$QUAKEC_REF"
+          ( cd "$RUNNER_TEMP/quakec/tools" && bash qc-compiler-gnu.sh )
+          ls -la "$RUNNER_TEMP/quakec/build/standard"
+          git clone -q --filter=blob:none "https://github.com/$ASSETS_REPO" "$RUNNER_TEMP/assets"
+          git -C "$RUNNER_TEMP/assets" checkout -q "$ASSETS_REF"
+          # As the assets repo assembles the PC data: pc/nzp first, then common/
+          # without overwriting what the PC set already has.
+          mkdir -p "$RUNNER_TEMP/nzp"
+          cp -r "$RUNNER_TEMP/assets/pc/nzp/." "$RUNNER_TEMP/nzp/"
+          cp -rn "$RUNNER_TEMP/assets/common/." "$RUNNER_TEMP/nzp/"
+          cp "$RUNNER_TEMP/quakec/build/standard/progs.dat" "$RUNNER_TEMP/nzp/"
+          cp "$RUNNER_TEMP/quakec/build/standard/progs.lno" "$RUNNER_TEMP/nzp/" 2>/dev/null || true
+          # PS3 defaults on top of the PC config (controller glyphs: PlayStation)
+          printf '\n// PS3\nseta cl_controllerglyphs "sony"\n' >> "$RUNNER_TEMP/nzp/autoexec.cfg"
+          rm -rf "$RUNNER_TEMP/nzp/licenses/.git"
+          du -sh "$RUNNER_TEMP/nzp"
+
+      - name: Full PKG (EBOOT + game data)
+        if: github.event_name == 'workflow_dispatch' && inputs.full_pkg || startsWith(github.ref, 'refs/tags/')
+        working-directory: vril
+        run: |
+          rm -f build/ps3/nzportable.pkg build/ps3/nzportable.gnpdrm.pkg
+          make -f Makefile.ps3 CGCOMP_BIN="$CGCOMP_BIN" DATA_DIR="$RUNNER_TEMP/nzp" pkg
+          cp build/ps3/nzportable.gnpdrm.pkg ../nzp-ps3-full.pkg
+
+      - name: Upload
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nzp-ps3
+          retention-days: 7  # the account's Actions storage is small
+          path: |
+            nzp-ps3-*.pkg
+            vril/build/ps3/nzportable.self
+            vril/nzportable.map
+            vril/build.log
+          if-no-files-found: warn

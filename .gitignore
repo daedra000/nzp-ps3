@@ -1,3 +1,1 @@
-# flatpak build files
-.flatpak-builder
-build-dir
+vril/build/

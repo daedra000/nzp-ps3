@@ -6,6 +6,8 @@ on:
   
 jobs:
   Generate-Nightly:
+    # Upstream's nightlies: not for the PS3 fork.
+    if: github.repository == 'nzp-team/nzportable'
     runs-on: ubuntu-latest
     container:
       image: sharkwouter/pspdev

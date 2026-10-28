@@ -1,0 +1,138 @@
+#---------------------------------------------------------------------------------
+# Nazi Zombies: Portable -- PS3 (PSL1GHT) build
+#
+#   make -f Makefile.ps3                       EBOOT-only PKG (updates an installed game)
+#   make -f Makefile.ps3 DATA_DIR=path/to/nzp  full PKG: the game data goes in USRDIR/nzp
+#   make -f Makefile.ps3 clean
+#
+# Needs PS3DEV/PSL1GHT (ps3toolchain + PSL1GHT), python3, and PSL1GHT's cgcomp: the RSX
+# programs are NV40 assembly built here by source/platform/ps3/tools/build_shaders.py.
+#
+# Flags: what thug-ps3 runs on hardware with this same toolchain (GCC 13): -O2,
+# -mcpu=cell, no AltiVec, -mminimal-toc and --no-multi-toc (a split TOC hangs at boot).
+# ps3_video.c, which drives GCM most, goes at -O1 -fno-inline (Quake2PS3's lesson:
+# PSL1GHT's syscall stubs don't survive aggressive inlining).
+#---------------------------------------------------------------------------------
+.SUFFIXES:
+
+ifeq ($(strip $(PSL1GHT)),)
+$(error "Set PSL1GHT (and PS3DEV) in your environment")
+endif
+
+include $(PSL1GHT)/ppu_rules
+
+ROOT     := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
+BUILD    := $(ROOT)/build/ps3
+OBJDIR   := $(BUILD)/obj
+PLAT     := source/platform/ps3
+
+export TITLE   := Nazi Zombies: Portable
+export APPID   := NZPP00001
+export CONTENTID := UP0001-$(APPID)_00-0000000000000000
+export ICON0   := $(ROOT)/$(PLAT)/art/ICON0.PNG
+export BUILDDIR := $(BUILD)/package
+export PKGFILES := $(BUILD)/pkgfiles
+
+TARGET   := $(BUILD)/nzportable
+
+DATA_DIR ?=
+CGCOMP_BIN ?= $(PS3DEV)/bin/cgcomp
+
+#---------------------------------------------------------------------------------
+# Sources: the engine as the SDL build has it, plus the PS3 platform.
+#---------------------------------------------------------------------------------
+ENGINE_SOURCES := $(wildcard source/*.c) $(wildcard source/menu/*.c) \
+	$(wildcard source/qcvm/*.c) $(wildcard source/render/*.c) $(wildcard source/tests/*.c)
+
+# LAN play (net_dgrm.c, net_udp_ps3.c) isn't in yet: net_ps3.c registers loopback only.
+PS3_SOURCES := \
+	$(PLAT)/common.c $(PLAT)/sys_ps3.c $(PLAT)/in_ps3.c $(PLAT)/snd_ps3.c \
+	$(PLAT)/music_ps3.c $(PLAT)/net_main.c $(PLAT)/net_ps3.c $(PLAT)/ps3_video.c \
+	$(wildcard $(PLAT)/gl/*.c) $(wildcard $(PLAT)/rsx/*.c)
+
+SOURCES := $(ENGINE_SOURCES) $(PS3_SOURCES)
+OBJECTS := $(patsubst %.c,$(OBJDIR)/%.o,$(SOURCES)) $(OBJDIR)/$(PLAT)/ps3_setjmp.o
+
+#---------------------------------------------------------------------------------
+# Flags
+#---------------------------------------------------------------------------------
+DEFINES := -DGLQUAKE -D__PS3__ -DPLATFORM_DIRECTORY=ps3 -DPLATFORM_RENDERER=gl \
+	-DMAX_AI_COUNT=24 -DPLATFORM_USES_GENERIC_GLYPHS -DPLATFORM_SUPPORTS_RUMBLE \
+	-DPLATFORM_KEYBOARD_OSK -DPS3_APP_DIR='"/dev_hdd0/game/$(APPID)/USRDIR"'
+
+# platform/ps3/include first: its setjmp.h gives jmp_buf room for ps3_setjmp.S.
+INCLUDES := -I$(PLAT)/include -Isource -I$(PLAT)/rsx -I$(BUILD) $(LIBPSL1GHT_INC) -I$(PORTLIBS)/include
+
+OPT      := -O2
+CFLAGS   := $(OPT) -mcpu=cell -mtune=cell -mno-altivec -mminimal-toc $(MACHDEP) \
+	-std=gnu99 -fsigned-char -fno-strict-aliasing -fno-common -fwrapv \
+	-Wall -Wno-unused-variable -Wno-unused-but-set-variable -Wno-pointer-sign \
+	-Wno-unused-function -Wno-format-truncation -Wno-stringop-truncation \
+	-MMD -MP $(DEFINES) $(INCLUDES)
+ASFLAGS  := -mcpu=cell $(MACHDEP)
+LDFLAGS  := $(MACHDEP) -Wl,--no-multi-toc $(LIBPSL1GHT_LIB) -L$(PORTLIBS)/lib
+LIBS     := -lrsx -lgcm_sys -laudio -lio -lsysmodule -lsysutil -lnet -lrt -llv2 -lm
+
+ifeq ($(WERROR),1)
+CFLAGS += -Werror
+endif
+
+#---------------------------------------------------------------------------------
+.PHONY: all pkg self clean shaders print-sources
+
+all: pkg
+
+pkg: $(TARGET).pkg
+self: $(TARGET).self
+
+print-sources:
+	@echo $(SOURCES)
+
+# Generated headers
+$(BUILD)/_build_info.h:
+	@mkdir -p $(@D)
+	@{ echo '#define GIT_HASH "$(shell git rev-parse --short HEAD 2>/dev/null)$(shell git diff --quiet 2>/dev/null || echo -dirty)"'; \
+	   echo '#define GIT_BRANCH "$(shell git rev-parse --abbrev-ref HEAD 2>/dev/null)"'; \
+	   echo '#define BUILD_DATE "$(shell date -u +%Y-%m-%dT%H:%M:%SZ)"'; } > $@
+
+$(BUILD)/ps3gl_shader_data.h: $(PLAT)/rsx/shaders/nzp_vp.vasm $(PLAT)/tools/build_shaders.py
+	@mkdir -p $(@D)
+	python3 $(PLAT)/tools/build_shaders.py $(CGCOMP_BIN) $@ $(PLAT)/rsx/shaders
+
+shaders: $(BUILD)/ps3gl_shader_data.h
+
+$(OBJECTS): | $(BUILD)/_build_info.h $(BUILD)/ps3gl_shader_data.h
+
+$(OBJDIR)/%.o: %.c
+	@mkdir -p $(@D)
+	@echo $<
+	@$(CC) $(CFLAGS) -c $< -o $@
+
+$(OBJDIR)/$(PLAT)/ps3_video.o: CFLAGS := $(filter-out $(OPT),$(CFLAGS)) -O1 -fno-inline
+
+$(OBJDIR)/%.o: %.S
+	@mkdir -p $(@D)
+	@echo $<
+	@$(CC) $(ASFLAGS) -c $< -o $@
+
+$(TARGET).elf: $(OBJECTS)
+	@echo linking $(notdir $@)
+	@$(CC) $(LDFLAGS) $(OBJECTS) $(LIBS) -o $@
+
+# What ppu_rules' %.pkg rule copies into the package next to EBOOT.BIN.
+.PHONY: pkgfiles
+pkgfiles:
+	@rm -rf $(PKGFILES)
+	@mkdir -p $(PKGFILES)/USRDIR
+	@cp $(PLAT)/art/PIC1.PNG $(PKGFILES)/PIC1.PNG
+ifneq ($(strip $(DATA_DIR)),)
+	@echo "game data: $(DATA_DIR) -> USRDIR/nzp"
+	@cp -r $(DATA_DIR) $(PKGFILES)/USRDIR/nzp
+endif
+
+$(TARGET).pkg: | pkgfiles
+
+clean:
+	rm -rf $(ROOT)/build/ps3
+
+-include $(OBJECTS:.o=.d)
