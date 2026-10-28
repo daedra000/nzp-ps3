@@ -465,7 +465,7 @@ short ShortNoSwap (short l) { return l; }
 int   LongNoSwap (int l) { return l; }
 float FloatNoSwap (float f) { return f; }
 
-size_t Q_strlcpy(char *dst, const char *src, size_t size)
+size_t PS3_strlcpy(char *dst, const char *src, size_t size)
 {
 	size_t length = strlen(src);
 	if (size) {
@@ -476,11 +476,11 @@ size_t Q_strlcpy(char *dst, const char *src, size_t size)
 	return length;
 }
 
-size_t Q_strlcat(char *dst, const char *src, size_t size)
+size_t PS3_strlcat(char *dst, const char *src, size_t size)
 {
 	size_t used = strnlen(dst, size);
 	if (used == size) return size + strlen(src);
-	return used + Q_strlcpy(dst + used, src, size - used);
+	return used + PS3_strlcpy(dst + used, src, size - used);
 }
 
 float FloatSwap (float f)

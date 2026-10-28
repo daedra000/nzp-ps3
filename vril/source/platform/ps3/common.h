@@ -21,16 +21,16 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include <stddef.h>
 
-size_t Q_strlcpy(char *dst, const char *src, size_t size);
-size_t Q_strlcat(char *dst, const char *src, size_t size);
+size_t PS3_strlcpy(char *dst, const char *src, size_t size);
+size_t PS3_strlcat(char *dst, const char *src, size_t size);
 #ifdef strlcpy
 #undef strlcpy
 #endif
 #ifdef strlcat
 #undef strlcat
 #endif
-#define strlcpy Q_strlcpy
-#define strlcat Q_strlcat
+#define strlcpy PS3_strlcpy
+#define strlcat PS3_strlcat
 
 #ifndef min
 #define min(a, b) ((a) < (b) ? (a) : (b))

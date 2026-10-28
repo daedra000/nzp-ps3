@@ -19,9 +19,10 @@ ifeq ($(strip $(PSL1GHT)),)
 $(error "Set PSL1GHT (and PS3DEV) in your environment")
 endif
 
-include $(PSL1GHT)/ppu_rules
-
+# Before the include: MAKEFILE_LIST's last word becomes PSL1GHT's rules after it.
 ROOT     := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
+
+include $(PSL1GHT)/ppu_rules
 BUILD    := $(ROOT)/build/ps3
 OBJDIR   := $(BUILD)/obj
 PLAT     := source/platform/ps3
