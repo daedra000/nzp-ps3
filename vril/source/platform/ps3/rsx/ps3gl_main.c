@@ -113,6 +113,10 @@ WaitForFrame(uint32_t frame)
 		{
 			PS3_Log("[gl] WARNING: frame fence timed out (want %u, RSX at %u)",
 					(unsigned)frame, (unsigned)ps3gl_completed_frame());
+			{
+				extern void ps3gl_trace_dump(uint32_t frame);
+				ps3gl_trace_dump(ps3gl_completed_frame() + 1);
+			}
 			break;
 		}
 	}

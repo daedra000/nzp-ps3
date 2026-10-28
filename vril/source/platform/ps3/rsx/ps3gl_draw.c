@@ -580,6 +580,85 @@ Prim(GLenum mode, uint32_t *prim)
 	}
 }
 
+/* Bring-up trace: what each draw of the last frames sent, so a frame the RSX
+   never finishes (a GPU hang) can be listed from WaitForFrame. */
+#define TRACE_FRAMES 4
+#define TRACE_DRAWS  192
+
+typedef struct {
+	uint16_t mode, fp;
+	uint32_t count;
+	uint8_t  units;
+	uint8_t  blend, alpha, depth;
+	struct { int16_t name; uint16_t w, h; uint8_t swz, levels; } tex[PS3GL_MAX_TMUS];
+} trace_draw_t;
+
+static struct {
+	uint32_t frame;
+	int n;
+	trace_draw_t d[TRACE_DRAWS];
+} trace[TRACE_FRAMES];
+
+static int last_fp;
+
+static void
+TraceDraw(GLenum mode, int count, unsigned units)
+{
+	int slot = ps3gl.frame % TRACE_FRAMES, i;
+	trace_draw_t *d;
+
+	if (trace[slot].frame != ps3gl.frame)
+	{
+		trace[slot].frame = ps3gl.frame;
+		trace[slot].n = 0;
+	}
+	if (trace[slot].n >= TRACE_DRAWS)
+	{
+		trace[slot].n++;
+		return;
+	}
+	d = &trace[slot].d[trace[slot].n++];
+	d->mode = (uint16_t)mode;
+	d->fp = (uint16_t)last_fp;
+	d->count = (uint32_t)count;
+	d->units = (uint8_t)units;
+	d->blend = (uint8_t)ps3gl.rs.blend;
+	d->alpha = (uint8_t)ps3gl.rs.alpha_test;
+	d->depth = (uint8_t)ps3gl.rs.depth_test;
+	for (i = 0; i < PS3GL_MAX_TMUS; i++)
+	{
+		const ps3gl_texture_t *t = &ps3gl.textures[ps3gl.tmu[i].tex];
+		d->tex[i].name = (int16_t)((units & (1u << i)) ? ps3gl.tmu[i].tex : -1);
+		d->tex[i].w = t->width;
+		d->tex[i].h = t->height;
+		d->tex[i].swz = t->swizzled;
+		d->tex[i].levels = t->num_levels;
+	}
+}
+
+void
+ps3gl_trace_dump(uint32_t frame)
+{
+	static int dumped;
+	int slot = frame % TRACE_FRAMES, i, n;
+
+	if (dumped++ >= 2 || trace[slot].frame != frame)
+	{
+		return;
+	}
+	n = trace[slot].n;
+	PS3_Log("[gl] frame %u: %d draws (the RSX never finished it)", (unsigned)frame, n);
+	for (i = 0; i < n && i < TRACE_DRAWS; i++)
+	{
+		const trace_draw_t *d = &trace[slot].d[i];
+		PS3_Log("[gl]  #%d mode 0x%x count %u fp %u units %u blend %d alpha %d depth %d"
+				" t0 %d %ux%u swz %d lv %d t1 %d %ux%u",
+				i, d->mode, (unsigned)d->count, d->fp, d->units, d->blend, d->alpha, d->depth,
+				d->tex[0].name, d->tex[0].w, d->tex[0].h, d->tex[0].swz, d->tex[0].levels,
+				d->tex[1].name, d->tex[1].w, d->tex[1].h);
+	}
+}
+
 /* State, matrices, textures and shader to the RSX. Gives the samplers in
    use. */
 static void
@@ -599,6 +678,7 @@ PrepareState(unsigned *units_out)
 	}
 
 	fp = ChooseFP(&units);
+	last_fp = fp;
 
 	ps3gl_apply_states();
 	ps3gl_apply_matrices();
@@ -639,6 +719,7 @@ glDrawArrays(GLenum mode, GLint first, GLsizei count)
 	}
 
 	BindRing(off);
+	TraceDraw(mode, count, units);
 	rsxDrawVertexArray(ps3gl.ctx, prim, 0, (u32)count);
 
 	ps3gl.st_draws++;
@@ -708,6 +789,7 @@ glDrawElements(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices)
 	}
 
 	BindRing(off);
+	TraceDraw(mode, count, units);
 	rsxDrawInlineIndexArray16(ps3gl.ctx, prim, 0, (u32)count, idx16);
 
 	ps3gl.st_draws++;
@@ -815,6 +897,7 @@ ImFlush(int count)
 	memcpy(out, im_buf, (size_t)count * PS3GL_VERTEX_SIZE);
 
 	BindRing(off);
+	TraceDraw(ps3gl.im_mode, count, units);
 
 	if (nidx)
 	{
