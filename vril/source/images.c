@@ -75,6 +75,10 @@ typedef struct
 byte* LoadPCX(FILE* f, int matchwidth, int matchheight) 
 {
     pcx_t pcxbuf = {0};
+    // The file may sit inside a pak: every seek is relative to where it starts,
+    // and its end is start + com_filesize, not the end of the FILE.
+    long base = ftell(f);
+    long filesize = com_filesize;
     if (fread(&pcxbuf, 1, 128, f) != 128) {
         fclose(f);
         Sys_Error("Truncated pcx header\n");
@@ -113,13 +117,14 @@ byte* LoadPCX(FILE* f, int matchwidth, int matchheight)
     }
 
     unsigned char palette[768];
-    if (fseek(f, -768, SEEK_END) != 0 || fread(palette, 1, sizeof(palette), f) != sizeof(palette)) {
+    if (filesize < 128 + 768 || fseek(f, base + filesize - 768, SEEK_SET) != 0 ||
+        fread(palette, 1, sizeof(palette), f) != sizeof(palette)) {
         fclose(f);
         Sys_Error("Truncated pcx palette\n");
         return NULL;
     }
 
-    if (fseek(f, 128, SEEK_SET) != 0) {
+    if (fseek(f, base + 128, SEEK_SET) != 0) {
         fclose(f);
         Sys_Error("Invalid pcx data offset\n");
         return NULL;
@@ -128,6 +133,7 @@ byte* LoadPCX(FILE* f, int matchwidth, int matchheight)
     int count = (pcx->xmax + 1) * (pcx->ymax + 1);
     byte* image_rgba = (unsigned char*)(Q_malloc(4 * count));
 	byte* pix = image_rgba;
+	byte* pix_end = image_rgba + 4 * count;
 
     for (int y = 0; y <= pcx->ymax; y++) {
         for (int x = 0; x <= pcx->xmax;) {
@@ -151,7 +157,7 @@ byte* LoadPCX(FILE* f, int matchwidth, int matchheight)
                 }
             }
 
-            while (runLength-- > 0) {
+            while (runLength-- > 0 && pix < pix_end) {
                 byte* color = palette + dataByte * 3;
                 pix[0] = color[0];
                 pix[1] = color[1];

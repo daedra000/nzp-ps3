@@ -180,6 +180,7 @@ void WAD3_LoadTextureWadFile (char *filename) {
    lumpinfo_t *lumps, *lump_p;
    wadinfo_t header;
    int i, j, infotableofs, numlumps, lowmark;
+   long base;
    FILE *file = NULL;
 
    if (COM_FOpenFile (va("textures/halflife/%s", filename), &file) != -1)
@@ -192,6 +193,8 @@ void WAD3_LoadTextureWadFile (char *filename) {
    Host_Error ("Couldn't load halflife wad \"%s\"\n", filename);
 
 loaded:
+   // The wad may be inside a pak: its offsets are relative to where it starts.
+   base = ftell(file);
    if (fread(&header, 1, sizeof(wadinfo_t), file) != sizeof(wadinfo_t)) {
       Con_Printf ("WAD3_LoadTextureWadFile: unable to read wad header");
       return;
@@ -209,7 +212,7 @@ loaded:
    }
 
    infotableofs = LittleLong(header.infotableofs);
-   if (fseek(file, infotableofs, SEEK_SET)) {
+   if (fseek(file, base + infotableofs, SEEK_SET)) {
       Con_Printf ("WAD3_LoadTextureWadFile: unable to seek to lump table");
       return;
    }
@@ -237,7 +240,7 @@ loaded:
       if (!texwadlump[j].name[0])
          Q_strncpyz (texwadlump[j].name, lump_p->name, sizeof(texwadlump[j].name));
       texwadlump[j].file = file;
-      texwadlump[j].position = LittleLong(lump_p->filepos);
+      texwadlump[j].position = base + LittleLong(lump_p->filepos);
       texwadlump[j].size = LittleLong(lump_p->disksize);
    }
 
