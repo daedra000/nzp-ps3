@@ -23,6 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // on the same machine.
 
 #include "../../../nzportable_def.h"
+#include "../ps3_platform.h"
 
 model_t	*loadmodel;
 char	loadname[32];	// for hunk tags
@@ -257,6 +258,11 @@ model_t *Mod_LoadModel (model_t *mod, qboolean crash)
 	void	*d;
 	unsigned *buf;
 	byte	stackbuf[1024];		// avoid dirtying the cache heap
+	{
+		char stage[96];
+		snprintf(stage, sizeof(stage), "model %s", mod->name);
+		PS3_Stage(stage);
+	}
 
 	if (!mod->needload)
 	{

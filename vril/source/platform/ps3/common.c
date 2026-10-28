@@ -1470,6 +1470,12 @@ int COM_FindFile (char *filename, int *handle, FILE **file)
 		// PS3: every missing file in the log (the first 200), the search paths once
 		static int missing;
 		extern void PS3_Log(const char *fmt, ...);
+		// expected misses (the PC build has none of these either): start-up HUD
+		// placeholders, other image formats tried before the one that exists
+		const char *ext = COM_FileExtension(filename);
+		if (!strncmp(filename, "gfx/hud/", 8) || strstr(filename, ".mdl_") ||
+			!strcmp(ext, "tga") || !strcmp(ext, "jpg") || !strcmp(ext, "jpeg"))
+			goto not_found;
 		if (missing == 0)
 			for (search = com_searchpaths; search; search = search->next)
 				PS3_Log("FindFile: search path %s", search->pack ? search->pack->filename : search->filename);
@@ -1488,6 +1494,7 @@ int COM_FindFile (char *filename, int *handle, FILE **file)
 				filename, probe ? "ok" : "failed", err, strerror(err));
 		}
 	}
+not_found:
 	
 	if (handle)
 		*handle = -1;

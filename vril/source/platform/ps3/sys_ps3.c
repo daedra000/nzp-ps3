@@ -317,12 +317,18 @@ static void PS3_GameThread(void *arg)
 	Host_Init(&parms);
 	PS3_Log("Host_Init done, entering the main loop");
 
+	PS3_Watchdog_Start();
 	oldtime = Sys_FloatTime();
 	while (!ps3_quit_requested) {
+		static unsigned frame;
 		double now = Sys_FloatTime();
 		Host_Frame(now - oldtime);
 		music_update();
 		oldtime = now;
+		PS3_Heartbeat();
+		// a sign of life every ~30 s, and the frame rate it implies
+		if (++frame % 1800 == 0)
+			PS3_Log("[alive] frame %u, %.1f s", frame, now);
 	}
 
 	// Writes config.cfg, then lets go of the audio port and the RSX (VID_Shutdown):

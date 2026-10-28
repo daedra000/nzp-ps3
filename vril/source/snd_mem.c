@@ -20,6 +20,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // snd_mem.c: sound caching
 
 #include "nzportable_def.h"
+#ifdef __PS3__
+#include "platform/ps3/ps3_platform.h"
+#endif
 
 int			cache_full_cycle;
 
@@ -108,6 +111,13 @@ sfxcache_t *S_LoadSound (sfx_t *s)
 	if ((sc = Cache_Check (&s->cache)))
 		return sc;
 
+#ifdef __PS3__
+	{
+		char stage[96];
+		snprintf(stage, sizeof(stage), "sound %s", s->name);
+		PS3_Stage(stage);
+	}
+#endif
 //Con_Printf ("S_LoadSound: %x\n", (int)stackbuf);
 // load it in
     Q_strcpy(namebuffer, "");

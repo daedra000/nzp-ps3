@@ -181,6 +181,11 @@ int music_start_play(char *fname, int pos)
 	(void)pos;
 	if (!music_initialized)
 		return 0;
+	{
+		char stage[96];
+		snprintf(stage, sizeof(stage), "music start %s", fname);
+		PS3_Stage(stage);
+	}
 	music_stop();
 
 	f = fopen(fname, "rb");
@@ -222,6 +227,7 @@ void music_stop(void)
 {
 	if (!music_initialized)
 		return;
+	PS3_Stage("music stop (lock)");
 	sysLwMutexLock(&music_lock, 0);
 	Track_Free();
 	music_job_started = 0;

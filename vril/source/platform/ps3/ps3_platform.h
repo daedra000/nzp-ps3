@@ -14,6 +14,10 @@
 void PS3_Crash_Install(void);
 void PS3_Crash_SetStackTop(void *top);
 void PS3_Crash_NoteCommand(const char *text);
+/* what the game is doing, for the watchdog (a freeze names its stage) */
+void PS3_Stage(const char *what);
+void PS3_Heartbeat(void);
+void PS3_Watchdog_Start(void);
 
 /* sys_ps3.c: one line in USRDIR/nzp_log.txt */
 void PS3_Log(const char *fmt, ...) __attribute__((format(printf, 1, 2)));

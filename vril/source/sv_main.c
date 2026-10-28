@@ -20,6 +20,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // sv_main.c -- server main program
 
 #include "nzportable_def.h"
+#ifdef __PS3__
+#include "platform/ps3/ps3_platform.h"
+#endif
 
 server_t		sv;
 server_static_t	svs;
@@ -1258,6 +1261,9 @@ void SV_SpawnServer (char *server)
 //
 // set up the new server
 //
+#ifdef __PS3__
+	PS3_Stage("spawn: clear memory");
+#endif
 	Host_ClearMemory ();
 
 	memset (&sv, 0, sizeof(sv));
@@ -1265,6 +1271,9 @@ void SV_SpawnServer (char *server)
 	strcpy (sv.name, server);
 
 // load progs to get entity field count
+#ifdef __PS3__
+	PS3_Stage("spawn: progs");
+#endif
 	PR_LoadProgs ();
 
 // allocate server memory
@@ -1299,6 +1308,9 @@ void SV_SpawnServer (char *server)
 
 	strcpy (sv.name, server);
 	snprintf (sv.modelname, sizeof(sv.modelname), "maps/%.*s.bsp", (int)sizeof(sv.modelname) - (int)sizeof("maps/.bsp"), server);
+#ifdef __PS3__
+	PS3_Stage("spawn: world model");
+#endif
 	sv.worldmodel = Mod_ForName (sv.modelname, false);
 	if (!sv.worldmodel)
 	{
@@ -1312,6 +1324,9 @@ void SV_SpawnServer (char *server)
 //
 // clear world interaction links
 //
+#ifdef __PS3__
+	PS3_Stage("spawn: clear world");
+#endif
 	SV_ClearWorld ();
 
 	sv.sound_precache[0] = dummy;
@@ -1345,6 +1360,9 @@ void SV_SpawnServer (char *server)
 // serverflags are for cross level information (sigils)
 	pr_global_struct->serverflags = svs.serverflags;
 
+#ifdef __PS3__
+	PS3_Stage("spawn: entities (QC spawn functions)");
+#endif
 	ED_LoadFromFile (sv.worldmodel->entities);
 
 	sv.active = true;
@@ -1358,6 +1376,9 @@ void SV_SpawnServer (char *server)
 	SV_Physics ();
 
 // create a baseline for more efficient communications
+#ifdef __PS3__
+	PS3_Stage("spawn: baseline");
+#endif
 	SV_CreateBaseline ();
 
 // send serverinfo to all connected clients
@@ -1365,7 +1386,13 @@ void SV_SpawnServer (char *server)
 		if (host_client->active)
 			SV_SendServerinfo (host_client);
 
+#ifdef __PS3__
+	PS3_Stage("spawn: waypoints");
+#endif
 	Load_Waypoint ();
+#ifdef __PS3__
+	PS3_Stage("spawn: done");
+#endif
 	sv_restart_hunkmark = Hunk_LowMark ();
 	Con_DPrintf ("Server spawned.\n");
 }

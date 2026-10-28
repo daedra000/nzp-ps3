@@ -20,6 +20,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // host.c -- coordinates spawning and killing of local servers
 
 #include "nzportable_def.h"
+#ifdef __PS3__
+#include "platform/ps3/ps3_platform.h"
+#endif
 
 #ifdef PLATFORM_SDL
 extern qboolean sdl_running;
@@ -635,12 +638,18 @@ void _Host_Frame (float time)
 	}
 
 // get new key events
+#ifdef __PS3__
+	PS3_Stage("frame: input");
+#endif
 	Sys_SendKeyEvents ();
 	Key_UpdateHoldBindings ();
 
 // allow mice or other external controllers to add commands
 	IN_Commands ();
 
+#ifdef __PS3__
+	PS3_Stage("frame: commands");
+#endif
 // process console commands
 	Cbuf_Execute ();
 #ifdef PLATFORM_SDL
@@ -648,6 +657,9 @@ void _Host_Frame (float time)
 		return;
 #endif
 
+#ifdef __PS3__
+	PS3_Stage("frame: net");
+#endif
 	NET_Poll();
 
 // if running the server locally, make intentions now
@@ -660,6 +672,9 @@ void _Host_Frame (float time)
 //
 //-------------------
 
+#ifdef __PS3__
+	PS3_Stage("frame: server");
+#endif
 // check for commands typed to the host
 	Host_GetConsoleCommands ();
 	if (sv.active)
@@ -681,17 +696,26 @@ void _Host_Frame (float time)
 
 	host_time += host_frametime;
 
+#ifdef __PS3__
+	PS3_Stage("frame: client");
+#endif
 // fetch results from server
 	if (cls.state == ca_connected)
 	{
 		CL_ReadFromServer ();
 	}
+#ifdef __PS3__
+	PS3_Stage("frame: screen");
+#endif
 // update video
 	if (host_speeds.value)
 		time1 = Sys_FloatTime ();
 	SCR_UpdateScreen ();
 	if (host_speeds.value)
 		time2 = Sys_FloatTime ();
+#ifdef __PS3__
+	PS3_Stage("frame: sound");
+#endif
 // update audio
 	if (cls.signon == SIGNONS)
 	{
@@ -701,6 +725,9 @@ void _Host_Frame (float time)
 	else
 		S_Update (vec3_origin, vec3_origin, vec3_origin, vec3_origin);
 
+#ifdef __PS3__
+	PS3_Stage("frame: music, loading screen");
+#endif
 	Music_Update();
 	LoadingScreen_Update();
 

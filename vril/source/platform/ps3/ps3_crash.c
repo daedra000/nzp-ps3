@@ -33,6 +33,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include <sys/dbg.h>
 #include <sys/process.h>
+#include <sys/thread.h>
+#include <unistd.h>
 #include <sysmodule/sysmodule.h>
 
 #define CMD_TRAIL 16
@@ -43,13 +45,102 @@ static uintptr_t game_stack_top;
 
 void PS3_Crash_SetStackTop(void *top) { game_stack_top = (uintptr_t)top; }
 
+/*
+===============================================================================
+
+STAGES AND WATCHDOG
+
+A freeze (an endless loop or a deadlock) writes nothing and the crash handler
+never runs. The game marks what it is doing (PS3_Stage: console commands, the
+parts of Host_Frame, model/sound/map loads); a watchdog thread at a higher
+priority than the game wakes every second and, when no stage has changed for
+WATCHDOG_SECS, writes the stuck stage and the ones before it to the log.
+
+===============================================================================
+*/
+
+#define STAGE_TRAIL    24
+#define WATCHDOG_SECS  6
+
+static char stage_trail[STAGE_TRAIL][96];
+static double stage_time[STAGE_TRAIL];
+static volatile unsigned stage_next;
+static volatile unsigned stage_progress;
+
+void PS3_Stage(const char *what)
+{
+	unsigned n = stage_next;
+	char *dst = stage_trail[n % STAGE_TRAIL];
+
+	strncpy(dst, what, sizeof(stage_trail[0]) - 1);
+	dst[sizeof(stage_trail[0]) - 1] = 0;
+	stage_time[n % STAGE_TRAIL] = Sys_FloatTime();
+	__asm__ volatile("lwsync" ::: "memory");
+	stage_next = n + 1;
+	stage_progress++;
+}
+
+// The main loop's beat: progress without a new stage name.
+void PS3_Heartbeat(void) { stage_progress++; }
+
+static void DumpStages(const char *why)
+{
+	unsigned i, last = stage_next;
+
+	PS3_Log("[watchdog] %s; the last stages (oldest first):", why);
+	for (i = last > STAGE_TRAIL ? last - STAGE_TRAIL : 0; i < last; i++)
+		PS3_Log("[watchdog]   %8.2f  %s", stage_time[i % STAGE_TRAIL], stage_trail[i % STAGE_TRAIL]);
+}
+
+static void WatchdogThread(void *arg)
+{
+	unsigned seen = 0, still = 0;
+	int reported = 0;
+
+	(void)arg;
+	for (;;) {
+		unsigned now;
+
+		usleep(1000 * 1000);
+		now = stage_progress;
+		if (now != seen) {
+			if (reported)
+				PS3_Log("[watchdog] moving again after %u s", still);
+			seen = now;
+			still = 0;
+			reported = 0;
+			continue;
+		}
+		still++;
+		if (still == WATCHDOG_SECS && reported < 1) {
+			char why[64];
+			snprintf(why, sizeof(why), "no progress for %d s (game time %.2f)", WATCHDOG_SECS, Sys_FloatTime());
+			DumpStages(why);
+			reported = 1;
+		}
+	}
+}
+
+void PS3_Watchdog_Start(void)
+{
+	sys_ppu_thread_t id;
+	// lv2: a lower number is a higher priority (the game runs at 1000)
+	s32 rc = sysThreadCreate(&id, WatchdogThread, NULL, 900, 64 * 1024, 0, (char *)"nzp_watchdog");
+	if (rc != 0)
+		PS3_Log("watchdog not started (%d)", (int)rc);
+}
+
 // Called from Cmd_ExecuteString: the commands that ran just before a crash.
 void PS3_Crash_NoteCommand(const char *text)
 {
 	char *dst = cmd_trail[cmd_trail_next % CMD_TRAIL];
+	char stage[110];
+
 	strncpy(dst, text, sizeof(cmd_trail[0]) - 1);
 	dst[sizeof(cmd_trail[0]) - 1] = 0;
 	cmd_trail_next++;
+	snprintf(stage, sizeof(stage), "cmd: %s", dst);
+	PS3_Stage(stage);
 }
 
 static void PS3_CrashHandler(u64 cause, sys_ppu_thread_t tid, u64 dar)
