@@ -1,3 +1,67 @@
+# Nazi Zombies: Portable — PS3
+
+This fork ports NZ:P to the **PlayStation 3** as native homebrew (PSL1GHT), from the
+Vril engine in [`vril/`](vril) with a PS3 platform in
+[`vril/source/platform/ps3`](vril/source/platform/ps3).
+
+**Status:** early. Video, input and audio are written; the game boots on hardware and
+is being brought up. Single player only for now (no LAN yet).
+
+## Install
+1. A PS3 that runs homebrew (HEN or CFW).
+2. Download `nzp-ps3.pkg` from the latest successful
+   [PS3 build](../../actions/workflows/ps3.yml) run (artifact `nzp-ps3`).
+3. Install it from Package Manager. It shows up as *Nazi Zombies: Portable*.
+
+Everything lives in `/dev_hdd0/game/NZPP00001/USRDIR/`: the game data in `nzp/`
+(most of it in `nzp/pak0.pak`), config and saves next to it, and `nzp_log.txt`,
+the log to send when something goes wrong.
+
+## Controls (DualShock 3)
+| Button | Action |
+|---|---|
+| Left stick / right stick | Move / look |
+| R2 / L2 | Fire / aim |
+| R1 / L1 | Grenade / special grenade |
+| Cross | Jump |
+| Square | Reload (hold: use) |
+| Triangle | Switch weapon |
+| Circle | Crouch / prone |
+| R3 / L3 | Knife / sprint |
+| Start | Pause |
+
+All rebindable in the game's controls menu.
+
+## How the port works
+- **Rendering:** the PS3 has no OpenGL driver. `rsx/` is a GL 1.x layer on the RSX
+  taken from [TyrQuakeCell](https://github.com/stingziz0u/tyrquakecell) (via Quake2PS3
+  and [IoQuake3-PS3](https://github.com/Mayo1970/IoQuake3-PS3)), with linear fog and
+  the texture matrix added for NZ:P. The RSX programs are NV40 assembly, assembled by
+  PSL1GHT's `cgcomp -a` at build time (`tools/build_shaders.py`).
+- **Big-endian:** NZ:P had only run on little-endian CPUs; the loaders were fixed for
+  the Cell PPU (PCX skins, palettes, Half-Life BSP lightmaps, PAK headers).
+- **Audio:** one audio port at 48 kHz: Quake's mixer plus the MP3 music (minimp3).
+- **Data:** a PKG install drops entries past a limit, so the 1100+ data files are
+  packed into `pak0.pak` (`tools/make_pak.py`); what the engine opens by path stays
+  loose.
+
+## Building
+GitHub Actions ([`.github/workflows/ps3.yml`](.github/workflows/ps3.yml)) builds the
+PS3 toolchain once (cached), compiles progs.dat from
+[nzp-team/quakec](https://github.com/nzp-team/quakec), takes the PC data from
+[nzp-team/assets](https://github.com/nzp-team/assets) (both at pinned revisions) and
+makes `nzp-ps3.pkg` on every push.
+
+Locally, with `PS3DEV`/`PSL1GHT` set:
+```
+cd vril
+make -f Makefile.ps3 PS3PY_DIR=$PSL1GHT_SRC/tools/ps3py DATA_DIR=/path/to/nzp pkg
+```
+`PS3PY_DIR` points at PSL1GHT's `tools/ps3py` with `pkgcrypt` built: the C `pkg`
+tool silently drops entries past 1024.
+
+---
+
 # Nazi Zombies: Portable
 
 # About
