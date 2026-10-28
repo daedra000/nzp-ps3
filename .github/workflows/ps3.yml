@@ -161,10 +161,20 @@ jobs:
           ppu-gcc --version | head -1
           make -f Makefile.ps3 CGCOMP_BIN="$CGCOMP_BIN" -k -j"$(nproc)" self 2>&1 | tee build.log
 
+      # The errors also go into annotations: readable through the API (gh api
+      # .../check-runs/<id>/annotations) where the raw logs aren't.
       - name: Report errors
         if: failure()
         working-directory: vril
-        run: grep -E 'error|undefined reference|multiple definition' build.log | head -80 || true
+        run: |
+          grep -E 'error|undefined reference|multiple definition|No rule|Error [0-9]' build.log \
+            | grep -v '^\s*|' | awk '!seen[$0]++' | head -120 > errors.txt || true
+          for part in 0 1 2 3; do
+            chunk=$(sed -n "$((part*30+1)),$((part*30+30))p" errors.txt)
+            [ -n "$chunk" ] || break
+            printf '::error title=build errors %d::%s\n' "$part" \
+              "$(printf '%s' "$chunk" | sed -e 's/%/%25/g' | awk '{printf "%s%%0A", $0}')"
+          done
 
       - name: Link checks (TOC, sizes)
         working-directory: vril
