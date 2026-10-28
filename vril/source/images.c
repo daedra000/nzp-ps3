@@ -97,6 +97,14 @@ byte* LoadPCX(FILE* f, int matchwidth, int matchheight)
     pcx->bytes_per_line = LittleShort(pcx->bytes_per_line);
     pcx->palette_type = LittleShort(pcx->palette_type);
 
+#ifdef __PS3__
+    {
+        extern void PS3_Log(const char *fmt, ...);
+        PS3_Log("pcx: at %ld, %ld bytes, %dx%d, %d bpp", base, filesize,
+            pcx->xmax + 1, pcx->ymax + 1, pcx->bits_per_pixel);
+    }
+#endif
+
     if (pcx->manufacturer != 0x0a || pcx->version != 5 || pcx->encoding != 1 ||
         pcx->bits_per_pixel != 8 || pcx->xmax >= 640 || pcx->ymax >= 480) {
 		fclose(f);
@@ -148,6 +156,8 @@ byte* LoadPCX(FILE* f, int matchwidth, int matchheight)
             int runLength = 1;
             if ((dataByte & 0xC0) == 0xC0) {
                 runLength = dataByte & 0x3F;
+                if (runLength == 0)
+                    runLength = 1;  // invalid; never let x stand still
                 dataByte = fgetc(f);
                 if (dataByte == EOF) {
                     free(image_rgba);

@@ -28,6 +28,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "../../nzportable_def.h"
 #include "ps3_platform.h"
 #include "ps3_local.h"
+#include "_build_info.h"
 
 #include <errno.h>
 #include <sys/stat.h>
@@ -296,7 +297,7 @@ static void PS3_GameThread(void *arg)
 	// A fresh log each run, the previous one kept.
 	remove(PS3_LOG_OLD_PATH);
 	rename(PS3_LOG_PATH, PS3_LOG_OLD_PATH);
-	PS3_Log("=== Nazi Zombies: Portable, PS3 (%s) ===", PS3_APP_DIR);
+	PS3_Log("=== Nazi Zombies: Portable, PS3 (%s), build %s %s ===", PS3_APP_DIR, GIT_HASH, BUILD_DATE);
 
 	if (sysUtilRegisterCallback(SYSUTIL_EVENT_SLOT0, PS3_SysutilCallback, NULL) != 0)
 		PS3_Log("WARNING: sysUtilRegisterCallback failed, the XMB's Quit Game won't be clean");
