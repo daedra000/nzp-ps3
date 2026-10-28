@@ -293,11 +293,14 @@ static void PS3_GameThread(void *arg)
 	double oldtime;
 
 	(void)arg;
+	PS3_Crash_SetStackTop(&parms);
 
 	// A fresh log each run, the previous one kept.
 	remove(PS3_LOG_OLD_PATH);
 	rename(PS3_LOG_PATH, PS3_LOG_OLD_PATH);
 	PS3_Log("=== Nazi Zombies: Portable, PS3 (%s), build %s %s ===", PS3_APP_DIR, GIT_HASH, BUILD_DATE);
+
+	PS3_Crash_Install();
 
 	if (sysUtilRegisterCallback(SYSUTIL_EVENT_SLOT0, PS3_SysutilCallback, NULL) != 0)
 		PS3_Log("WARNING: sysUtilRegisterCallback failed, the XMB's Quit Game won't be clean");

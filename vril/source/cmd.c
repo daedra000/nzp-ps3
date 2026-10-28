@@ -20,6 +20,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // cmd.c -- Quake script command processing module
 
 #include "nzportable_def.h"
+#ifdef __PS3__
+#include "platform/ps3/ps3_platform.h"
+#endif
 
 void Cmd_ForwardToServer (void);
 
@@ -758,6 +761,9 @@ void	Cmd_ExecuteString (char *text, cmd_source_t src)
 	cmdalias_t		*a;
 
 	cmd_source = src;
+#ifdef __PS3__
+	PS3_Crash_NoteCommand(text);
+#endif
 	Cmd_TokenizeString (text);
 			
 // execute the command line

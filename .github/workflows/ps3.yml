@@ -4,6 +4,11 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+    inputs:
+      addrs:
+        description: "Crash addresses from nzp_log.txt to name (space separated, e.g. 0x0001a2b4 0x00034c10)"
+        required: false
+        default: ""
 
 env:
   # Pinned so the cached toolchain only rebuilds when these are bumped on purpose
@@ -190,6 +195,17 @@ jobs:
           echo "::notice title=.got size::$(ppu-readelf -SW $elf | awk '$2==".got"{print $6}')"
           ppu-size $elf
           ppu-nm -C --defined-only $elf | sort > nzportable.map
+
+      # Run by hand with the [crash] addresses: names their functions and lines.
+      - name: Name crash addresses
+        if: github.event.inputs.addrs != ''
+        working-directory: vril
+        env:
+          ADDRS: ${{ github.event.inputs.addrs }}
+        run: |
+          out=$(ppu-addr2line -f -i -C -e build/ps3/nzportable.elf $ADDRS | paste - - | sed 's#.*/vril/##')
+          echo "$out"
+          printf '::notice title=crash addresses::%s\n' "$(printf '%s' "$out" | sed -e 's/%/%25/g' | awk '{printf "%s%%0A", $0}')"
 
       - name: Fetch quakec and assets
         run: |

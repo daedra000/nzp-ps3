@@ -55,7 +55,7 @@ ENGINE_SOURCES := $(wildcard source/*.c) $(wildcard source/menu/*.c) \
 # LAN play (net_dgrm.c, net_udp_ps3.c) isn't in yet: net_ps3.c registers loopback only.
 PS3_SOURCES := \
 	$(PLAT)/common.c $(PLAT)/sys_ps3.c $(PLAT)/in_ps3.c $(PLAT)/snd_ps3.c \
-	$(PLAT)/music_ps3.c $(PLAT)/net_main.c $(PLAT)/net_ps3.c $(PLAT)/ps3_video.c \
+	$(PLAT)/music_ps3.c $(PLAT)/net_main.c $(PLAT)/net_ps3.c $(PLAT)/ps3_video.c $(PLAT)/ps3_crash.c \
 	$(wildcard $(PLAT)/gl/*.c) $(wildcard $(PLAT)/rsx/*.c)
 
 SOURCES := $(ENGINE_SOURCES) $(PS3_SOURCES)
@@ -79,7 +79,7 @@ CFLAGS   := $(OPT) -mcpu=cell -mtune=cell -mno-altivec -mminimal-toc $(MACHDEP) 
 	-MMD -MP $(DEFINES) $(INCLUDES)
 ASFLAGS  := -mcpu=cell $(MACHDEP)
 LDFLAGS  := $(MACHDEP) -Wl,--no-multi-toc $(LIBPSL1GHT_LIB) -L$(PORTLIBS)/lib
-LIBS     := -lrsx -lgcm_sys -laudio -lio -lsysmodule -lsysutil -lnet -lrt -llv2 -lm
+LIBS     := -lrsx -lgcm_sys -laudio -lio -llv2dbg -lsysmodule -lsysutil -lnet -lrt -llv2 -lm
 
 ifeq ($(WERROR),1)
 CFLAGS += -Werror

@@ -10,6 +10,11 @@
 #ifndef PS3_PLATFORM_H
 #define PS3_PLATFORM_H
 
+/* ps3_crash.c: PPU exception handler, logs pc/registers/backtrace/last commands */
+void PS3_Crash_Install(void);
+void PS3_Crash_SetStackTop(void *top);
+void PS3_Crash_NoteCommand(const char *text);
+
 /* sys_ps3.c: one line in USRDIR/nzp_log.txt */
 void PS3_Log(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 
