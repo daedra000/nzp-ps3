@@ -210,11 +210,17 @@ jobs:
           python3 bin/qc_hash_generator.py -i tools/asset_conversion_table.csv -o source/server/hash_table.qc
           mkdir -p build/fte build/standard
           bin/fteqcc-cli-lin -O3 -Ono-compound_jumps -Wall -srcfile progs/ssqc.src > qc.log 2>&1 || true
-          if [ ! -s build/standard/progs.dat ]; then
-            printf '::error title=fteqcc::%s\n' "$(tail -n 40 qc.log | sed -e 's/%/%25/g' | awk '{printf "%s%%0A", $0}')"
+          # progs_dat is "../build/standard/progs.dat": find where that resolved to
+          dat=$(find "$RUNNER_TEMP" -name progs.dat -newer qc.log -o -name progs.dat -path '*standard*' | head -1)
+          if [ -z "$dat" ] || [ ! -s "$dat" ]; then
+            printf '::error title=fteqcc::%s\n' "$(grep -v '^including' qc.log | tail -n 40 | sed -e 's/%/%25/g' | awk '{printf "%s%%0A", $0}')"
             exit 1
           fi
-          ls -la build/standard
+          echo "progs.dat: $dat"
+          mkdir -p "$RUNNER_TEMP/progs"
+          cp "$dat" "$RUNNER_TEMP/progs/"
+          cp "$(dirname "$dat")/progs.lno" "$RUNNER_TEMP/progs/" 2>/dev/null || true
+          grep -v '^including' qc.log | tail -n 5
 
       - name: Assemble game data
         if: github.event_name == 'workflow_dispatch' && inputs.full_pkg || startsWith(github.ref, 'refs/tags/')
@@ -224,8 +230,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/nzp"
           cp -r "$RUNNER_TEMP/assets/pc/nzp/." "$RUNNER_TEMP/nzp/"
           cp -rn "$RUNNER_TEMP/assets/common/." "$RUNNER_TEMP/nzp/"
-          cp "$RUNNER_TEMP/quakec/build/standard/progs.dat" "$RUNNER_TEMP/nzp/"
-          cp "$RUNNER_TEMP/quakec/build/standard/progs.lno" "$RUNNER_TEMP/nzp/" 2>/dev/null || true
+          cp "$RUNNER_TEMP"/progs/* "$RUNNER_TEMP/nzp/"
           # PS3 default on top of the PC config: PlayStation button icons
           printf '\n// PS3\nseta cl_controllerglyphs "sony"\n' >> "$RUNNER_TEMP/nzp/autoexec.cfg"
           du -sh "$RUNNER_TEMP/nzp"
