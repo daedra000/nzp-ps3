@@ -138,6 +138,17 @@ jobs:
           echo "$RUNNER_TEMP/ps3dev/bin" >> "$GITHUB_PATH"
           echo "$RUNNER_TEMP/ps3dev/ppu/bin" >> "$GITHUB_PATH"
 
+      - name: PSL1GHT's pkg.py (the C pkg drops entries past 1024)
+        run: |
+          git clone -q https://github.com/ps3dev/PSL1GHT "$RUNNER_TEMP/psl1ght-py"
+          git -C "$RUNNER_TEMP/psl1ght-py" checkout -q "$PSL1GHT_REF"
+          pip install --quiet setuptools
+          cd "$RUNNER_TEMP/psl1ght-py/tools/ps3py"
+          python3 setup.py build -q
+          cp build/lib.*/pkgcrypt*.so .
+          python3 -c "import sys; sys.path.insert(0, '.'); import pkgcrypt"
+          echo "PS3PY_DIR=$RUNNER_TEMP/psl1ght-py/tools/ps3py" >> "$GITHUB_ENV"
+
       - name: cgcomp
         run: |
           if [ ! -x "$RUNNER_TEMP/ps3dev/bin/cgcomp" ]; then
@@ -224,7 +235,7 @@ jobs:
       - name: PKG (EBOOT + game data)
         working-directory: vril
         run: |
-          make -f Makefile.ps3 CGCOMP_BIN="$CGCOMP_BIN" DATA_DIR="$RUNNER_TEMP/nzp" pkg
+          make -f Makefile.ps3 CGCOMP_BIN="$CGCOMP_BIN" PS3PY_DIR="$PS3PY_DIR" DATA_DIR="$RUNNER_TEMP/nzp" pkg
           # the data must be in what was packed, file for file
           src=$(find "$RUNNER_TEMP/nzp" -type f | wc -l)
           packed=$(find build/ps3/package/pkg/USRDIR/nzp -type f | wc -l)
@@ -234,6 +245,7 @@ jobs:
             [ -f "build/ps3/package/pkg/USRDIR/nzp/$f" ] || { echo "::error title=missing from PKG::$f"; exit 1; }
           done
           [ "$src" -eq "$packed" ] || { echo "::error title=game data::only $packed of $src files packed"; exit 1; }
+          [ "$(stat -c %s build/ps3/nzportable.gnpdrm.pkg)" -ge "$(du -sb "$RUNNER_TEMP/nzp" | cut -f1)" ] || { echo "::error title=PKG::smaller than the data it should hold"; exit 1; }
           cp build/ps3/nzportable.gnpdrm.pkg ../nzp-ps3.pkg
 
       - name: Upload

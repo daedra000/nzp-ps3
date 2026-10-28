@@ -36,6 +36,13 @@ export PKGFILES := $(BUILD)/pkgfiles
 
 TARGET   := $(BUILD)/nzportable
 
+# PSL1GHT's C `pkg` (tools/sfo_pkg) packs at most 1024 entries and silently drops
+# the rest: NZ:P's data is over 1100 files, so textures/ and tracks/ went missing.
+# Its Python pkg.py (tools/ps3py, with the pkgcrypt module built) has no such limit.
+ifneq ($(strip $(PS3PY_DIR)),)
+PKG := python3 $(PS3PY_DIR)/pkg.py
+endif
+
 DATA_DIR ?=
 CGCOMP_BIN ?= $(PS3DEV)/bin/cgcomp
 
