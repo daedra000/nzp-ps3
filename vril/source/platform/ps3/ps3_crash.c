@@ -110,14 +110,19 @@ void PS3_Crash_Install(void)
 		PS3_Log("crash handler not available (liblv2dbg: 0x%08x)", (unsigned)ret);
 		return;
 	}
-	sysDbgSetStacksizePPUExceptionHandler(64 * 1024);
-	ret = sysDbgInitializePPUExceptionHandler(100);
-	if (ret == 0)
-		// Called through a 32-bit function descriptor, 16 bytes into the 64-bit one.
-		ret = sysDbgRegisterPPUExceptionHandler(
-			(dbg_exception_handler_t)((uintptr_t)(void *)PS3_CrashHandler + 16), 0);
+	ret = sysDbgSetStacksizePPUExceptionHandler(64 * 1024);
 	if (ret != 0)
-		PS3_Log("crash handler not available (0x%08x)", (unsigned)ret);
+		PS3_Log("crash handler: SetStacksize 0x%08x", (unsigned)ret);
+	ret = sysDbgInitializePPUExceptionHandler(100);
+	if (ret != 0) {
+		PS3_Log("crash handler not available (Initialize 0x%08x)", (unsigned)ret);
+		return;
+	}
+	// Called through a 32-bit function descriptor, 16 bytes into the 64-bit one.
+	ret = sysDbgRegisterPPUExceptionHandler(
+		(dbg_exception_handler_t)((uintptr_t)(void *)PS3_CrashHandler + 16), 0);
+	if (ret != 0)
+		PS3_Log("crash handler not available (Register 0x%08x)", (unsigned)ret);
 	else
 		PS3_Log("crash handler ready");
 }

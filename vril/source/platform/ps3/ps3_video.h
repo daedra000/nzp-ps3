@@ -28,6 +28,7 @@ int  PS3_Video_Ready(void);
 /* Waits until the RSX has executed everything queued (before freeing
    memory it may use). */
 void PS3_Video_Finish(void);
+void PS3_Video_DumpFifo(void);
 
 int  PS3_Video_Width(void);           /* TV mode, e.g. 1280x720 */
 int  PS3_Video_Height(void);

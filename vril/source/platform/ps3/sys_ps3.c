@@ -295,13 +295,6 @@ static void PS3_GameThread(void *arg)
 	(void)arg;
 	PS3_Crash_SetStackTop(&parms);
 
-	// A fresh log each run, the previous one kept.
-	remove(PS3_LOG_OLD_PATH);
-	rename(PS3_LOG_PATH, PS3_LOG_OLD_PATH);
-	PS3_Log("=== Nazi Zombies: Portable, PS3 (%s), build %s %s ===", PS3_APP_DIR, GIT_HASH, BUILD_DATE);
-
-	PS3_Crash_Install();
-
 	if (sysUtilRegisterCallback(SYSUTIL_EVENT_SLOT0, PS3_SysutilCallback, NULL) != 0)
 		PS3_Log("WARNING: sysUtilRegisterCallback failed, the XMB's Quit Game won't be clean");
 
@@ -350,6 +343,15 @@ int main(int argc, char **argv)
 
 	(void)argc;
 	(void)argv;
+
+	// A fresh log each run, the previous one kept.
+	remove(PS3_LOG_OLD_PATH);
+	rename(PS3_LOG_PATH, PS3_LOG_OLD_PATH);
+	PS3_Log("=== Nazi Zombies: Portable, PS3 (%s), build %s %s ===", PS3_APP_DIR, GIT_HASH, BUILD_DATE);
+
+	// From the main thread before any other (as thug-ps3 does): from the game
+	// thread lv2 refused it (0x8001042c).
+	PS3_Crash_Install();
 
 	rc = sysThreadCreate(&thread_id, PS3_GameThread, NULL, PS3_GAME_PRIO, PS3_GAME_STACK,
 		THREAD_JOINABLE, (char *)"nzp_game");

@@ -117,6 +117,7 @@ WaitForFrame(uint32_t frame)
 				extern void ps3gl_trace_dump(uint32_t frame);
 				ps3gl_trace_dump(ps3gl_completed_frame() + 1);
 			}
+			PS3_Video_DumpFifo();
 			break;
 		}
 	}

@@ -134,6 +134,44 @@ WaitFlips(void)
    every time it returns at once from the second call on (the register
    already holds it), and memory still in use gets freed. A new value each
    time. */
+/* After a fence timeout: where the RSX's command reader stopped (GET) against
+   what has been handed to it (PUT), and the command words around GET. */
+void
+PS3_Video_DumpFifo(void)
+{
+	static int dumps;
+	gcmControlRegister volatile *ctrl;
+	u32 get, put;
+	void *addr = NULL;
+	int i;
+
+	if (!ctx || dumps++ >= 2)
+	{
+		return;
+	}
+
+	ctrl = gcmGetControlRegister();
+	get = ctrl->get;
+	put = ctrl->put;
+	PS3_Log("[fifo] put 0x%08x get 0x%08x ref 0x%08x; buffer %p..%p, cpu at %p",
+			(unsigned)put, (unsigned)get, (unsigned)ctrl->ref,
+			(void *)ctx->begin, (void *)ctx->end, (void *)ctx->current);
+
+	if (gcmIoOffsetToAddress(get, &addr) != 0 || !addr)
+	{
+		PS3_Log("[fifo] GET is not an IO offset");
+		return;
+	}
+
+	for (i = -32; i < 16; i += 4)
+	{
+		u32 *w = (u32 *)addr + i;
+		PS3_Log("[fifo] %+4d %08x %08x %08x %08x%s", i * 4,
+				(unsigned)w[0], (unsigned)w[1], (unsigned)w[2], (unsigned)w[3],
+				i == 0 ? "  <- GET" : "");
+	}
+}
+
 void
 PS3_Video_Finish(void)
 {
