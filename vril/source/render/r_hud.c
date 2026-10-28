@@ -67,7 +67,11 @@ image_t b_start;
 image_t b_select;
 image_t b_home;
 #ifdef PLATFORM_USES_GENERIC_GLYPHS
+#ifdef __PS3__
+cvar_t cl_controllerglyphs       = { "cl_controllerglyphs", "sony", true };
+#else
 cvar_t cl_controllerglyphs       = { "cl_controllerglyphs", "xbox", true };
+#endif
 static image_t controller_glyphs = -1;
 static char loaded_controller_glyphs[MAX_QPATH];
 #endif
