@@ -134,6 +134,77 @@ WaitFlips(void)
    every time it returns at once from the second call on (the register
    already holds it), and memory still in use gets freed. A new value each
    time. */
+/* ================================================================ */
+/* Command buffer room                                               */
+/* ================================================================ */
+
+/* librsx moves to the next 32 KB piece of the command buffer from inside its
+   functions, through an asm call that tells GCC nothing about memory or the
+   registers the system's callback changes. Built with GCC 13 the function then
+   carries on writing through the pointer it had before the call: the end of the
+   command runs into the next piece, over the jump the RSX was to follow, and
+   the RSX reads vertex program words as commands and hangs (the [fifo] dump:
+   GET stuck 0x5c into a piece that starts with stray program words).
+
+   So librsx must never need to: before each batch of commands there is always
+   at least PS3_CMD_ROOM words left, making the move here, through a call that
+   declares everything the callback may change. */
+#define PS3_CMD_ROOM 2048   /* words; the largest single librsx call is ~100 */
+
+static s32 __attribute__((noinline, noipa))
+CallContextCallback(gcmContextData *c, u32 count)
+{
+	register u64 r3 __asm__("r3") = (u64)(uintptr_t)c;
+	register u64 r4 __asm__("r4") = count;
+	u32 opd = (u32)(u64)(uintptr_t)c->callback;
+
+	__asm__ __volatile__(
+		"stdu   1,-128(1)\n"
+		"mr     31,2\n"
+		"lwz    0,0(%2)\n"
+		"lwz    2,4(%2)\n"
+		"mtctr  0\n"
+		"bctrl\n"
+		"mr     2,31\n"
+		"addi   1,1,128\n"
+		: "+r"(r3), "+r"(r4)
+		: "b"((u64)opd)
+		: "r0", "r5", "r6", "r7", "r8", "r9", "r10", "r11", "r12", "r31",
+		  "ctr", "lr", "xer", "cr0", "cr1", "cr5", "cr6", "cr7",
+		  "fr0", "fr1", "fr2", "fr3", "fr4", "fr5", "fr6", "fr7", "fr8", "fr9",
+		  "fr10", "fr11", "fr12", "fr13", "memory");
+	return (s32)r3;
+}
+
+void
+PS3_Cmd_Reserve(void)
+{
+	static int logged;
+
+	if (!ctx)
+	{
+		return;
+	}
+
+	if (ctx->current + PS3_CMD_ROOM <= ctx->end)
+	{
+		return;
+	}
+
+	if (CallContextCallback(ctx, PS3_CMD_ROOM) != 0 && !logged)
+	{
+		logged = 1;
+		PS3_Log("[video] WARNING: command buffer callback failed");
+	}
+
+	if (logged < 2 && ctx->current + PS3_CMD_ROOM > ctx->end)
+	{
+		logged = 2;
+		PS3_Log("[video] WARNING: still no command room after the callback (%p..%p)",
+				(void *)ctx->current, (void *)ctx->end);
+	}
+}
+
 /* After a fence timeout: where the RSX's command reader stopped (GET) against
    what has been handed to it (PUT), and the command words around GET. */
 void
@@ -194,6 +265,7 @@ PS3_Video_Finish(void)
 
 	/* rsxFinish(ctx, ref), with a time limit: on the way out after an
 	   error the RSX may be the thing that's stuck. */
+	PS3_Cmd_Reserve();
 	rsxSetReferenceCommand(ctx, ref);
 	rsxFlushBuffer(ctx);
 	ctrl = gcmGetControlRegister();
@@ -526,6 +598,7 @@ PS3_Video_BindRenderTarget(void)
 	{
 		return;
 	}
+	PS3_Cmd_Reserve();
 
 	/* the target isn't free until the flip that showed it is done */
 	{
@@ -899,6 +972,7 @@ PS3_Video_Present(void)
 
 	color_pass = (color_brightness != 1.0f || color_exponent != 1.0f) && ColorPassInit() == 1;
 
+	PS3_Cmd_Reserve();
 	if (color_pass)
 	{
 		ColorPass(off_x, off_y, out_w, out_h);
@@ -940,6 +1014,7 @@ PS3_Video_Present(void)
 	surface.pitch = disp_pitch;
 	surface.offset = fb_offset[cur];
 
+	PS3_Cmd_Reserve();
 	/* The renderer's writes must be in memory before the RSX reads them. */
 	__asm__ volatile("sync" ::: "memory");
 
@@ -973,6 +1048,7 @@ flip:
 
 	last_flip_vblank = vblank_count;
 
+	PS3_Cmd_Reserve();
 	/* TyrQuakeCell's sequence: flip, flush, wait-flip. */
 	gcmSetFlip(ctx, cur);
 	rsxFlushBuffer(ctx);

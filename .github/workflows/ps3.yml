@@ -163,12 +163,12 @@ jobs:
         run: |
           cd "$RUNNER_TEMP/psl1ght-py/ppu/librsx"
           ppu-objdump -d --no-show-raw-insn "$PSL1GHT/ppu/lib/librsx.a" \
-            | awk '/<rsxLoadVertexProgramBlock>:/,/^$/' | head -45 > before.txt
+            | awk '/<\.?rsxLoadVertexProgramBlock>:/,/^$/' | head -45 > before.txt
           sed -i 's/-O2 -mregnames/-O2 -fno-ipa-ra -mregnames/' Makefile
           grep -n 'fno-ipa-ra' Makefile
           make -s install
           ppu-objdump -d --no-show-raw-insn "$PSL1GHT/ppu/lib/librsx.a" \
-            | awk '/<rsxLoadVertexProgramBlock>:/,/^$/' | head -45 > after.txt
+            | awk '/<\.?rsxLoadVertexProgramBlock>:/,/^$/' | head -45 > after.txt
           for f in before after; do
             printf '::notice title=rsxLoadVertexProgramBlock %s::%s\n' "$f" \
               "$(sed -e 's/%/%25/g' $f.txt | awk '{printf "%s%%0A", $0}')"

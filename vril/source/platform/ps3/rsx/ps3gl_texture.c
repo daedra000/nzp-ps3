@@ -637,6 +637,8 @@ glCopyTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset,
 		return;
 	}
 
+	PS3_Cmd_Reserve();
+
 	/* inside the render target and the texture */
 	if (x < 0 || y < 0 || x + width > ps3gl.screen_w || y + height > ps3gl.screen_h ||
 		xoffset < 0 || yoffset < 0 || xoffset + width > t->width ||

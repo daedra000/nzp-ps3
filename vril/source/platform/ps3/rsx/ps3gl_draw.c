@@ -34,6 +34,7 @@
 #include <string.h>
 
 #include "ps3gl.h"
+#include "../ps3_video.h"
 #include "ps3gl_shader_data.h"
 #include "../ps3_platform.h"
 
@@ -667,6 +668,8 @@ PrepareState(unsigned *units_out)
 	gcmContextData *ctx = ps3gl.ctx;
 	unsigned units;
 	int fp;
+
+	PS3_Cmd_Reserve();
 
 	/* A copy into a texture (glCopyTexSubImage2D) must be finished, and
 	   out of the texture cache, before anything samples it. */

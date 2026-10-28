@@ -22,6 +22,7 @@
 #include <math.h>
 
 #include "ps3gl.h"
+#include "../ps3_video.h"
 
 int ps3gl_cull_flip(void);
 
@@ -357,6 +358,7 @@ glClear(GLbitfield mask)
 		return;
 	}
 
+	PS3_Cmd_Reserve();
 	/* the clear obeys the scissor and the color mask */
 	ps3gl_apply_states();
 
