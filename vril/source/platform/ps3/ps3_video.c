@@ -80,7 +80,7 @@ static u32 *depth;
 static u32 depth_offset, depth_pitch;
 
 static int clear_frames;     /* framebuffers that still need black borders */
-static int perf_log;         /* fps and timings in the log every 10 s */
+static int perf_log = 1;     /* fps and timings in the log every 10 s (bring-up: on) */
 static int fit_percent = 90;
 static int filter_linear = 1;
 

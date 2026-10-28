@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <lv2/systime.h>
 
 #include "ps3gl.h"
 #include "../ps3_platform.h"
@@ -100,10 +101,13 @@ ps3gl_process_frees(void)
 	}
 }
 
+static uint64_t st_fence_wait_us;   /* CPU waiting for the RSX to finish a frame */
+
 static void
 WaitForFrame(uint32_t frame)
 {
 	int waited = 0;
+	uint64_t t0 = sysGetSystemTime();
 
 	while ((int)(ps3gl_completed_frame() - frame) < 0)
 	{
@@ -121,6 +125,7 @@ WaitForFrame(uint32_t frame)
 			break;
 		}
 	}
+	st_fence_wait_us += sysGetSystemTime() - t0;
 }
 
 /* ================================================================ */
@@ -289,15 +294,17 @@ PS3GL_LogStats(int frames)
 	if (frames > 0)
 	{
 		PS3_Log("[gl]   %u draws, %u verts, %u KB uploaded, %u copies per frame; "
-				"ring peak %u KB; textures %u MB%s",
+				"RSX fence wait %.1f ms per frame; ring peak %u KB; textures %u MB%s",
 				(unsigned)(ps3gl.st_draws / frames), (unsigned)(ps3gl.st_verts / frames),
 				(unsigned)(ps3gl.st_upload / frames / 1024),
-				(unsigned)(ps3gl.st_copies / frames), (unsigned)(ps3gl.ring_peak / 1024),
+				(unsigned)(ps3gl.st_copies / frames), st_fence_wait_us / 1000.0 / frames,
+				(unsigned)(ps3gl.ring_peak / 1024),
 				(unsigned)(ps3gl.st_tex_bytes >> 20),
 				ps3gl.st_dropped ? " -- DRAWS DROPPED (ring full)" : "");
 	}
 
 	ps3gl.st_draws = ps3gl.st_verts = ps3gl.st_upload = ps3gl.st_dropped = 0;
+	st_fence_wait_us = 0;
 	ps3gl.st_copies = 0;
 	ps3gl.ring_peak = 0;
 }
