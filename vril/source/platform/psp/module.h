@@ -1,1 +1,0 @@
-#define PSP_HEAP_SIZE_MB -2
