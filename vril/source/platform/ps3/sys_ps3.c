@@ -151,10 +151,16 @@ void Sys_FileSeek(int handle, int position) { fseek(sys_handles[handle], positio
 int Sys_FileRead(int handle, void *dest, int count) { return (int)fread(dest, 1, count, sys_handles[handle]); }
 int Sys_FileWrite(int handle, void *data, int count) { return (int)fwrite(data, 1, count, sys_handles[handle]); }
 
+// Only "does it exist" matters to the engine (-1 = no). Not stat()'s st_mtime:
+// TyrQuakeCell (on hardware) also opens the file instead, and a modification time
+// that happens to read as -1 would make a file that is there count as missing.
 int Sys_FileTime(char *path)
 {
-	struct stat st;
-	return stat(path, &st) == 0 ? (int)st.st_mtime : -1;
+	FILE *f = fopen(path, "rb");
+	if (!f)
+		return -1;
+	fclose(f);
+	return 1;
 }
 
 void Sys_mkdir(char *path) { mkdir(path, 0777); }

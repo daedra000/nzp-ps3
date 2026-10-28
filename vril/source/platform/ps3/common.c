@@ -1438,6 +1438,16 @@ int COM_FindFile (char *filename, int *handle, FILE **file)
 	}
 	
 	//Sys_Printf ("FindFile: can't find %s\n", filename);
+	{
+		// PS3: every missing file in the log (the first 200), the search paths once
+		static int missing;
+		extern void PS3_Log(const char *fmt, ...);
+		if (missing == 0)
+			for (search = com_searchpaths; search; search = search->next)
+				PS3_Log("FindFile: search path %s", search->pack ? search->pack->filename : search->filename);
+		if (missing++ < 200)
+			PS3_Log("FindFile: can't find %s", filename);
+	}
 	
 	if (handle)
 		*handle = -1;

@@ -4,11 +4,6 @@ on:
   push:
   pull_request:
   workflow_dispatch:
-    inputs:
-      full_pkg:
-        description: "Also build the full PKG (EBOOT + ~90 MB of game data)"
-        type: boolean
-        default: true
 
 env:
   # Pinned so the cached toolchain only rebuilds when these are bumped on purpose
@@ -185,14 +180,7 @@ jobs:
           ppu-size $elf
           ppu-nm -C --defined-only $elf | sort > nzportable.map
 
-      - name: EBOOT-only PKG (installs over the full one)
-        working-directory: vril
-        run: |
-          make -f Makefile.ps3 CGCOMP_BIN="$CGCOMP_BIN" pkg
-          cp build/ps3/nzportable.gnpdrm.pkg ../nzp-ps3-eboot-only.pkg
-
       - name: Fetch quakec and assets
-        if: github.event_name == 'workflow_dispatch' && inputs.full_pkg || startsWith(github.ref, 'refs/tags/')
         run: |
           git clone -q --filter=blob:none "https://github.com/$QUAKEC_REPO" "$RUNNER_TEMP/quakec"
           git -C "$RUNNER_TEMP/quakec" checkout -q "$QUAKEC_REF"
@@ -202,7 +190,6 @@ jobs:
       # What quakec's tools/qc-compiler-gnu.sh does, without its rule that any
       # warning fails the build: the result is checked by progs.dat existing.
       - name: Compile progs.dat (FTEQCC)
-        if: github.event_name == 'workflow_dispatch' && inputs.full_pkg || startsWith(github.ref, 'refs/tags/')
         working-directory: ${{ runner.temp }}/quakec
         run: |
           chmod +x bin/fteqcc-cli-lin
@@ -223,7 +210,6 @@ jobs:
           grep -v '^including' qc.log | tail -n 5
 
       - name: Assemble game data
-        if: github.event_name == 'workflow_dispatch' && inputs.full_pkg || startsWith(github.ref, 'refs/tags/')
         run: |
           # As the assets repo assembles the PC data: pc/nzp first, then common/
           # without overwriting what the PC set already has.
@@ -235,22 +221,28 @@ jobs:
           printf '\n// PS3\nseta cl_controllerglyphs "sony"\n' >> "$RUNNER_TEMP/nzp/autoexec.cfg"
           du -sh "$RUNNER_TEMP/nzp"
 
-      - name: Full PKG (EBOOT + game data)
-        if: github.event_name == 'workflow_dispatch' && inputs.full_pkg || startsWith(github.ref, 'refs/tags/')
+      - name: PKG (EBOOT + game data)
         working-directory: vril
         run: |
-          rm -f build/ps3/nzportable.pkg build/ps3/nzportable.gnpdrm.pkg
           make -f Makefile.ps3 CGCOMP_BIN="$CGCOMP_BIN" DATA_DIR="$RUNNER_TEMP/nzp" pkg
-          cp build/ps3/nzportable.gnpdrm.pkg ../nzp-ps3-full.pkg
+          # the data must be in what was packed, file for file
+          src=$(find "$RUNNER_TEMP/nzp" -type f | wc -l)
+          packed=$(find build/ps3/package/pkg/USRDIR/nzp -type f | wc -l)
+          echo "::notice title=game data::$src files assembled, $packed in the PKG, $(du -sh build/ps3/nzportable.gnpdrm.pkg | cut -f1) PKG"
+          for f in gfx/palette.lmp textures/particles/particlefont.tga progs.dat default.cfg; do
+            [ -f "build/ps3/package/pkg/USRDIR/nzp/$f" ] || { echo "::error title=missing from PKG::$f"; exit 1; }
+          done
+          [ "$src" -eq "$packed" ] || { echo "::error title=game data::only $packed of $src files packed"; exit 1; }
+          cp build/ps3/nzportable.gnpdrm.pkg ../nzp-ps3.pkg
 
       - name: Upload
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: nzp-ps3
-          retention-days: 7  # the account's Actions storage is small
+          retention-days: 3  # the account's Actions storage is small (~60 MB a run)
           path: |
-            nzp-ps3-*.pkg
+            nzp-ps3.pkg
             vril/build/ps3/nzportable.self
             vril/nzportable.map
             vril/build.log
