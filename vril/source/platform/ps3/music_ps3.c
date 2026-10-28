@@ -32,7 +32,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "ps3_platform.h"
 #include "ps3_local.h"
 
-#include <lv2/mutex.h>
+#include <unistd.h>
+
 
 #define MINIMP3_IMPLEMENTATION
 #define MINIMP3_ONLY_MP3
@@ -45,7 +46,36 @@ volatile int music_job_started;
 int music_volume;
 qboolean music_paused;
 
-static sys_lwmutex_t music_lock;
+// A plain atomic flag, not an lv2 lightweight mutex: with one, the game thread's
+// sysLwMutexLock in music_stop never returned (the loading screen froze the
+// console). The audio thread only ever tries it; the game thread waits briefly.
+static volatile int music_lock;
+
+static int Music_TryLock(void)
+{
+	if (!__sync_bool_compare_and_swap(&music_lock, 0, 1))
+		return 0;
+	__asm__ volatile("isync" ::: "memory");
+	return 1;
+}
+
+static void Music_Lock(void)
+{
+	int waited = 0;
+	while (!Music_TryLock()) {
+		usleep(100);
+		if (++waited == 20000) {   // ~2 s: the audio thread never holds it this long
+			PS3_Log("music_ps3: WARNING: lock held for 2 s, taking it");
+			music_lock = 0;
+		}
+	}
+}
+
+static void Music_Unlock(void)
+{
+	__asm__ volatile("lwsync" ::: "memory");
+	music_lock = 0;
+}
 static qboolean music_initialized;
 
 // The playing track: owned by whoever holds music_lock.
@@ -96,10 +126,10 @@ void PS3_Music_Mix(float *out, int frames)
 	double step;
 	int i;
 
-	if (!music_initialized || sysLwMutexTryLock(&music_lock) != 0)
+	if (!music_initialized || !Music_TryLock())
 		return;
 	if (!track.file || track.done || music_paused || music_volume <= 0) {
-		sysLwMutexUnlock(&music_lock);
+		Music_Unlock();
 		return;
 	}
 
@@ -122,7 +152,7 @@ void PS3_Music_Mix(float *out, int frames)
 			if (!Track_Decode()) {
 				track.done = true;
 				music_job_started = 0;   // snd_music.c restarts it if it loops
-				sysLwMutexUnlock(&music_lock);
+				Music_Unlock();
 				return;
 			}
 		}
@@ -140,24 +170,12 @@ void PS3_Music_Mix(float *out, int frames)
 		out[i * 2 + 1] += (a[1] + (b[1] - a[1]) * frac) * gain;
 		track.pcm_pos += step;
 	}
-	sysLwMutexUnlock(&music_lock);
+	Music_Unlock();
 }
 
 int music_init(void)
 {
-	sys_lwmutex_attr_t attr;
-
-	// As thug-ps3's lightweight mutex on hardware: PRIO + recursive. Lightweight
-	// mutexes don't take PRIO_INHERIT (the first build failed to create one).
-	memset(&attr, 0, sizeof(attr));
-	attr.attr_protocol = SYS_LWMUTEX_PROTOCOL_PRIO;
-	attr.attr_recursive = SYS_LWMUTEX_ATTR_RECURSIVE;
-	strcpy(attr.name, "music");
-	if (sysLwMutexCreate(&music_lock, &attr) != 0) {
-		// Without music the game still runs: snd_music.c makes a failed init fatal.
-		PS3_Log("music_ps3: sysLwMutexCreate failed, no music");
-		return 1;
-	}
+	music_lock = 0;
 	music_initialized = true;
 	return 1;
 }
@@ -168,7 +186,6 @@ void music_deinit(void)
 		return;
 	music_stop();
 	music_initialized = false;
-	sysLwMutexDestroy(&music_lock);
 }
 
 // 1 playing, 2 file not found, 0 other failure (as music_sdl.c).
@@ -203,20 +220,20 @@ int music_start_play(char *fname, int pos)
 	}
 	fclose(f);
 
-	sysLwMutexLock(&music_lock, 0);
+	Music_Lock();
 	memset(&track, 0, sizeof(track));
 	track.file = data;
 	track.file_size = (int)size;
 	mp3dec_init(&track.dec);
 	if (!Track_Decode()) {
 		Track_Free();
-		sysLwMutexUnlock(&music_lock);
+		Music_Unlock();
 		Con_Printf("music: %s is not an MP3 minimp3 can play\n", fname);
 		return 0;
 	}
 	music_job_started = 1;
 	music_paused = false;
-	sysLwMutexUnlock(&music_lock);
+	Music_Unlock();
 	return 1;
 }
 
@@ -227,12 +244,12 @@ void music_stop(void)
 {
 	if (!music_initialized)
 		return;
-	PS3_Stage("music stop (lock)");
-	sysLwMutexLock(&music_lock, 0);
+	PS3_Stage("music stop");
+	Music_Lock();
 	Track_Free();
 	music_job_started = 0;
 	music_paused = false;
-	sysLwMutexUnlock(&music_lock);
+	Music_Unlock();
 }
 
 void music_update(void) {}

@@ -320,15 +320,25 @@ static void PS3_GameThread(void *arg)
 	PS3_Watchdog_Start();
 	oldtime = Sys_FloatTime();
 	while (!ps3_quit_requested) {
-		static unsigned frame;
+		static double next_alive = 30.0;
+		static int last_frames;
+		int frames_before = host_framecount;
 		double now = Sys_FloatTime();
 		Host_Frame(now - oldtime);
 		music_update();
 		oldtime = now;
 		PS3_Heartbeat();
-		// a sign of life every ~30 s, and the frame rate it implies
-		if (++frame % 1800 == 0)
-			PS3_Log("[alive] frame %u, %.1f s", frame, now);
+		// Host_Frame returns at once until a frame's time has gone by: don't
+		// spin the PPU (the audio thread shares it) while waiting
+		if (host_framecount == frames_before)
+			usleep(500);
+		// a sign of life every 30 s, with the frame rate
+		if (now >= next_alive) {
+			PS3_Log("[alive] %.0f s, frame %d, %.1f fps", now, host_framecount,
+				(host_framecount - last_frames) / 30.0);
+			last_frames = host_framecount;
+			next_alive = now + 30.0;
+		}
 	}
 
 	// Writes config.cfg, then lets go of the audio port and the RSX (VID_Shutdown):
