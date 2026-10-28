@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // common.c -- misc functions used in client and server
 
 #include "../../nzportable_def.h"
+#include <errno.h>
 
 #ifndef _WIN32
 #include <dirent.h>
@@ -1445,8 +1446,26 @@ int COM_FindFile (char *filename, int *handle, FILE **file)
 		if (missing == 0)
 			for (search = com_searchpaths; search; search = search->next)
 				PS3_Log("FindFile: search path %s", search->pack ? search->pack->filename : search->filename);
-		if (missing++ < 200)
-			PS3_Log("FindFile: can't find %s", filename);
+		if (missing++ < 200) {
+			char full[MAX_OSPATH];
+			FILE *probe;
+			int err;
+			// errno of the direct open (ENOENT = not there, EMFILE = out of
+			// handles), and whether a file known to exist still opens.
+			snprintf(full, sizeof(full), "%s/%s", com_searchpaths->filename, filename);
+			errno = 0;
+			probe = fopen(full, "rb");
+			err = errno;
+			if (probe) fclose(probe);
+			snprintf(netpath, sizeof(netpath), "%s/gfx/palette.lmp", com_searchpaths->filename);
+			{
+				FILE *known = fopen(netpath, "rb");
+				PS3_Log("FindFile: can't find %s (open: %s, errno %d %s; gfx/palette.lmp %s)",
+					filename, probe ? "ok" : "failed", err, strerror(err),
+					known ? "opens" : "does NOT open");
+				if (known) fclose(known);
+			}
+		}
 	}
 	
 	if (handle)
