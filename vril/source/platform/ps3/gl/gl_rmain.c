@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // r_main.c
 
 #include "../../../nzportable_def.h"
+#include "../ps3_platform.h"
 
 entity_t	r_worldentity;
 
@@ -1578,12 +1579,21 @@ void R_RenderScene (void)
 
 	R_MarkLeaves(r_novis.value != 0, mirror);	// done here so we know if we're in water
 
+#ifdef __PS3__
+	PS3_Stage("render: world");
+#endif
 	R_DrawWorld ();		// adds static entities to the list
 
 	S_ExtraUpdate ();	// don't let sound get messed up if going slow
 
+#ifdef __PS3__
+	PS3_Stage("render: entities");
+#endif
 	R_DrawEntitiesOnList ();
 
+#ifdef __PS3__
+	PS3_Stage("render: decals, particles");
+#endif
 	R_DrawDecals ();
 	R_DrawParticles ();
 }
@@ -1689,6 +1699,9 @@ void R_Mirror (void)
 	glDepthFunc (GL_LEQUAL);
 
 	R_RenderScene ();
+#ifdef __PS3__
+	PS3_Stage("render: water, mirror, blend");
+#endif
 	R_DrawWaterSurfaces ();
 
 	gldepthmin = 0;
@@ -1762,6 +1775,9 @@ void R_RenderView (void)
 	MYgluPerspective(r_refdef.fov_y,
 		(float)r_refdef.vrect.width / r_refdef.vrect.height, 0.1f, 4096.0f);
 	glMatrixMode(GL_MODELVIEW);
+#ifdef __PS3__
+	PS3_Stage("render: viewmodel");
+#endif
 	R_DrawViewModel ();
 	R_DrawView2Model ();
 	glMatrixMode(GL_PROJECTION);
@@ -1786,4 +1802,7 @@ void R_RenderView (void)
 			(int)((time2-time1)*1000), c_brush_polys, c_alias_polys,
 			base_batches, lightmap_batches, base_indices, lightmap_indices);
 	}
+#ifdef __PS3__
+	PS3_Stage("render: 2D, present");
+#endif
 }

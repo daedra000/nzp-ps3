@@ -282,6 +282,10 @@ PS3GL_EndFrame(void)
 		return;
 	}
 
+	{
+		extern void ps3gl_capture_end(void);
+		ps3gl_capture_end();
+	}
 	PS3_Cmd_Reserve();
 	/* Written by the RSX once everything before it is drawn. */
 	rsxSetWriteBackendLabel(ps3gl.ctx, PS3GL_LABEL_FRAME, ps3gl.frame);

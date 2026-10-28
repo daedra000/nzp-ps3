@@ -592,6 +592,7 @@ typedef struct {
 	uint8_t  units;
 	uint8_t  blend, alpha, depth;
 	struct { int16_t name; uint16_t w, h; uint8_t swz, levels; } tex[PS3GL_MAX_TMUS];
+	uint32_t area;   /* screen pixels its bounding box covers (capture frames only) */
 } trace_draw_t;
 
 static struct {
@@ -601,6 +602,111 @@ static struct {
 } trace[TRACE_FRAMES];
 
 static int last_fp;
+
+/* A GPU-heavy frame (the RSX made the CPU wait for a free framebuffer) is
+   captured: every draw's screen area from its vertices, the biggest listed.
+   Reading the ring back from RSX memory is slow: only that one frame, and
+   at most 48 vertices of each draw. */
+static uint32_t capture_frame;
+static int captures;
+
+void
+ps3gl_request_capture(void)
+{
+	if (captures < 4 && !capture_frame)
+	{
+		capture_frame = ps3gl.frame + 1;
+	}
+}
+
+static uint32_t
+DrawArea(const ps3gl_vertex_t *v, int n)
+{
+	const float *m = ps3gl.mvp;
+	float x0 = 1e9f, y0 = 1e9f, x1 = -1e9f, y1 = -1e9f, sw, sh;
+	int i, step = n > 48 ? n / 48 : 1;
+
+	for (i = 0; i < n; i += step)
+	{
+		float x = v[i].x, y = v[i].y, z = v[i].z;
+		float cw = m[12] * x + m[13] * y + m[14] * z + m[15];
+		float cx, cy;
+
+		if (cw <= 0.001f)
+		{
+			return (uint32_t)(ps3gl.screen_w * ps3gl.screen_h);   /* through the camera: call it all */
+		}
+		cx = (m[0] * x + m[1] * y + m[2] * z + m[3]) / cw;
+		cy = (m[4] * x + m[5] * y + m[6] * z + m[7]) / cw;
+		if (cx < x0) x0 = cx;
+		if (cx > x1) x1 = cx;
+		if (cy < y0) y0 = cy;
+		if (cy > y1) y1 = cy;
+	}
+	if (x0 < -1.0f) x0 = -1.0f;
+	if (y0 < -1.0f) y0 = -1.0f;
+	if (x1 > 1.0f) x1 = 1.0f;
+	if (y1 > 1.0f) y1 = 1.0f;
+	if (x1 <= x0 || y1 <= y0)
+	{
+		return 0;
+	}
+	sw = (x1 - x0) * 0.5f * ps3gl.screen_w;
+	sh = (y1 - y0) * 0.5f * ps3gl.screen_h;
+	return (uint32_t)(sw * sh);
+}
+
+static void TraceDraw(GLenum mode, int count, unsigned units);
+
+static void
+TraceDrawAt(GLenum mode, int count, unsigned units, uint32_t ring_off, int nverts)
+{
+	TraceDraw(mode, count, units);
+	if (capture_frame == ps3gl.frame)
+	{
+		int slot = ps3gl.frame % TRACE_FRAMES;
+		if (trace[slot].n <= TRACE_DRAWS)
+		{
+			const ps3gl_vertex_t *v = (const ps3gl_vertex_t *)(ps3gl.ring + (ring_off - ps3gl.ring_off));
+			trace[slot].d[trace[slot].n - 1].area = DrawArea(v, nverts);
+		}
+	}
+}
+
+/* At the end of a captured frame: total coverage and the biggest draws. */
+void
+ps3gl_capture_end(void)
+{
+	int slot, i, j, n, top[12], ntop = 0;
+	double total = 0, screen;
+
+	if (capture_frame != ps3gl.frame)
+	{
+		return;
+	}
+	capture_frame = 0;
+	captures++;
+	slot = ps3gl.frame % TRACE_FRAMES;
+	n = trace[slot].n < TRACE_DRAWS ? trace[slot].n : TRACE_DRAWS;
+	screen = (double)ps3gl.screen_w * ps3gl.screen_h;
+	for (i = 0; i < n; i++)
+	{
+		total += trace[slot].d[i].area;
+		/* insertion into the top 12 by area */
+		for (j = ntop; j > 0 && trace[slot].d[top[j - 1]].area < trace[slot].d[i].area; j--)
+			if (j < 12) top[j] = top[j - 1];
+		if (j < 12) { top[j] = i; if (ntop < 12) ntop++; }
+	}
+	PS3_Log("[gpu] heavy frame %u: %d draws (%d traced), pixels drawn %.1f screens; biggest:",
+			(unsigned)ps3gl.frame, trace[slot].n, n, total / screen);
+	for (i = 0; i < ntop; i++)
+	{
+		const trace_draw_t *d = &trace[slot].d[top[i]];
+		PS3_Log("[gpu]  #%d %.2f screens, mode 0x%x count %u fp %u blend %d alpha %d depth %d t0 %d %ux%u lv %d",
+				top[i], d->area / screen, d->mode, (unsigned)d->count, d->fp, d->blend, d->alpha, d->depth,
+				d->tex[0].name, d->tex[0].w, d->tex[0].h, d->tex[0].levels);
+	}
+}
 
 static void
 TraceDraw(GLenum mode, int count, unsigned units)
@@ -622,6 +728,7 @@ TraceDraw(GLenum mode, int count, unsigned units)
 	d->mode = (uint16_t)mode;
 	d->fp = (uint16_t)last_fp;
 	d->count = (uint32_t)count;
+	d->area = 0;
 	d->units = (uint8_t)units;
 	d->blend = (uint8_t)ps3gl.rs.blend;
 	d->alpha = (uint8_t)ps3gl.rs.alpha_test;
@@ -722,7 +829,7 @@ glDrawArrays(GLenum mode, GLint first, GLsizei count)
 	}
 
 	BindRing(off);
-	TraceDraw(mode, count, units);
+	TraceDrawAt(mode, count, units, off, count);
 	rsxDrawVertexArray(ps3gl.ctx, prim, 0, (u32)count);
 
 	ps3gl.st_draws++;
@@ -792,7 +899,7 @@ glDrawElements(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices)
 	}
 
 	BindRing(off);
-	TraceDraw(mode, count, units);
+	TraceDrawAt(mode, count, units, off, hi - lo + 1);
 	rsxDrawInlineIndexArray16(ps3gl.ctx, prim, 0, (u32)count, idx16);
 
 	ps3gl.st_draws++;
@@ -900,7 +1007,7 @@ ImFlush(int count)
 	memcpy(out, im_buf, (size_t)count * PS3GL_VERTEX_SIZE);
 
 	BindRing(off);
-	TraceDraw(ps3gl.im_mode, count, units);
+	TraceDrawAt(ps3gl.im_mode, count, units, off, count);
 
 	if (nidx)
 	{

@@ -952,7 +952,16 @@ PS3_Video_Present(void)
 
 	t0 = sysGetSystemTime();
 	WaitFlips();
-	prof_wait_us += sysGetSystemTime() - t0;
+	t0 = sysGetSystemTime() - t0;
+	prof_wait_us += t0;
+#ifdef GLQUAKE
+	/* the RSX is behind: list what the next frame draws */
+	if (gl_mode && t0 > 6000 && frames > 600)
+	{
+		extern void ps3gl_request_capture(void);
+		ps3gl_request_capture();
+	}
+#endif
 
 	/* Keep the picture's aspect (square pixels), inside the screen fit
 	   area, centered. 4:3 modes get black bars on a 16:9 TV. */

@@ -68,7 +68,7 @@ static volatile unsigned stage_next;
 static volatile unsigned stage_progress;
 
 /* Time per part of Host_Frame (the "frame: ..." stages), for [alive]. */
-#define MAX_PHASES 12
+#define MAX_PHASES 20
 static struct { const char *name; double total; } phases[MAX_PHASES];
 static int num_phases;
 static int slow_logged;
@@ -76,7 +76,7 @@ static int slow_logged;
 static void AddPhaseTime(const char *name, double dt)
 {
 	int i;
-	if (strncmp(name, "frame: ", 7))
+	if (strncmp(name, "frame: ", 7) && strncmp(name, "render: ", 8))
 		return;
 	for (i = 0; i < num_phases; i++)
 		if (!strcmp(phases[i].name, name))
@@ -124,7 +124,7 @@ void PS3_Stage_Report(char *out, int size, int frames)
 	out[0] = 0;
 	for (i = 0; i < num_phases && used < size - 1; i++) {
 		used += snprintf(out + used, size - used, "%s%s %.1f", i ? ", " : "",
-			phases[i].name + 7, frames > 0 ? phases[i].total * 1000.0 / frames : 0.0);
+			strchr(phases[i].name, ' ') + 1, frames > 0 ? phases[i].total * 1000.0 / frames : 0.0);
 		phases[i].total = 0;
 	}
 }
