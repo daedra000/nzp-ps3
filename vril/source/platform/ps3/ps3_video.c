@@ -90,6 +90,7 @@ static int lock30;
 
 /* profiling, reset every 10 seconds */
 static u64 prof_copy_us, prof_wait_us, prof_lock_us;
+static int frames_presented;
 
 
 /* ================================================================ */
@@ -605,7 +606,17 @@ PS3_Video_BindRenderTarget(void)
 		u64 t0 = sysGetSystemTime();
 
 		WaitFlips();
-		prof_wait_us += sysGetSystemTime() - t0;
+		t0 = sysGetSystemTime() - t0;
+		prof_wait_us += t0;
+#ifdef GLQUAKE
+		/* the RSX is behind: list what this frame draws (the wait is here,
+		   at the start of a frame, not in Present) */
+		if (t0 > 6000 && frames_presented > 600)
+		{
+			extern void ps3gl_request_capture(void);
+			ps3gl_request_capture();
+		}
+#endif
 	}
 
 	memset(&sf, 0, sizeof(sf));
@@ -1073,6 +1084,7 @@ flip:
 	}
 
 	frames++;
+	frames_presented = frames;
 
 	/* Frame rate in the log every 10 seconds. Not more often: every write
 	   to the HDD flashes the system's activity icon. */

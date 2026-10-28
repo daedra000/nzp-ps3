@@ -19,6 +19,9 @@
 // r_world.c -- Texture-sorted BSP traversal and lightmap passes
 
 #include "../nzportable_def.h"
+#ifdef __PS3__
+#include "../platform/ps3/ps3_platform.h"
+#endif
 
 static r_world_layout_t world_layout;
 static qboolean world_separate_arrays, world_hardware_clipping;
@@ -862,10 +865,19 @@ R_DrawWorld(void)
     R_ClearLightmapChains();
     R_ClearWorldBatches();
     R_DrawSkyBox();
+#ifdef __PS3__
+    PS3_Stage("render: world: walk BSP (lightmap builds)");
+#endif
     R_RecursiveWorldNode(cl.worldmodel->nodes, planes);
     R_AddStaticBrushModelsToChains(planes);
     Fog_SetupFrame(true);
+#ifdef __PS3__
+    PS3_Stage("render: world: texture chains");
+#endif
     R_DrawTextureChains();
     Fog_SetupFrame(false);
+#ifdef __PS3__
+    PS3_Stage("render: world: lightmap upload, blend");
+#endif
     R_BlendLightmaps();
 }
