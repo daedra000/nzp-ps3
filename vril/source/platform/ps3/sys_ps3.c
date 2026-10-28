@@ -66,51 +66,136 @@ LOG
 #define PS3_LOG_PATH     PS3_APP_DIR "/nzp_log.txt"
 #define PS3_LOG_OLD_PATH PS3_APP_DIR "/nzp_log.old.txt"
 
-// Every line is a trip to the HDD (opened, written, closed, so a crash right after
-// still leaves it on disk): capped per run so a chatty frame can't slow the game.
+// Capped per run so a chatty frame can't fill the HDD.
 #define PS3_LOG_MAX (512 * 1024)
 
+// Until the main loop starts every line goes straight to the file (opened,
+// written, closed: a crash right after still leaves it on disk). From then on
+// a line only goes into memory and a low-priority thread writes it a moment
+// later: an HDD write can take 2 s (the stutter every 30 s in Nacht was the
+// [alive] line), and the game must not wait for it.
+#define LOG_BUF_SIZE (64 * 1024)
+
 static long ps3_log_written;
+static char log_buf[LOG_BUF_SIZE];
+static int log_buf_len;
+static int log_dropped;
+static volatile int log_buf_lock, log_file_lock;
+static volatile int log_async;
 
-void PS3_Log(const char *fmt, ...)
+static void SpinLock(volatile int *lock)
 {
-	va_list argptr;
-	FILE *f;
-	int n;
+	while (!__sync_bool_compare_and_swap(lock, 0, 1))
+		usleep(50);
+	__asm__ volatile("isync" ::: "memory");
+}
 
-	if (ps3_log_written >= PS3_LOG_MAX)
+static void SpinUnlock(volatile int *lock)
+{
+	__asm__ volatile("lwsync" ::: "memory");
+	*lock = 0;
+}
+
+static void LogWriteFile(const char *text, int n)
+{
+	FILE *f;
+
+	if (n <= 0 || ps3_log_written >= PS3_LOG_MAX)
 		return;
 	f = fopen(PS3_LOG_PATH, "a");
 	if (!f)
 		return;
-	if (ps3_log_written + 256 >= PS3_LOG_MAX) {
+	if (ps3_log_written + n >= PS3_LOG_MAX - 64) {
 		fprintf(f, "(log full: nothing more is written this run)\n");
-		fclose(f);
 		ps3_log_written = PS3_LOG_MAX;
+	} else {
+		fwrite(text, 1, n, f);
+		ps3_log_written += n;
+	}
+	fclose(f);
+}
+
+// Writes out what is waiting in memory. Any thread; also called before exit.
+void PS3_Log_Flush(void)
+{
+	static char out[LOG_BUF_SIZE + 64];
+	int n, dropped;
+
+	SpinLock(&log_file_lock);
+	SpinLock(&log_buf_lock);
+	n = log_buf_len;
+	memcpy(out, log_buf, n);
+	log_buf_len = 0;
+	dropped = log_dropped;
+	log_dropped = 0;
+	SpinUnlock(&log_buf_lock);
+	if (dropped)
+		n += snprintf(out + n, 64, "(%d log lines dropped: buffer full)\n", dropped);
+	LogWriteFile(out, n);
+	SpinUnlock(&log_file_lock);
+}
+
+static void LogAppend(const char *text, int n)
+{
+	if (n <= 0)
+		return;
+	if (!log_async) {
+		SpinLock(&log_file_lock);
+		LogWriteFile(text, n);
+		SpinUnlock(&log_file_lock);
 		return;
 	}
+	SpinLock(&log_buf_lock);
+	if (log_buf_len + n <= LOG_BUF_SIZE) {
+		memcpy(log_buf + log_buf_len, text, n);
+		log_buf_len += n;
+	} else {
+		log_dropped++;
+	}
+	SpinUnlock(&log_buf_lock);
+}
+
+static void LogWriterThread(void *arg)
+{
+	(void)arg;
+	for (;;) {
+		usleep(250 * 1000);
+		if (log_buf_len || log_dropped)
+			PS3_Log_Flush();
+	}
+}
+
+static void PS3_Log_StartAsync(void)
+{
+	sys_ppu_thread_t id;
+	// below the game (1000): it only runs when the game waits
+	if (sysThreadCreate(&id, LogWriterThread, NULL, 1500, 32 * 1024, 0, (char *)"nzp_log") == 0)
+		log_async = 1;
+	else
+		PS3_Log("log writer thread not started: the log stays synchronous");
+}
+
+void PS3_Log(const char *fmt, ...)
+{
+	char line[1024];
+	va_list argptr;
+	int n;
+
 	va_start(argptr, fmt);
-	n = vfprintf(f, fmt, argptr);
+	n = vsnprintf(line, sizeof(line) - 1, fmt, argptr);
 	va_end(argptr);
-	fprintf(f, "\n");
-	fclose(f);
-	ps3_log_written += (n > 0 ? n : 0) + 1;
+	if (n < 0)
+		return;
+	if (n > (int)sizeof(line) - 2)
+		n = sizeof(line) - 2;
+	line[n++] = '\n';
+	LogAppend(line, n);
 }
 
 // The engine's console output, as it is printed (no newline added).
 static void PS3_LogRaw(const char *text)
 {
-	FILE *f;
-	size_t n = strlen(text);
-
-	if (!n || ps3_log_written + (long)n >= PS3_LOG_MAX - 256)
-		return;
-	f = fopen(PS3_LOG_PATH, "a");
-	if (!f)
-		return;
-	fwrite(text, 1, n, f);
-	fclose(f);
-	ps3_log_written += (long)n;
+	LogAppend(text, (int)strlen(text));
 }
 
 void Sys_DebugLog(char *file, char *fmt, ...) { (void)file; (void)fmt; }
@@ -212,6 +297,7 @@ void Sys_SystemError(char *error)
 
 	PS3_Log("=== Sys_Error ===");
 	PS3_Log("%s", error);
+	PS3_Log_Flush();
 	printf("Vril Engine: %s\n", error);
 
 	// Let go of the audio port and the RSX before exit(): leaving with the RSX's
@@ -318,6 +404,7 @@ static void PS3_GameThread(void *arg)
 	PS3_Log("Host_Init done, entering the main loop");
 
 	PS3_Watchdog_Start();
+	PS3_Log_StartAsync();
 	oldtime = Sys_FloatTime();
 	while (!ps3_quit_requested) {
 		static double next_alive = 30.0;
@@ -338,8 +425,10 @@ static void PS3_GameThread(void *arg)
 			int frames = host_framecount - last_frames;
 			double audio = PS3_Audio_TakeBusyUs() / 1e6;
 			PS3_Stage_Report(phases_ms, sizeof(phases_ms), frames);
-			PS3_Log("[alive] %.0f s, frame %d, %.1f fps; ms per frame: %s; audio thread busy %.0f%%",
-				now, host_framecount, frames / 30.0, phases_ms, audio * 100.0 / 30.0);
+			char audio_state[96];
+			PS3_Audio_Status(audio_state, sizeof(audio_state));
+			PS3_Log("[alive] %.0f s, frame %d, %.1f fps; ms per frame: %s; audio thread busy %.0f%%, %s",
+				now, host_framecount, frames / 30.0, phases_ms, audio * 100.0 / 30.0, audio_state);
 			last_frames = host_framecount;
 			next_alive = now + 30.0;
 		}
@@ -349,9 +438,11 @@ static void PS3_GameThread(void *arg)
 	// exiting with the RSX's handlers still pointing into this process crashes the
 	// whole console.
 	PS3_Log("Shutting down");
+	PS3_Log_Flush();
 	Host_Shutdown();
 	free(parms.membase);
 	PS3_Log("Bye");
+	PS3_Log_Flush();
 	sysThreadExit(0);
 }
 

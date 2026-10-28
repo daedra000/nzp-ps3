@@ -107,13 +107,17 @@ static void Track_Free(void)
 	memset(&track, 0, sizeof(track));
 }
 
+extern volatile int ps3_audio_where;   // snd_ps3.c
+
 // Decodes MP3 frames until there is one with samples. false at the end of the file.
 static qboolean Track_Decode(void)
 {
 	mp3dec_frame_info_t info;
 
 	while (track.file_pos < track.file_size) {
-		int frames = mp3dec_decode_frame(&track.dec, track.file + track.file_pos,
+		int frames;
+		ps3_audio_where = 31;
+		frames = mp3dec_decode_frame(&track.dec, track.file + track.file_pos,
 			track.file_size - track.file_pos, track.pcm, &info);
 		if (info.frame_bytes <= 0)
 			break;   // nothing more it can make sense of

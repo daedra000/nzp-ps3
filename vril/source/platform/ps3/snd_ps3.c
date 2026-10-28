@@ -54,6 +54,16 @@ static volatile u32      blocks_written;
 static short ring[PS3_RING_SAMPLES] __attribute__((aligned(128)));
 
 static volatile u64 audio_busy_us;
+static volatile u64 audio_blocks;
+volatile int ps3_audio_where;   // where the audio thread is (music_ps3.c sets 30s)
+
+void PS3_Audio_Status(char *out, int size)
+{
+	static const char *const names[] = {"start", "waiting for the port", "copying sound", "mixing music", "writing the block"};
+	int w = ps3_audio_where;
+	snprintf(out, size, "%llu blocks, now %s (%d)", (unsigned long long)audio_blocks,
+		w >= 0 && w < 5 ? names[w] : w >= 30 ? "in the music decoder" : "?", w);
+}
 
 unsigned long long PS3_Audio_TakeBusyUs(void)
 {
@@ -81,6 +91,7 @@ static void PS3_AudioThread(void *arg)
 		u32 write_block, pos, i;
 		f32 *dst;
 
+		ps3_audio_where = 1;
 		if (sysEventQueueReceive(port_queue, &event, 20 * 1000) != 0) {
 			if (++timeouts <= 3 || (timeouts % 500) == 0)
 				PS3_Log("snd_ps3: port event timeout #%d", timeouts);
@@ -94,9 +105,12 @@ static void PS3_AudioThread(void *arg)
 		dst = data_start + write_block * PS3_AUDIO_CHANNELS * PS3_AUDIO_BLOCK;
 		pos = (blocks_written * PS3_AUDIO_BLOCK * PS3_AUDIO_CHANNELS) % PS3_RING_SAMPLES;
 
+		ps3_audio_where = 2;
 		for (i = 0; i < PS3_AUDIO_BLOCK * PS3_AUDIO_CHANNELS; i++)
 			block[i] = ring[pos + i] * (1.0f / 32768.0f);
+		ps3_audio_where = 3;
 		PS3_Music_Mix(block, PS3_AUDIO_BLOCK);
+		ps3_audio_where = 4;
 		for (i = 0; i < PS3_AUDIO_BLOCK * PS3_AUDIO_CHANNELS; i++) {
 			float s = block[i];
 			block[i] = s > 1.0f ? 1.0f : s < -1.0f ? -1.0f : s;
@@ -104,6 +118,7 @@ static void PS3_AudioThread(void *arg)
 		// audioDataStart's alignment isn't guaranteed: plain copy.
 		memcpy(dst, block, sizeof(block));
 		blocks_written++;
+		audio_blocks++;
 		audio_busy_us += sysGetSystemTime() - t0;
 	}
 	sysThreadExit(0);

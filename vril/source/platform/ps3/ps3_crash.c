@@ -165,6 +165,7 @@ static void WatchdogThread(void *arg)
 			char why[64];
 			snprintf(why, sizeof(why), "no progress for %d s (game time %.2f)", WATCHDOG_SECS, Sys_FloatTime());
 			DumpStages(why);
+			PS3_Log_Flush();   // the writer thread may be the one that can't run
 			reported = 1;
 		}
 	}
@@ -240,6 +241,7 @@ static void PS3_CrashHandler(u64 cause, sys_ppu_thread_t tid, u64 dar)
 	for (i = cmd_trail_next > CMD_TRAIL ? cmd_trail_next - CMD_TRAIL : 0; i < cmd_trail_next; i++)
 		PS3_Log("[crash]   %s", cmd_trail[i % CMD_TRAIL]);
 	PS3_Log("[crash] exiting");
+	PS3_Log_Flush();
 	sysProcessExit(1);
 }
 

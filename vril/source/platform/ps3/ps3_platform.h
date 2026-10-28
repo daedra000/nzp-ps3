@@ -20,7 +20,11 @@ void PS3_Heartbeat(void);
 void PS3_Stage_Report(char *out, int size, int frames);
 /* snd_ps3.c: microseconds the audio thread spent mixing since the last call */
 unsigned long long PS3_Audio_TakeBusyUs(void);
+void PS3_Audio_Status(char *out, int size);
 void PS3_Watchdog_Start(void);
+
+/* sys_ps3.c: write out what the log holds in memory (before an exit, after a dump) */
+void PS3_Log_Flush(void);
 
 /* sys_ps3.c: one line in USRDIR/nzp_log.txt */
 void PS3_Log(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
