@@ -276,6 +276,9 @@ jobs:
           echo "::notice title=maps::$(ls "$RUNNER_TEMP/nzp/maps" | grep -ci '\.bsp$') .bsp from $(basename "$(dirname "$pcmaps")") ($(ls "$RUNNER_TEMP/nzp/maps" | grep -i '\.bsp$' | tr '\n' ' '))"
           # what else the PC build has that this data doesn't (for reference)
           echo "::notice title=only in the PC build::$(cd "$(dirname "$pcmaps")" && find . -type f | sed 's#^\./##' | while read -r f; do [ -e "$RUNNER_TEMP/nzp/$f" ] || echo "$f"; done | head -60 | tr '\n' ' ')"
+          # Main menu version line (the PC build has one; the assets repo doesn't):
+          # kept in the repo, with this build's commit added
+          printf '%s-%s\n' "$(head -1 vril/source/platform/ps3/version.txt)" "${GITHUB_SHA::7}" > "$RUNNER_TEMP/nzp/version.txt"
           # PS3: PlayStation button icons
           # (the engine's default is "sony" on PS3; the PC config.cfg saves "xbox")
           sed -i 's/^cl_controllerglyphs .*/cl_controllerglyphs "sony"/' "$RUNNER_TEMP/nzp/config.cfg"
@@ -296,7 +299,7 @@ jobs:
           packed=$(find build/ps3/package/pkg/USRDIR/nzp -type f | wc -l)
           echo "::notice title=game data::$src files assembled, $packed in the PKG, $(du -sh build/ps3/nzportable.gnpdrm.pkg | cut -f1) PKG"
           echo "::notice title=sizes::data $(du -sb "$RUNNER_TEMP/nzp" | cut -f1) B, packed $(du -sb build/ps3/package/pkg | cut -f1) B, pkg $(stat -c %s build/ps3/nzportable.pkg) B, gnpdrm $(stat -c %s build/ps3/nzportable.gnpdrm.pkg) B; $(cd build/ps3/package/pkg/USRDIR/nzp && du -sb * | awk '{printf "%s=%d ", $2, $1}')"
-          for f in pak0.pak progs.dat default.cfg maps tracks; do
+          for f in pak0.pak progs.dat default.cfg version.txt maps tracks; do
             [ -e "build/ps3/package/pkg/USRDIR/nzp/$f" ] || { echo "::error title=missing from PKG::$f"; exit 1; }
           done
           entries=$(find build/ps3/package/pkg | wc -l)
