@@ -191,15 +191,33 @@ jobs:
           make -f Makefile.ps3 CGCOMP_BIN="$CGCOMP_BIN" pkg
           cp build/ps3/nzportable.gnpdrm.pkg ../nzp-ps3-eboot-only.pkg
 
-      - name: Game data
+      - name: Fetch quakec and assets
         if: github.event_name == 'workflow_dispatch' && inputs.full_pkg || startsWith(github.ref, 'refs/tags/')
         run: |
           git clone -q --filter=blob:none "https://github.com/$QUAKEC_REPO" "$RUNNER_TEMP/quakec"
           git -C "$RUNNER_TEMP/quakec" checkout -q "$QUAKEC_REF"
-          ( cd "$RUNNER_TEMP/quakec/tools" && bash qc-compiler-gnu.sh )
-          ls -la "$RUNNER_TEMP/quakec/build/standard"
           git clone -q --filter=blob:none "https://github.com/$ASSETS_REPO" "$RUNNER_TEMP/assets"
           git -C "$RUNNER_TEMP/assets" checkout -q "$ASSETS_REF"
+
+      # What quakec's tools/qc-compiler-gnu.sh does, without its rule that any
+      # warning fails the build: the result is checked by progs.dat existing.
+      - name: Compile progs.dat (FTEQCC)
+        if: github.event_name == 'workflow_dispatch' && inputs.full_pkg || startsWith(github.ref, 'refs/tags/')
+        working-directory: ${{ runner.temp }}/quakec
+        run: |
+          chmod +x bin/fteqcc-cli-lin
+          python3 bin/qc_hash_generator.py -i tools/asset_conversion_table.csv -o source/server/hash_table.qc
+          mkdir -p build/fte build/standard
+          bin/fteqcc-cli-lin -O3 -Ono-compound_jumps -Wall -srcfile progs/ssqc.src > qc.log 2>&1 || true
+          if [ ! -s build/standard/progs.dat ]; then
+            printf '::error title=fteqcc::%s\n' "$(tail -n 40 qc.log | sed -e 's/%/%25/g' | awk '{printf "%s%%0A", $0}')"
+            exit 1
+          fi
+          ls -la build/standard
+
+      - name: Assemble game data
+        if: github.event_name == 'workflow_dispatch' && inputs.full_pkg || startsWith(github.ref, 'refs/tags/')
+        run: |
           # As the assets repo assembles the PC data: pc/nzp first, then common/
           # without overwriting what the PC set already has.
           mkdir -p "$RUNNER_TEMP/nzp"
@@ -207,9 +225,8 @@ jobs:
           cp -rn "$RUNNER_TEMP/assets/common/." "$RUNNER_TEMP/nzp/"
           cp "$RUNNER_TEMP/quakec/build/standard/progs.dat" "$RUNNER_TEMP/nzp/"
           cp "$RUNNER_TEMP/quakec/build/standard/progs.lno" "$RUNNER_TEMP/nzp/" 2>/dev/null || true
-          # PS3 defaults on top of the PC config (controller glyphs: PlayStation)
+          # PS3 default on top of the PC config: PlayStation button icons
           printf '\n// PS3\nseta cl_controllerglyphs "sony"\n' >> "$RUNNER_TEMP/nzp/autoexec.cfg"
-          rm -rf "$RUNNER_TEMP/nzp/licenses/.git"
           du -sh "$RUNNER_TEMP/nzp"
 
       - name: Full PKG (EBOOT + game data)
