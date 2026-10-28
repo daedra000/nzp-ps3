@@ -229,6 +229,7 @@ jobs:
           src=$(find "$RUNNER_TEMP/nzp" -type f | wc -l)
           packed=$(find build/ps3/package/pkg/USRDIR/nzp -type f | wc -l)
           echo "::notice title=game data::$src files assembled, $packed in the PKG, $(du -sh build/ps3/nzportable.gnpdrm.pkg | cut -f1) PKG"
+          echo "::notice title=sizes::data $(du -sb "$RUNNER_TEMP/nzp" | cut -f1) B, packed $(du -sb build/ps3/package/pkg | cut -f1) B, pkg $(stat -c %s build/ps3/nzportable.pkg) B, gnpdrm $(stat -c %s build/ps3/nzportable.gnpdrm.pkg) B; $(cd build/ps3/package/pkg/USRDIR/nzp && du -sb * | awk '{printf "%s=%d ", $2, $1}')"
           for f in gfx/palette.lmp textures/particles/particlefont.tga progs.dat default.cfg; do
             [ -f "build/ps3/package/pkg/USRDIR/nzp/$f" ] || { echo "::error title=missing from PKG::$f"; exit 1; }
           done
