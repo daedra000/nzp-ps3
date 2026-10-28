@@ -741,6 +741,7 @@ ps3gl_capture_end(void)
 	n = trace[slot].n < TRACE_DRAWS ? trace[slot].n : TRACE_DRAWS;
 	/* the end mark for the last draw's GPU time; read when the frame is done */
 	ts_count = n < TS_MAX ? n : TS_MAX;
+	PS3_Cmd_Reserve();   /* librsx must never wrap the buffer itself (ps3_video.c) */
 	rsxSetTimeStamp(ps3gl.ctx, TS_BASE + ts_count);
 	ts_pending_frame = ps3gl.frame;
 	screen = (double)ps3gl.screen_w * ps3gl.screen_h;
