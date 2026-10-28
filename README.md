@@ -22,11 +22,11 @@ the log to send when something goes wrong.
 |---|---|
 | Left stick / right stick | Move / look |
 | R2 / L2 | Fire / aim |
-| R1 / L1 | Grenade / special grenade |
+| R1 / L1 | Grenade / Bouncing Betty |
 | Cross | Jump |
 | Square | Reload (hold: use) |
 | Triangle | Switch weapon |
-| Circle | Crouch / prone |
+| Circle | Crouch / prone (dive while sprinting) |
 | R3 / L3 | Knife / sprint |
 | Start | Pause |
 
