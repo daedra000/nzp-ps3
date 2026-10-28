@@ -376,15 +376,25 @@ MAIN
 static void PS3_SetPlayerName(void)
 {
 	extern cvar_t cl_name;
-	char user[SYSUTIL_SYSTEMPARAM_CURRENT_USERNAME_SIZE + 1];
-	s32 rc;
+	// As ioquake3-ps3: the local user name (0x131, 64 bytes, works offline),
+	// then the PSN nickname (0x113, 128 bytes); the buffer sizes matter.
+	char user[SYSUTIL_SYSTEMPARAM_NICKNAME_SIZE + 1];
+	s32 rc, rc_nick = 0;
 
 	if (Q_strcasecmp(cl_name.string, "player") && cl_name.string[0])
 		return;
 	memset(user, 0, sizeof(user));
-	rc = sysUtilGetSystemParamString(SYSUTIL_SYSTEMPARAM_ID_CURRENT_USERNAME, user, sizeof(user) - 1);
+	rc = sysUtilGetSystemParamString(SYSUTIL_SYSTEMPARAM_ID_CURRENT_USERNAME, user,
+		SYSUTIL_SYSTEMPARAM_CURRENT_USERNAME_SIZE);
+	user[SYSUTIL_SYSTEMPARAM_CURRENT_USERNAME_SIZE - 1] = 0;
 	if (rc != 0 || !user[0]) {
-		PS3_Log("PS3 user name not available (0x%08x)", (unsigned)rc);
+		memset(user, 0, sizeof(user));
+		rc_nick = sysUtilGetSystemParamString(SYSUTIL_SYSTEMPARAM_ID_NICKNAME, user,
+			SYSUTIL_SYSTEMPARAM_NICKNAME_SIZE);
+		user[SYSUTIL_SYSTEMPARAM_NICKNAME_SIZE - 1] = 0;
+	}
+	if (!user[0] || (rc != 0 && rc_nick != 0)) {
+		PS3_Log("PS3 user name not available (0x%08x, nickname 0x%08x)", (unsigned)rc, (unsigned)rc_nick);
 		return;
 	}
 	Cvar_Set("_cl_name", user);
