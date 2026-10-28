@@ -1397,7 +1397,34 @@ int COM_FindFile (char *filename, int *handle, FILE **file)
 	}
 
 	for ( ; search ; search = search->next)
-	{             
+	{
+		// PS3: the game data ships in pak0.pak (a PKG can't hold NZ:P's 1100+
+		// loose files), so pack files are searched again, as Quake did.
+		// Case-insensitive, like the directory lookup below.
+		if (search->pack)
+		{
+			pack_t *pak = search->pack;
+			for (i = 0; i < pak->numfiles; i++)
+			{
+				if (Q_strcasecmp(pak->files[i].name, filename))
+					continue;
+				com_filesize = pak->files[i].filelen;
+				if (handle)
+				{
+					*handle = pak->handle;
+					Sys_FileSeek(pak->handle, pak->files[i].filepos);
+				}
+				else
+				{
+					*file = fopen(pak->filename, "rb");
+					if (*file)
+						fseek(*file, pak->files[i].filepos, SEEK_SET);
+				}
+				return com_filesize;
+			}
+			continue;
+		}
+
 		// check a file in the directory tree
 		if (!COM_JoinPath(netpath, sizeof(netpath), search->filename, filename))
 			continue;
@@ -1450,21 +1477,15 @@ int COM_FindFile (char *filename, int *handle, FILE **file)
 			char full[MAX_OSPATH];
 			FILE *probe;
 			int err;
-			// errno of the direct open (ENOENT = not there, EMFILE = out of
-			// handles), and whether a file known to exist still opens.
-			snprintf(full, sizeof(full), "%s/%s", com_searchpaths->filename, filename);
+			// errno of a direct open in the game folder (ENOENT = not there,
+			// EMFILE = out of handles)
+			snprintf(full, sizeof(full), "%s/%s", com_gamedir, filename);
 			errno = 0;
 			probe = fopen(full, "rb");
 			err = errno;
 			if (probe) fclose(probe);
-			snprintf(netpath, sizeof(netpath), "%s/gfx/palette.lmp", com_searchpaths->filename);
-			{
-				FILE *known = fopen(netpath, "rb");
-				PS3_Log("FindFile: can't find %s (open: %s, errno %d %s; gfx/palette.lmp %s)",
-					filename, probe ? "ok" : "failed", err, strerror(err),
-					known ? "opens" : "does NOT open");
-				if (known) fclose(known);
-			}
+			PS3_Log("FindFile: can't find %s (open: %s, errno %d %s)",
+				filename, probe ? "ok" : "failed", err, strerror(err));
 		}
 	}
 	

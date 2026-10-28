@@ -230,6 +230,10 @@ jobs:
           cp "$RUNNER_TEMP"/progs/* "$RUNNER_TEMP/nzp/"
           # PS3 default on top of the PC config: PlayStation button icons
           printf '\n// PS3\nseta cl_controllerglyphs "sony"\n' >> "$RUNNER_TEMP/nzp/autoexec.cfg"
+          # A PKG install drops entries past a limit and NZ:P has 1100+ files: the
+          # bulk goes into pak0.pak. Loose: what the engine opens by path (maps/
+          # waypoints and the map list, data/ for QuakeC, tracks/ music, configs).
+          python3 vril/source/platform/ps3/tools/make_pak.py "$RUNNER_TEMP/nzp" gfx models sounds textures licenses
           du -sh "$RUNNER_TEMP/nzp"
 
       - name: PKG (EBOOT + game data)
@@ -241,9 +245,12 @@ jobs:
           packed=$(find build/ps3/package/pkg/USRDIR/nzp -type f | wc -l)
           echo "::notice title=game data::$src files assembled, $packed in the PKG, $(du -sh build/ps3/nzportable.gnpdrm.pkg | cut -f1) PKG"
           echo "::notice title=sizes::data $(du -sb "$RUNNER_TEMP/nzp" | cut -f1) B, packed $(du -sb build/ps3/package/pkg | cut -f1) B, pkg $(stat -c %s build/ps3/nzportable.pkg) B, gnpdrm $(stat -c %s build/ps3/nzportable.gnpdrm.pkg) B; $(cd build/ps3/package/pkg/USRDIR/nzp && du -sb * | awk '{printf "%s=%d ", $2, $1}')"
-          for f in gfx/palette.lmp textures/particles/particlefont.tga progs.dat default.cfg; do
-            [ -f "build/ps3/package/pkg/USRDIR/nzp/$f" ] || { echo "::error title=missing from PKG::$f"; exit 1; }
+          for f in pak0.pak progs.dat default.cfg maps tracks; do
+            [ -e "build/ps3/package/pkg/USRDIR/nzp/$f" ] || { echo "::error title=missing from PKG::$f"; exit 1; }
           done
+          entries=$(find build/ps3/package/pkg | wc -l)
+          echo "::notice title=PKG entries::$entries"
+          [ "$entries" -le 300 ] || { echo "::error title=PKG::$entries entries, too many for an install"; exit 1; }
           [ "$src" -eq "$packed" ] || { echo "::error title=game data::only $packed of $src files packed"; exit 1; }
           [ "$(stat -c %s build/ps3/nzportable.gnpdrm.pkg)" -ge "$(du -sb "$RUNNER_TEMP/nzp" | cut -f1)" ] || { echo "::error title=PKG::smaller than the data it should hold"; exit 1; }
           cp build/ps3/nzportable.gnpdrm.pkg ../nzp-ps3.pkg
