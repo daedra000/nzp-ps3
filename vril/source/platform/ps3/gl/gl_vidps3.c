@@ -75,7 +75,7 @@ void GL_EndRendering(void)
 	Draw_Flush();
 	PS3GL_EndFrame();
 	PS3_Video_Present();
-	if (frames < 3)
+	if (frames < 30)
 		PS3_Log("GL_EndRendering: frame %d presented", frames);
 	frames++;
 }

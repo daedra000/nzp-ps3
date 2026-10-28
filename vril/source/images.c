@@ -250,6 +250,12 @@ image_t Image_LoadImageWithIdentifier(char *filename, char *identifier, int imag
 		return texture_index;
 	}
 
+#ifdef __PS3__
+	{
+		extern void PS3_Log(const char *fmt, ...);
+		PS3_Log("image %s", filename);
+	}
+#endif
 	data = Image_LoadPixels (filename, image_format);
 
 	if(data == NULL) {

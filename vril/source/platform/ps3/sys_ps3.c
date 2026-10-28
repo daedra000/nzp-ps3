@@ -96,6 +96,22 @@ void PS3_Log(const char *fmt, ...)
 	ps3_log_written += (n > 0 ? n : 0) + 1;
 }
 
+// The engine's console output, as it is printed (no newline added).
+static void PS3_LogRaw(const char *text)
+{
+	FILE *f;
+	size_t n = strlen(text);
+
+	if (!n || ps3_log_written + (long)n >= PS3_LOG_MAX - 256)
+		return;
+	f = fopen(PS3_LOG_PATH, "a");
+	if (!f)
+		return;
+	fwrite(text, 1, n, f);
+	fclose(f);
+	ps3_log_written += (long)n;
+}
+
 void Sys_DebugLog(char *file, char *fmt, ...) { (void)file; (void)fmt; }
 
 /*
@@ -179,10 +195,13 @@ void Sys_PrintSystemInfo(void) { Con_Printf("Vril Engine PS3 (PSL1GHT, RSX)\n");
 
 void Sys_Printf(char *fmt, ...)
 {
+	char text[1024];
 	va_list args;
 	va_start(args, fmt);
-	vprintf(fmt, args);
+	vsnprintf(text, sizeof(text), fmt, args);
 	va_end(args);
+	fputs(text, stdout);
+	PS3_LogRaw(text);
 }
 
 // Reached from Sys_Error (system.c) with the formatted report.
