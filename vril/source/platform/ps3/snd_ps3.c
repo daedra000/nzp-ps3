@@ -29,6 +29,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "../../nzportable_def.h"
 #include "ps3_platform.h"
 #include "ps3_local.h"
+#include <lv2/systime.h>
 
 #include <audio/audio.h>
 #include <sys/thread.h>
@@ -51,6 +52,15 @@ static volatile int      audio_running;
 static volatile u32      blocks_written;
 
 static short ring[PS3_RING_SAMPLES] __attribute__((aligned(128)));
+
+static volatile u64 audio_busy_us;
+
+unsigned long long PS3_Audio_TakeBusyUs(void)
+{
+	u64 v = audio_busy_us;
+	audio_busy_us = 0;
+	return v;
+}
 
 static void PS3_AudioThread(void *arg)
 {
@@ -79,6 +89,7 @@ static void PS3_AudioThread(void *arg)
 		if (feed_quit)
 			break;
 
+		u64 t0 = sysGetSystemTime();
 		write_block = (u32)((*read_index + 1) % num_blocks);
 		dst = data_start + write_block * PS3_AUDIO_CHANNELS * PS3_AUDIO_BLOCK;
 		pos = (blocks_written * PS3_AUDIO_BLOCK * PS3_AUDIO_CHANNELS) % PS3_RING_SAMPLES;
@@ -93,6 +104,7 @@ static void PS3_AudioThread(void *arg)
 		// audioDataStart's alignment isn't guaranteed: plain copy.
 		memcpy(dst, block, sizeof(block));
 		blocks_written++;
+		audio_busy_us += sysGetSystemTime() - t0;
 	}
 	sysThreadExit(0);
 }

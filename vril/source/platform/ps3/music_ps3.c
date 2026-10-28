@@ -59,9 +59,16 @@ static int Music_TryLock(void)
 	return 1;
 }
 
+// Set while the game thread waits: the audio thread then leaves the track alone
+// (with music decoding most of each 5 ms block, a polling waiter could miss
+// every gap: the first build waited 2 s at a map load).
+static volatile int music_want;
+
 static void Music_Lock(void)
 {
 	int waited = 0;
+	music_want = 1;
+	__asm__ volatile("sync" ::: "memory");
 	while (!Music_TryLock()) {
 		usleep(100);
 		if (++waited == 20000) {   // ~2 s: the audio thread never holds it this long
@@ -69,6 +76,7 @@ static void Music_Lock(void)
 			music_lock = 0;
 		}
 	}
+	music_want = 0;
 }
 
 static void Music_Unlock(void)
@@ -126,7 +134,7 @@ void PS3_Music_Mix(float *out, int frames)
 	double step;
 	int i;
 
-	if (!music_initialized || !Music_TryLock())
+	if (!music_initialized || music_want || !Music_TryLock())
 		return;
 	if (!track.file || track.done || music_paused || music_volume <= 0) {
 		Music_Unlock();

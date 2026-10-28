@@ -334,8 +334,12 @@ static void PS3_GameThread(void *arg)
 			usleep(500);
 		// a sign of life every 30 s, with the frame rate
 		if (now >= next_alive) {
-			PS3_Log("[alive] %.0f s, frame %d, %.1f fps", now, host_framecount,
-				(host_framecount - last_frames) / 30.0);
+			char phases_ms[256];
+			int frames = host_framecount - last_frames;
+			double audio = PS3_Audio_TakeBusyUs() / 1e6;
+			PS3_Stage_Report(phases_ms, sizeof(phases_ms), frames);
+			PS3_Log("[alive] %.0f s, frame %d, %.1f fps; ms per frame: %s; audio thread busy %.0f%%",
+				now, host_framecount, frames / 30.0, phases_ms, audio * 100.0 / 30.0);
 			last_frames = host_framecount;
 			next_alive = now + 30.0;
 		}

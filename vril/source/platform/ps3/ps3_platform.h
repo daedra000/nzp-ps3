@@ -17,6 +17,9 @@ void PS3_Crash_NoteCommand(const char *text);
 /* what the game is doing, for the watchdog (a freeze names its stage) */
 void PS3_Stage(const char *what);
 void PS3_Heartbeat(void);
+void PS3_Stage_Report(char *out, int size, int frames);
+/* snd_ps3.c: microseconds the audio thread spent mixing since the last call */
+unsigned long long PS3_Audio_TakeBusyUs(void);
 void PS3_Watchdog_Start(void);
 
 /* sys_ps3.c: one line in USRDIR/nzp_log.txt */

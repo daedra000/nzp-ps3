@@ -67,17 +67,66 @@ static double stage_time[STAGE_TRAIL];
 static volatile unsigned stage_next;
 static volatile unsigned stage_progress;
 
+/* Time per part of Host_Frame (the "frame: ..." stages), for [alive]. */
+#define MAX_PHASES 12
+static struct { const char *name; double total; } phases[MAX_PHASES];
+static int num_phases;
+static int slow_logged;
+
+static void AddPhaseTime(const char *name, double dt)
+{
+	int i;
+	if (strncmp(name, "frame: ", 7))
+		return;
+	for (i = 0; i < num_phases; i++)
+		if (!strcmp(phases[i].name, name))
+			break;
+	if (i == num_phases) {
+		if (num_phases == MAX_PHASES)
+			return;
+		// keep our own copy: the trail slot is reused
+		phases[i].name = strdup(name);
+		num_phases++;
+	}
+	phases[i].total += dt;
+}
+
 void PS3_Stage(const char *what)
 {
 	unsigned n = stage_next;
 	char *dst = stage_trail[n % STAGE_TRAIL];
+	double now = Sys_FloatTime();
+
+	// how long the previous stage took: a hitch names itself
+	if (n > 0) {
+		unsigned p = (n - 1) % STAGE_TRAIL;
+		double dt = now - stage_time[p];
+		AddPhaseTime(stage_trail[p], dt);
+		if (dt > 0.060 && slow_logged < 300) {
+			slow_logged++;
+			PS3_Log("[slow] %.0f ms in \"%s\" (at %.1f s)", dt * 1000.0, stage_trail[p], stage_time[p]);
+			now = Sys_FloatTime();   // the log write isn't the next stage's time
+		}
+	}
 
 	strncpy(dst, what, sizeof(stage_trail[0]) - 1);
 	dst[sizeof(stage_trail[0]) - 1] = 0;
-	stage_time[n % STAGE_TRAIL] = Sys_FloatTime();
+	stage_time[n % STAGE_TRAIL] = now;
 	__asm__ volatile("lwsync" ::: "memory");
 	stage_next = n + 1;
 	stage_progress++;
+}
+
+// "input 0.1, commands 0.0, ... ms per frame" since the last call
+void PS3_Stage_Report(char *out, int size, int frames)
+{
+	int i, used = 0;
+	out[0] = 0;
+	for (i = 0; i < num_phases && used < size - 1; i++) {
+		used += snprintf(out + used, size - used, "%s%s %.1f", i ? ", " : "",
+			phases[i].name + 7, frames > 0 ? phases[i].total * 1000.0 / frames : 0.0);
+		phases[i].total = 0;
+	}
 }
 
 // The main loop's beat: progress without a new stage name.
