@@ -264,6 +264,18 @@ jobs:
           cp -r "$RUNNER_TEMP/assets/pc/nzp/." "$RUNNER_TEMP/nzp/"
           cp -rn "$RUNNER_TEMP/assets/common/." "$RUNNER_TEMP/nzp/"
           cp "$RUNNER_TEMP"/progs/* "$RUNNER_TEMP/nzp/"
+          # The assets repo has no compiled maps (.bsp): the menu's map list and
+          # the maps themselves come from the official PC build. Only maps/ is
+          # taken from it, without overwriting the pinned files above.
+          wget -q -O "$RUNNER_TEMP/pcbuild.zip" \
+            https://github.com/nzp-team/nzportable/releases/download/nightly/nzportable-linux64.zip
+          mkdir -p "$RUNNER_TEMP/pcbuild" && unzip -q "$RUNNER_TEMP/pcbuild.zip" -d "$RUNNER_TEMP/pcbuild"
+          pcmaps=$(dirname "$(find "$RUNNER_TEMP/pcbuild" -iname '*.bsp' | head -1)")
+          [ -d "$pcmaps" ] || { echo "::error title=maps::no .bsp in the PC build"; exit 1; }
+          cp -rn "$pcmaps/." "$RUNNER_TEMP/nzp/maps/"
+          echo "::notice title=maps::$(ls "$RUNNER_TEMP/nzp/maps" | grep -ci '\.bsp$') .bsp from $(basename "$(dirname "$pcmaps")") ($(ls "$RUNNER_TEMP/nzp/maps" | grep -i '\.bsp$' | tr '\n' ' '))"
+          # what else the PC build has that this data doesn't (for reference)
+          echo "::notice title=only in the PC build::$(cd "$(dirname "$pcmaps")" && find . -type f | sed 's#^\./##' | while read -r f; do [ -e "$RUNNER_TEMP/nzp/$f" ] || echo "$f"; done | head -60 | tr '\n' ' ')"
           # PS3 default on top of the PC config: PlayStation button icons
           printf '\n// PS3\nseta cl_controllerglyphs "sony"\n' >> "$RUNNER_TEMP/nzp/autoexec.cfg"
           # A PKG install drops entries past a limit and NZ:P has 1100+ files: the

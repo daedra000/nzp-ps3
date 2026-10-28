@@ -688,6 +688,10 @@ void Menu_DrawMapButton (int order, int button_index, int usermap_index, int map
 	if (button_name == NULL) {
 		button_name = custom_maps[index].map_name;
 	}
+	// No map list (no .bsp found): a name, not a NULL to strlen.
+	if (button_name == NULL) {
+		button_name = bsp_name ? bsp_name : "?";
+	}
 
 	// Don't modify map_name_pretty memory location
 	// create a copy for uppercase drawing
