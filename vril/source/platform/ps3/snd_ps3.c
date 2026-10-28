@@ -188,7 +188,10 @@ qboolean SNDDMA_Init(void)
 	feed_quit = 0;
 	// Priority 100, well above the game thread's 1000 (0 = highest): each block has
 	// a ~5.3 ms deadline, and a busy frame must not make it crackle.
-	ret = sysThreadCreate(&feed_thread, PS3_AudioThread, NULL, 100, 0x4000,
+	// 256 KB: the MP3 decoder (music_ps3.c) keeps ~17 KB of scratch on the stack.
+	// With 16 KB it overflowed the stack and the thread hung in the decoder
+	// after 2 s: no sound at all, and music_stop waited for a lock forever.
+	ret = sysThreadCreate(&feed_thread, PS3_AudioThread, NULL, 100, 256 * 1024,
 		THREAD_JOINABLE, (char *)"nzp_audio");
 	if (ret != 0) {
 		PS3_Log("snd_ps3: sysThreadCreate = 0x%08x", (unsigned)ret);
