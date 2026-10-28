@@ -21,6 +21,16 @@ extern entity_t * currententity;
 static short * r_alias_positions;
 static int r_alias_vertex_capacity;
 
+#ifdef __PS3__
+// The Cell PPU pays a load-hit-store stall for every int<->float conversion:
+// lerping into shorts and converting them back to floats for the RSX cost
+// ~0.3 us per vertex (24 zombies: 75 000 vertices, 25 ms a frame). Bytes go
+// through a table straight to floats, and the GL layer copies floats as they are.
+static float * r_alias_positions_f;
+static int r_alias_float_capacity;
+static float r_byte_to_float[256];
+#endif
+
 typedef struct alias_topology_s {
     const void *              key;
     const int *               commands;
@@ -152,7 +162,12 @@ R_DrawAliasBatch(const alias_batch_t * batch)
         indices        = alias_client_indices;
     }
     arrays.position.data = batch->positions;
-    if (!batch->positions && cache) {
+    if (batch->positions_f) {
+        arrays.position.data = batch->positions_f;
+        arrays.position.type = HYE_FLOAT;
+        arrays.scale         = 1.0f;
+    }
+    if (!batch->positions && !batch->positions_f && cache) {
         alias_pose_t * pose;
         size_t size = batch->num_vertices * 3 * sizeof(short);
         for (pose = cache->poses; pose; pose = pose->next)
@@ -215,8 +230,16 @@ static alias_topology_t *
 R_AliasTopology(const int * commands)
 {
     alias_topology_t * topology;
+#ifdef __PS3__
+    // By the commands themselves: a zombie's limbs are drawn as the zombie
+    // entity with other models' commands, and keyed by the entity's model each
+    // limb rebuilt (malloc, free, every vertex) the body's topology and back,
+    // several times per zombie per frame. Cleared at each map (Host_ClearMemory).
+    const void * key = (const void *) commands;
+#else
     const void * key = currententity && currententity->model ?
       (const void *) currententity->model : (const void *) commands;
+#endif
     const int * scan;
     int count, vertex_base = 0, index = 0;
 
@@ -297,6 +320,40 @@ R_BuildAliasBatch(
     if (!pose2 && (Hyena_StaticVertexBudget() != 0))
         return;
 
+#ifdef __PS3__
+    {
+        const float * tab = r_byte_to_float;
+        float * out;
+
+        if (tab[255] == 0.0f)
+            for (i = 0; i < 256; i++)
+                r_byte_to_float[i] = (float) i;
+        if (topology->num_vertices > r_alias_float_capacity) {
+            r_alias_positions_f = realloc(r_alias_positions_f,
+                topology->num_vertices * 3 * sizeof(*r_alias_positions_f));
+            if (!r_alias_positions_f)
+                Sys_Error("R_BuildAliasBatch: out of memory");
+            r_alias_float_capacity = topology->num_vertices;
+        }
+        out = r_alias_positions_f;
+        if (pose2) {
+            for (i = 0; i < topology->num_vertices; ++i, out += 3) {
+                float a0 = tab[pose1[i].v[0]], a1 = tab[pose1[i].v[1]], a2 = tab[pose1[i].v[2]];
+                out[0] = a0 + blend * (tab[pose2[i].v[0]] - a0);
+                out[1] = a1 + blend * (tab[pose2[i].v[1]] - a1);
+                out[2] = a2 + blend * (tab[pose2[i].v[2]] - a2);
+            }
+        } else {
+            for (i = 0; i < topology->num_vertices; ++i, out += 3) {
+                out[0] = tab[pose1[i].v[0]];
+                out[1] = tab[pose1[i].v[1]];
+                out[2] = tab[pose1[i].v[2]];
+            }
+        }
+        batch->positions_f = r_alias_positions_f;
+        return;
+    }
+#endif
     if (topology->num_vertices > r_alias_vertex_capacity) {
         r_alias_positions = realloc(r_alias_positions,
             topology->num_vertices * 3 * sizeof(*r_alias_positions));

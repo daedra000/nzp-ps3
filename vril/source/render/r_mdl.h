@@ -25,6 +25,7 @@
 
 typedef struct {
     short *                positions;
+    float *                positions_f;     // PS3: float positions, already in model units
     const float *          uvs;
     const unsigned short * indices;
     int                    num_vertices;
