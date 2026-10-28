@@ -147,13 +147,16 @@ int music_init(void)
 {
 	sys_lwmutex_attr_t attr;
 
+	// As thug-ps3's lightweight mutex on hardware: PRIO + recursive. Lightweight
+	// mutexes don't take PRIO_INHERIT (the first build failed to create one).
 	memset(&attr, 0, sizeof(attr));
-	attr.attr_protocol = SYS_LWMUTEX_PROTOCOL_PRIO_INHERIT;
-	attr.attr_recursive = SYS_LWMUTEX_ATTR_NOT_RECURSIVE;
+	attr.attr_protocol = SYS_LWMUTEX_PROTOCOL_PRIO;
+	attr.attr_recursive = SYS_LWMUTEX_ATTR_RECURSIVE;
 	strcpy(attr.name, "music");
 	if (sysLwMutexCreate(&music_lock, &attr) != 0) {
+		// Without music the game still runs: snd_music.c makes a failed init fatal.
 		PS3_Log("music_ps3: sysLwMutexCreate failed, no music");
-		return 0;
+		return 1;
 	}
 	music_initialized = true;
 	return 1;
