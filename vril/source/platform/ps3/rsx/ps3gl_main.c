@@ -272,6 +272,10 @@ PS3GL_BeginFrame(void)
 	}
 
 	ps3gl_process_frees();
+	{
+		extern void ps3gl_capture_report(void);
+		ps3gl_capture_report();
+	}
 }
 
 void

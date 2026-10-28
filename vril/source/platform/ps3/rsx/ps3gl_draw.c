@@ -658,6 +658,14 @@ DrawArea(const ps3gl_vertex_t *v, int n)
 
 static void TraceDraw(GLenum mode, int count, unsigned units);
 
+/* GPU time per draw: in a captured frame the RSX writes its clock into
+   report TS_BASE+i before draw i (and TS_BASE+n after the last one); the
+   reports are read once that frame is done. */
+#define TS_BASE 256
+#define TS_MAX  (TRACE_DRAWS < 400 ? TRACE_DRAWS : 400)
+static uint32_t ts_pending_frame;
+static int ts_count;
+
 static void
 TraceDrawAt(GLenum mode, int count, unsigned units, uint32_t ring_off, int nverts)
 {
@@ -665,11 +673,54 @@ TraceDrawAt(GLenum mode, int count, unsigned units, uint32_t ring_off, int nvert
 	if (capture_frame == ps3gl.frame)
 	{
 		int slot = ps3gl.frame % TRACE_FRAMES;
-		if (trace[slot].n <= TRACE_DRAWS)
+		int idx = trace[slot].n - 1;
+		if (idx < TRACE_DRAWS)
 		{
 			const ps3gl_vertex_t *v = (const ps3gl_vertex_t *)(ps3gl.ring + (ring_off - ps3gl.ring_off));
-			trace[slot].d[trace[slot].n - 1].area = DrawArea(v, nverts);
+			trace[slot].d[idx].area = DrawArea(v, nverts);
 		}
+		if (idx < TS_MAX)
+			rsxSetTimeStamp(ps3gl.ctx, TS_BASE + idx);
+	}
+}
+
+/* Called at each frame start: the captured frame's GPU times, once the RSX
+   has finished it. */
+void
+ps3gl_capture_report(void)
+{
+	int slot, i, n, top[12], ntop = 0, j;
+	uint64_t t[TS_MAX + 1], total;
+
+	if (!ts_pending_frame || (int)(ps3gl_completed_frame() - ts_pending_frame) < 0)
+	{
+		return;
+	}
+	slot = ts_pending_frame % TRACE_FRAMES;
+	n = ts_count;
+	if (trace[slot].frame != ts_pending_frame || n <= 0)
+	{
+		ts_pending_frame = 0;   /* its draw list is gone: too late */
+		return;
+	}
+	ts_pending_frame = 0;
+	for (i = 0; i <= n; i++)
+		t[i] = gcmGetTimeStamp(TS_BASE + i);
+	total = t[n] - t[0];
+	for (i = 0; i < n; i++)
+	{
+		uint64_t d = t[i + 1] - t[i];
+		for (j = ntop; j > 0 && (t[top[j - 1] + 1] - t[top[j - 1]]) < d; j--)
+			if (j < 12) top[j] = top[j - 1];
+		if (j < 12) { top[j] = i; if (ntop < 12) ntop++; }
+	}
+	PS3_Log("[gpu] RSX time for those %d draws: %.2f ms; slowest:", n, total / 1e6);
+	for (i = 0; i < ntop; i++)
+	{
+		const trace_draw_t *d = &trace[slot].d[top[i]];
+		PS3_Log("[gpu]  #%d %.2f ms, mode 0x%x count %u fp %u blend %d alpha %d depth %d t0 %d %ux%u lv %d",
+				top[i], (t[top[i] + 1] - t[top[i]]) / 1e6, d->mode, (unsigned)d->count, d->fp,
+				d->blend, d->alpha, d->depth, d->tex[0].name, d->tex[0].w, d->tex[0].h, d->tex[0].levels);
 	}
 }
 
@@ -688,6 +739,10 @@ ps3gl_capture_end(void)
 	captures++;
 	slot = ps3gl.frame % TRACE_FRAMES;
 	n = trace[slot].n < TRACE_DRAWS ? trace[slot].n : TRACE_DRAWS;
+	/* the end mark for the last draw's GPU time; read when the frame is done */
+	ts_count = n < TS_MAX ? n : TS_MAX;
+	rsxSetTimeStamp(ps3gl.ctx, TS_BASE + ts_count);
+	ts_pending_frame = ps3gl.frame;
 	screen = (double)ps3gl.screen_w * ps3gl.screen_h;
 	for (i = 0; i < n; i++)
 	{
