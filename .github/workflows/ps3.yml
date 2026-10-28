@@ -206,6 +206,7 @@ jobs:
         working-directory: ${{ runner.temp }}/quakec
         run: |
           chmod +x bin/fteqcc-cli-lin
+          pip install --quiet pandas fastcrc colorama
           python3 bin/qc_hash_generator.py -i tools/asset_conversion_table.csv -o source/server/hash_table.qc
           mkdir -p build/fte build/standard
           bin/fteqcc-cli-lin -O3 -Ono-compound_jumps -Wall -srcfile progs/ssqc.src > qc.log 2>&1 || true
