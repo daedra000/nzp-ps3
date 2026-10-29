@@ -68,6 +68,57 @@ static void R_ReserveLightmapPages (int pages)
 }
 
 
+#ifdef __PS3__
+/*
+ * Dynamic lights that don't change (a fireplace, a lamp: entity lights put
+ * back every frame at the same place and size) rebuilt and re-uploaded every
+ * lightmap they touch every frame. A surface's lightmap is rebuilt only when
+ * the lights on it changed: a signature of which lights and their position,
+ * radius and colour.
+ */
+static unsigned dlight_sig[MAX_DLIGHTS];
+static int dlight_sig_frame = -1;
+
+static unsigned
+Sig(unsigned h, const void *data, int len)
+{
+	const unsigned char *p = (const unsigned char *)data;
+	while (len--)
+		h = (h ^ *p++) * 16777619u;
+	return h;
+}
+
+static unsigned
+R_SurfaceDlightSig(const msurface_t *surf)
+{
+	unsigned h = 2166136261u;
+	int lnum;
+
+	if (dlight_sig_frame != r_framecount)
+	{
+		for (lnum = 0; lnum < MAX_DLIGHTS; lnum++)
+		{
+			const dlight_t *l = &cl_dlights[lnum];
+			unsigned s = 2166136261u;
+			s = Sig(s, l->origin, sizeof(l->origin));
+			s = Sig(s, &l->radius, sizeof(l->radius));
+			s = Sig(s, &l->minlight, sizeof(l->minlight));
+			s = Sig(s, l->color, sizeof(l->color));
+			s = Sig(s, &l->dark, sizeof(l->dark));
+			dlight_sig[lnum] = s;
+		}
+		dlight_sig_frame = r_framecount;
+	}
+	for (lnum = 0; lnum < MAX_DLIGHTS; lnum++)
+		if (surf->dlightbits & (1U << lnum))
+		{
+			h = Sig(h, &lnum, sizeof(lnum));
+			h = Sig(h, &dlight_sig[lnum], sizeof(dlight_sig[lnum]));
+		}
+	return h;
+}
+#endif
+
 /*
 ===============
 R_AddDynamicLights
@@ -124,6 +175,40 @@ void R_AddDynamicLights (msurface_t *surf)
 		cgreen = cl_dlights[lnum].color[1] * 256.0f;
 		cblue = cl_dlights[lnum].color[2] * 256.0f;
 		//johnfitz
+#ifdef __PS3__
+		// Integers only per luxel: the Cell PPU stalls on every int<->float
+		// conversion, and a fireplace's light (Croft Manor) rebuilt a room's
+		// lightmaps this way every frame. Converted once per light instead.
+		{
+			int ilocal0 = (int)local[0], ilocal1 = (int)local[1];
+			int irad = (int)rad, iminlight = (int)minlight;
+			int ir = (int)cred, ig = (int)cgreen, ib = (int)cblue;
+			int idist;
+
+			for (t = 0 ; t<tmax ; t++)
+			{
+				td = ilocal1 - t*16;
+				if (td < 0)
+					td = -td;
+				for (s=0 ; s<smax ; s++, bl += 3)
+				{
+					sd = ilocal0 - s*16;
+					if (sd < 0)
+						sd = -sd;
+					idist = sd > td ? sd + (td>>1) : td + (sd>>1);
+					if (idist < iminlight)
+					{
+						int b = irad - idist;
+						bl[0] += b * ir;
+						bl[1] += b * ig;
+						bl[2] += b * ib;
+					}
+				}
+			}
+			(void)brightness;
+			continue;
+		}
+#endif
 		for (t = 0 ; t<tmax ; t++)
 		{
 			td = local[1] - t*16;
@@ -172,6 +257,10 @@ void R_BuildLightMap (msurface_t *surf, byte *dest, int stride)
 	unsigned	*bl;
 
 	surf->cached_dlight = (surf->dlightframe == r_framecount);
+#ifdef __PS3__
+	if (surf->cached_dlight)
+		surf->cached_dlight_sig = R_SurfaceDlightSig(surf);
+#endif
 
 	smax = (surf->extents[0]>>4)+1;
 	tmax = (surf->extents[1]>>4)+1;
@@ -356,6 +445,12 @@ R_UpdateSurfaceLightmap(msurface_t *surface)
     if (maps == MAXLIGHTMAPS || surface->styles[maps] == 255) {
         if (surface->dlightframe != r_framecount && !surface->cached_dlight)
             return;
+#ifdef __PS3__
+        // the same lights as when it was built: nothing to redo
+        if (surface->dlightframe == r_framecount && surface->cached_dlight &&
+            surface->cached_dlight_sig == R_SurfaceDlightSig(surface))
+            return;
+#endif
     }
     if (!r_dynamic.value)
         return;

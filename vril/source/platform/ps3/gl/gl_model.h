@@ -144,6 +144,7 @@ typedef struct msurface_s
 	byte		styles[MAXLIGHTMAPS];
 	int			cached_light[MAXLIGHTMAPS];	// values currently used in lightmap
 	qboolean	cached_dlight;				// true if dynamic light in cache
+	unsigned	cached_dlight_sig;			// PS3: which lights, where, how bright, when it was built
 	byte		*samples;		// [numstyles*surfsize]
 } msurface_t;
 
