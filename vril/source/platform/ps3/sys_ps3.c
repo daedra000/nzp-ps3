@@ -498,8 +498,13 @@ static void PS3_GameThread(void *arg)
 		PS3_Heartbeat();
 		// The PS3 account's name instead of the default "player", once the
 		// configs (run in the first frames) have set theirs.
-		if (host_framecount == 10)
-			PS3_SetPlayerName();
+		{
+			static int name_set;
+			if (host_framecount >= 10 && !name_set) {
+				name_set = 1;
+				PS3_SetPlayerName();
+			}
+		}
 		// Host_Frame returns at once until a frame's time has gone by: don't
 		// spin the PPU (the audio thread shares it) while waiting
 		if (host_framecount == frames_before)

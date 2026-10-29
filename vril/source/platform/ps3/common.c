@@ -1474,7 +1474,7 @@ int COM_FindFile (char *filename, int *handle, FILE **file)
 		static int missing;
 		extern void PS3_Log(const char *fmt, ...);
 		const char *ext = COM_FileExtension(filename);
-		if (!strncmp(filename, "gfx/hud/", 8) || strstr(filename, ".mdl_") ||
+		if (!strncmp(filename, "gfx/hud/", 8) || strstr(filename, ".mdl_") || strstr(filename, ".spr_") ||
 			!strcmp(ext, "tga") || !strcmp(ext, "jpg") || !strcmp(ext, "jpeg") ||
 			!strcmp(ext, "png") || !strcmp(ext, "json"))
 			goto not_found;
