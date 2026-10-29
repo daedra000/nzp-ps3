@@ -78,6 +78,8 @@ static u32 src_pitch;
 static int gl_mode;
 static u32 *depth;
 static u32 depth_offset, depth_pitch;
+static u32 *gm_buf;             /* gamma: the 3D view graded into this, then back */
+static u32 gm_offset;
 
 static int clear_frames;     /* framebuffers that still need black borders */
 static int perf_log = 1;     /* fps and timings in the log every 10 s (bring-up: on) */
@@ -450,6 +452,12 @@ PS3_Video_FreeSource(void)
 		depth = NULL;
 	}
 
+	if (gm_buf)
+	{
+		rsxFree(gm_buf);
+		gm_buf = NULL;
+	}
+
 	src_w = src_h = 0;
 	gl_mode = 0;
 }
@@ -642,36 +650,20 @@ GlowTestFrame(u64 wait_us)
 	}
 }
 
+/* An in-game slow frame was captured: also time the frames with and without
+   the lamp glows. */
 void
-PS3_Video_BindRenderTarget(void)
+PS3_Video_StartGlowTest(void)
+{
+	GlowTestStart();
+}
+
+/* the source image (and depth) as the render target */
+static void
+SetMainSurface(void)
 {
 	gcmSurface sf;
 	int i;
-
-	if (!ready || !gl_mode || !src[cur])
-	{
-		return;
-	}
-	PS3_Cmd_Reserve();
-
-	/* the target isn't free until the flip that showed it is done */
-	{
-		u64 t0 = sysGetSystemTime();
-
-		WaitFlips();
-		t0 = sysGetSystemTime() - t0;
-		prof_wait_us += t0;
-#ifdef GLQUAKE
-		/* the RSX is behind: list what this frame draws (the wait is here,
-		   at the start of a frame, not in Present), and start a glow test */
-		if (t0 > 6000 && frames_presented > 600)
-		{
-			extern void ps3gl_request_capture(void);
-			ps3gl_request_capture();
-		}
-		GlowTestFrame(t0);
-#endif
-	}
 
 	memset(&sf, 0, sizeof(sf));
 	sf.colorFormat = GCM_SURFACE_A8R8G8B8;
@@ -699,6 +691,37 @@ PS3_Video_BindRenderTarget(void)
 	sf.y = 0;
 
 	rsxSetSurface(ctx, &sf);
+}
+
+void
+PS3_Video_BindRenderTarget(void)
+{
+	if (!ready || !gl_mode || !src[cur])
+	{
+		return;
+	}
+	PS3_Cmd_Reserve();
+
+	/* the target isn't free until the flip that showed it is done */
+	{
+		u64 t0 = sysGetSystemTime();
+
+		WaitFlips();
+		t0 = sysGetSystemTime() - t0;
+		prof_wait_us += t0;
+#ifdef GLQUAKE
+		/* the RSX is behind: list what this frame draws (the wait is here,
+		   at the start of a frame, not in Present), and start a glow test */
+		if (t0 > 6000 && frames_presented > 600)
+		{
+			extern void ps3gl_request_capture(void);
+			ps3gl_request_capture();
+		}
+		GlowTestFrame(t0);
+#endif
+	}
+
+	SetMainSurface();
 }
 
 uint32_t *
@@ -821,7 +844,7 @@ ColorPassInit(void)
 	cp_fp = (rsxFragmentProgram *)present_fp_fpo;
 	rsxFragmentProgramGetUCode(cp_fp, &ucode, &cp_fp_size);
 	cp_fp_ucode = rsxMemalign(64, cp_fp_size);
-	cp_verts = (u8 *)rsxMemalign(128, FB_COUNT * 4 * PS3GL_VERTEX_SIZE + 128);
+	cp_verts = (u8 *)rsxMemalign(128, 3 * FB_COUNT * 4 * PS3GL_VERTEX_SIZE + 128);
 	cp_depth = (u32 *)rsxMemalign(FB_ALIGN, disp_pitch * disp_h);
 
 	if (!cp_mvp || !cp_fp_ucode || !cp_verts || !cp_depth)
@@ -841,8 +864,21 @@ ColorPassInit(void)
 	return cp_state;
 }
 
+/* One textured quad through present_fp (pow(texel, exponent) * brightness):
+   'tex' (linear, tex_w x tex_h) drawn into the rectangle of 'dst'. */
+typedef struct
+{
+	u32 dst_off, dst_pitch, z_off, z_pitch;
+	int dst_w, dst_h, clear;
+	u32 tex_off, tex_pitch;
+	int tex_w, tex_h, linear;
+	int off_x, off_y, out_w, out_h;
+	float brightness, exponent;
+	int slot;
+} pass_t;
+
 static void
-ColorPass(int off_x, int off_y, int out_w, int out_h)
+Pass(const pass_t *p)
 {
 	static const float identity[16] = {
 		1, 0, 0, 0,
@@ -869,24 +905,24 @@ ColorPass(int off_x, int off_y, int out_w, int out_h)
 	sf.colorFormat = GCM_SURFACE_A8R8G8B8;
 	sf.colorTarget = GCM_SURFACE_TARGET_0;
 	sf.colorLocation[0] = GCM_LOCATION_RSX;
-	sf.colorOffset[0] = fb_offset[cur];
-	sf.colorPitch[0] = disp_pitch;
+	sf.colorOffset[0] = p->dst_off;
+	sf.colorPitch[0] = p->dst_pitch;
 
 	for (i = 1; i < 4; i++)
 	{
 		sf.colorLocation[i] = GCM_LOCATION_RSX;
-		sf.colorOffset[i] = fb_offset[cur];
+		sf.colorOffset[i] = p->dst_off;
 		sf.colorPitch[i] = 64;
 	}
 
 	sf.depthFormat = GCM_SURFACE_ZETA_Z24S8;
 	sf.depthLocation = GCM_LOCATION_RSX;
-	sf.depthOffset = cp_depth_offset;
-	sf.depthPitch = disp_pitch;
+	sf.depthOffset = p->z_off;
+	sf.depthPitch = p->z_pitch;
 	sf.type = GCM_SURFACE_TYPE_LINEAR;
 	sf.antiAlias = GCM_SURFACE_CENTER_1;
-	sf.width = (u16)disp_w;
-	sf.height = (u16)disp_h;
+	sf.width = (u16)p->dst_w;
+	sf.height = (u16)p->dst_h;
 
 	/* the image must be finished (3D unit, or the CPU) and freshly read */
 	__asm__ volatile("sync" ::: "memory");
@@ -909,32 +945,35 @@ ColorPass(int off_x, int off_y, int out_w, int out_h)
 	/* Black borders. The clear is clipped by the viewport as well as the
 	   scissor, and the viewport still is the renderer's (smaller in 4:3
 	   modes): the whole screen first, or the bars keep old frames. */
-	vscale[0] = disp_w * 0.5f;
-	vscale[1] = disp_h * -0.5f;
+	vscale[0] = p->dst_w * 0.5f;
+	vscale[1] = p->dst_h * -0.5f;
 	vscale[2] = 0.5f;
 	vscale[3] = 0.0f;
-	voffset[0] = disp_w * 0.5f;
-	voffset[1] = disp_h * 0.5f;
+	voffset[0] = p->dst_w * 0.5f;
+	voffset[1] = p->dst_h * 0.5f;
 	voffset[2] = 0.5f;
 	voffset[3] = 0.0f;
-	rsxSetViewport(ctx, 0, 0, (u16)disp_w, (u16)disp_h, 0.0f, 1.0f, vscale, voffset);
-	rsxSetViewportClip(ctx, 0, disp_w, disp_h);
-	rsxSetScissor(ctx, 0, 0, (u16)disp_w, (u16)disp_h);
-	rsxSetClearColor(ctx, 0xff000000u);
-	rsxClearSurface(ctx, GCM_CLEAR_R | GCM_CLEAR_G | GCM_CLEAR_B | GCM_CLEAR_A);
+	rsxSetViewport(ctx, 0, 0, (u16)p->dst_w, (u16)p->dst_h, 0.0f, 1.0f, vscale, voffset);
+	rsxSetViewportClip(ctx, 0, p->dst_w, p->dst_h);
+	rsxSetScissor(ctx, 0, 0, (u16)p->dst_w, (u16)p->dst_h);
+	if (p->clear)
+	{
+		rsxSetClearColor(ctx, 0xff000000u);
+		rsxClearSurface(ctx, GCM_CLEAR_R | GCM_CLEAR_G | GCM_CLEAR_B | GCM_CLEAR_A);
+	}
 
 	/* the picture's rectangle */
-	vscale[0] = out_w * 0.5f;
-	vscale[1] = out_h * -0.5f;
+	vscale[0] = p->out_w * 0.5f;
+	vscale[1] = p->out_h * -0.5f;
 	vscale[2] = 0.5f;
 	vscale[3] = 0.0f;
-	voffset[0] = off_x + out_w * 0.5f;
-	voffset[1] = off_y + out_h * 0.5f;
+	voffset[0] = p->off_x + p->out_w * 0.5f;
+	voffset[1] = p->off_y + p->out_h * 0.5f;
 	voffset[2] = 0.5f;
 	voffset[3] = 0.0f;
-	rsxSetViewport(ctx, (u16)off_x, (u16)off_y, (u16)out_w, (u16)out_h,
+	rsxSetViewport(ctx, (u16)p->off_x, (u16)p->off_y, (u16)p->out_w, (u16)p->out_h,
 			0.0f, 1.0f, vscale, voffset);
-	rsxSetViewportClip(ctx, 0, disp_w, disp_h);
+	rsxSetViewportClip(ctx, 0, p->dst_w, p->dst_h);
 
 	/* the image as a linear texture */
 	rsxInvalidateTextureCache(ctx, GCM_INVALIDATE_TEXTURE);
@@ -945,18 +984,18 @@ ColorPass(int off_x, int off_y, int out_w, int out_h)
 	tex.dimension = GCM_TEXTURE_DIMS_2D;
 	tex.cubemap = GCM_FALSE;
 	tex.remap = 0x00AAE4;   /* identity, as in ps3gl */
-	tex.width = (u16)src_w;
-	tex.height = (u16)src_h;
+	tex.width = (u16)p->tex_w;
+	tex.height = (u16)p->tex_h;
 	tex.depth = 1;
 	tex.location = GCM_LOCATION_RSX;
-	tex.pitch = src_pitch;
-	tex.offset = src_offset[cur];
+	tex.pitch = p->tex_pitch;
+	tex.offset = p->tex_off;
 
 	rsxLoadTexture(ctx, 0, &tex);
 	rsxTextureControl(ctx, 0, GCM_TRUE, 0, 0, GCM_TEXTURE_MAX_ANISO_1);
 	rsxTextureFilter(ctx, 0, 0,
-			filter_linear ? GCM_TEXTURE_LINEAR : GCM_TEXTURE_NEAREST,
-			filter_linear ? GCM_TEXTURE_LINEAR : GCM_TEXTURE_NEAREST,
+			p->linear ? GCM_TEXTURE_LINEAR : GCM_TEXTURE_NEAREST,
+			p->linear ? GCM_TEXTURE_LINEAR : GCM_TEXTURE_NEAREST,
 			GCM_TEXTURE_CONVOLUTION_QUINCUNX);
 	rsxTextureWrapMode(ctx, 0, GCM_TEXTURE_CLAMP_TO_EDGE, GCM_TEXTURE_CLAMP_TO_EDGE,
 			GCM_TEXTURE_CLAMP_TO_EDGE, GCM_TEXTURE_UNSIGNED_REMAP_NORMAL,
@@ -969,8 +1008,8 @@ ColorPass(int off_x, int off_y, int out_w, int out_h)
 	rsxLoadFragmentProgramLocation(ctx, cp_fp, cp_fp_offset, GCM_LOCATION_RSX);
 
 	/* the quad, in this framebuffer's slot (its last use is done) */
-	voff = cp_verts_offset + (u32)cur * 4 * PS3GL_VERTEX_SIZE;
-	v = (ps3gl_vertex_t *)(cp_verts + (u32)cur * 4 * PS3GL_VERTEX_SIZE);
+	voff = cp_verts_offset + (u32)p->slot * 4 * PS3GL_VERTEX_SIZE;
+	v = (ps3gl_vertex_t *)(cp_verts + (u32)p->slot * 4 * PS3GL_VERTEX_SIZE);
 
 	for (i = 0; i < 4; i++)
 	{
@@ -980,8 +1019,8 @@ ColorPass(int off_x, int off_y, int out_w, int out_h)
 		v[i].w = 1.0f;
 		v[i].u0 = corner[i][2];
 		v[i].v0 = corner[i][3];
-		v[i].u1 = color_brightness;
-		v[i].v1 = color_exponent;
+		v[i].u1 = p->brightness;
+		v[i].v1 = p->exponent;
 		v[i].color = 0xffffffffu;
 	}
 
@@ -997,6 +1036,101 @@ ColorPass(int off_x, int off_y, int out_w, int out_h)
 			PS3GL_VERTEX_SIZE, 4, GCM_VERTEX_DATA_TYPE_U8, GCM_LOCATION_RSX);
 
 	rsxDrawVertexArray(ctx, GCM_TYPE_TRIANGLE_FAN, 0, 4);
+}
+
+/* The finished picture onto the screen with brightness/gamma (no view pass). */
+static void
+ColorPass(int off_x, int off_y, int out_w, int out_h)
+{
+	pass_t p;
+
+	memset(&p, 0, sizeof(p));
+	p.dst_off = fb_offset[cur];
+	p.dst_pitch = disp_pitch;
+	p.dst_w = disp_w;
+	p.dst_h = disp_h;
+	p.z_off = cp_depth_offset;
+	p.z_pitch = disp_pitch;
+	p.clear = 1;
+	p.tex_off = src_offset[cur];
+	p.tex_pitch = src_pitch;
+	p.tex_w = src_w;
+	p.tex_h = src_h;
+	p.linear = filter_linear;
+	p.off_x = off_x;
+	p.off_y = off_y;
+	p.out_w = out_w;
+	p.out_h = out_h;
+	p.brightness = color_brightness;
+	p.exponent = color_exponent;
+	p.slot = cur;
+	Pass(&p);
+}
+
+static void SetMainSurface(void);
+
+/*
+ * Gamma on the 3D view only: called once the world and the weapon are drawn,
+ * before the HUD. The view goes through pow() into a scratch image and is
+ * copied back; the HUD and menus are drawn on top unchanged.
+ */
+void
+PS3_Video_GammaView(void)
+{
+	extern void PS3GL_InvalidateState(void);
+	pass_t p;
+
+	if (!ready || !gl_mode || !src[cur] || (color_exponent == 1.0f && color_brightness == 1.0f))
+	{
+		return;
+	}
+	if (ColorPassInit() != 1)
+	{
+		return;
+	}
+	if (!gm_buf)
+	{
+		gm_buf = (u32 *)rsxMemalign(FB_ALIGN, src_pitch * src_h);
+		if (!gm_buf)
+		{
+			return;
+		}
+		rsxAddressToOffset(gm_buf, &gm_offset);
+	}
+
+	memset(&p, 0, sizeof(p));
+	p.dst_pitch = src_pitch;
+	p.dst_w = src_w;
+	p.dst_h = src_h;
+	p.z_off = depth_offset;   /* not tested or written */
+	p.z_pitch = depth_pitch;
+	p.tex_pitch = src_pitch;
+	p.tex_w = src_w;
+	p.tex_h = src_h;
+	p.out_w = src_w;
+	p.out_h = src_h;
+
+	/* the view, graded, into the scratch image */
+	PS3_Cmd_Reserve();
+	p.dst_off = gm_offset;
+	p.tex_off = src_offset[cur];
+	p.brightness = color_brightness;
+	p.exponent = color_exponent;
+	p.slot = FB_COUNT + cur * 2;
+	Pass(&p);
+
+	/* and back, as it is */
+	PS3_Cmd_Reserve();
+	p.dst_off = src_offset[cur];
+	p.tex_off = gm_offset;
+	p.brightness = 1.0f;
+	p.exponent = 1.0f;
+	p.slot = FB_COUNT + cur * 2 + 1;
+	Pass(&p);
+
+	PS3_Cmd_Reserve();
+	SetMainSurface();
+	PS3GL_InvalidateState();
 }
 
 void
@@ -1044,7 +1178,8 @@ PS3_Video_Present(void)
 	off_x = ((int)disp_w - out_w) / 2;
 	off_y = ((int)disp_h - out_h) / 2;
 
-	color_pass = (color_brightness != 1.0f || color_exponent != 1.0f) && ColorPassInit() == 1;
+	/* gamma is applied to the 3D view (PS3_Video_GammaView), not the HUD */
+	color_pass = 0;
 
 	PS3_Cmd_Reserve();
 	if (color_pass)

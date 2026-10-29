@@ -672,26 +672,49 @@ ps3gl_request_capture(void)
 static uint32_t
 DrawArea(const ps3gl_vertex_t *v, int n)
 {
+	/* Bounding box on screen. Vertices behind the eye are clipped at the near
+	   plane (along the edge to the previous/next vertex) instead of calling the
+	   whole draw full-screen: that made every world draw "1.00 screens". */
 	const float *m = ps3gl.mvp;
 	float x0 = 1e9f, y0 = 1e9f, x1 = -1e9f, y1 = -1e9f, sw, sh;
-	int i, step = n > 48 ? n / 48 : 1;
+	float c[4][49];
+	int i, k = 0, step = n > 48 ? n / 48 : 1;
+	const float near_w = 0.01f;
 
-	for (i = 0; i < n; i += step)
+	for (i = 0; i < n && k < 48; i += step, k++)
 	{
 		float x = v[i].x, y = v[i].y, z = v[i].z;
-		float cw = m[12] * x + m[13] * y + m[14] * z + m[15];
-		float cx, cy;
-
-		if (cw <= 0.001f)
+		c[0][k] = m[0] * x + m[1] * y + m[2] * z + m[3];
+		c[1][k] = m[4] * x + m[5] * y + m[6] * z + m[7];
+		c[3][k] = m[12] * x + m[13] * y + m[14] * z + m[15];
+	}
+	for (i = 0; i < k; i++)
+	{
+		int j, e;
+		if (c[3][i] > near_w)
 		{
-			return (uint32_t)(ps3gl.screen_w * ps3gl.screen_h);   /* through the camera: call it all */
+			float px = c[0][i] / c[3][i], py = c[1][i] / c[3][i];
+			if (px < x0) x0 = px;
+			if (px > x1) x1 = px;
+			if (py < y0) y0 = py;
+			if (py > y1) y1 = py;
+			continue;
 		}
-		cx = (m[0] * x + m[1] * y + m[2] * z + m[3]) / cw;
-		cy = (m[4] * x + m[5] * y + m[6] * z + m[7]) / cw;
-		if (cx < x0) x0 = cx;
-		if (cx > x1) x1 = cx;
-		if (cy < y0) y0 = cy;
-		if (cy > y1) y1 = cy;
+		/* behind: where its edges to the neighbours cross the near plane */
+		for (e = 0; e < 2; e++)
+		{
+			float t, px, py;
+			j = e ? (i + 1) % k : (i + k - 1) % k;
+			if (c[3][j] <= near_w)
+				continue;
+			t = (near_w - c[3][i]) / (c[3][j] - c[3][i]);
+			px = (c[0][i] + t * (c[0][j] - c[0][i])) / near_w;
+			py = (c[1][i] + t * (c[1][j] - c[1][i])) / near_w;
+			if (px < x0) x0 = px;
+			if (px > x1) x1 = px;
+			if (py < y0) y0 = py;
+			if (py > y1) y1 = py;
+		}
 	}
 	if (x0 < -1.0f) x0 = -1.0f;
 	if (y0 < -1.0f) y0 = -1.0f;
@@ -725,7 +748,9 @@ int ps3gl_skip_glows;
 int
 ps3gl_skipped_draw(GLenum mode)
 {
-	return ps3gl_skip_glows && mode == GL_QUADS && ps3gl.rs.blend;
+	/* sprites: blended quads in the 3D view (depth tested, not written); not the HUD */
+	return ps3gl_skip_glows && mode == GL_QUADS && ps3gl.rs.blend &&
+		ps3gl.rs.depth_test && !ps3gl.rs.depth_mask;
 }
 
 static void
@@ -770,6 +795,10 @@ ps3gl_capture_end(void)
 	if (trace[slot].n < 20)
 		return;
 	captures++;
+	{
+		extern void PS3_Video_StartGlowTest(void);
+		PS3_Video_StartGlowTest();
+	}
 	n = trace[slot].n < TRACE_DRAWS ? trace[slot].n : TRACE_DRAWS;
 	/* the end mark for the last draw's GPU time; read when the frame is done */
 	/* (RSX timestamps per draw froze the console: not used) */

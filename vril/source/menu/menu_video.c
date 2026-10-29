@@ -31,6 +31,7 @@ char* ultrawide_string;
 extern void PS3_VID_NextResolution(void);
 extern void PS3_VID_ResetPendingResolution(void);
 extern void PS3_VID_ApplyResolution(void);
+extern void PS3_VID_ApplyGamma(void);
 extern const char *PS3_VID_ResolutionString(void);
 #endif
 #ifdef PLATFORM_SUPPORTS_VIDEO_OPTIONS
@@ -122,6 +123,7 @@ void Menu_Configuration_ApplySettings (void)
 {
 #ifdef __PS3__
     PS3_VID_ApplyResolution();
+    PS3_VID_ApplyGamma();
 #endif
     Menu_SetSound(MENU_SND_ENTER);
 }

@@ -1818,6 +1818,14 @@ void R_RenderView (void)
 	// render mirror view
 	R_Mirror ();
 
+#ifdef __PS3__
+	{
+		// gamma on the 3D view only: the HUD drawn after keeps its colours
+		extern void PS3_Video_GammaView(void);
+		PS3_Video_GammaView();
+	}
+#endif
+
 	R_PolyBlend ();
 
 	if (r_speeds.value)

@@ -278,6 +278,24 @@ PS3GL_BeginFrame(void)
 	}
 }
 
+/* Something else drew on the RSX mid-frame (the gamma pass): send all of
+   ps3gl's state again before the next draw. */
+void
+PS3GL_InvalidateState(void)
+{
+	int i;
+
+	ps3gl.dirty = PS3GL_DIRTY_ALL;
+	ps3gl.vp_loaded = 0;
+	ps3gl.active_fp = -1;
+	ps3gl.mvp_uploaded = 0;
+	for (i = 0; i < PS3GL_MAX_TMUS; i++)
+	{
+		ps3gl.tmu[i].hw_tex = -2;
+		ps3gl.tmu[i].hw_enabled = -1;
+	}
+}
+
 void
 PS3GL_EndFrame(void)
 {

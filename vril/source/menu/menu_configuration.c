@@ -36,8 +36,15 @@ void Menu_Configuration_Back (void)
 Menu_Configuration_Set
 ===============
 */
+#ifdef __PS3__
+extern void PS3_VID_ResetPendingResolution(void);
+#endif
+
 void Menu_Configuration_Set (void)
 {
+#ifdef __PS3__
+	PS3_VID_ResetPendingResolution();   // BACK from Video Options: drop what wasn't applied
+#endif
 	Menu_ResetMenuButtons();
 	if (key_dest == key_menu_pause) {
 		m_previous_state = m_pause;

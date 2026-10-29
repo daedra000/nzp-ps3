@@ -92,10 +92,29 @@ void PS3_VID_NextResolution(void)
 	ps3_res_pending = (ps3_res_pending + 1) % NUM_PS3_RES;
 }
 
-/* Video Options opened: show what's in use. */
+/* Gamma on screen: follows the cvar (config.cfg, the console) until Video
+   Options is opened; from then on the slider only takes effect on APPLY. */
+static float ps3_gamma_live = -1.0f;
+static int ps3_gamma_held;
+
+/* Video Options opened (and Configuration, which BACK returns to): show what's
+   in use, dropping changes that weren't applied. */
 void PS3_VID_ResetPendingResolution(void)
 {
+	extern cvar_t v_gamma;
+
 	ps3_res_pending = PS3_ResIndex(vid_ps3_res.string);
+	if (ps3_gamma_live < 0.0f)
+		ps3_gamma_live = v_gamma.value;
+	if (v_gamma.value != ps3_gamma_live)
+		Cvar_SetValue("gamma", ps3_gamma_live);
+	ps3_gamma_held = 1;
+}
+
+void PS3_VID_ApplyGamma(void)
+{
+	extern cvar_t v_gamma;
+	ps3_gamma_live = v_gamma.value;
 }
 
 void PS3_VID_ApplyResolution(void)
@@ -123,10 +142,15 @@ static void PS3_VID_CheckGamma(void)
 	static float applied = -1.0f;
 	float exponent;
 
-	if (v_gamma.value == applied)
+	float want;
+
+	if (!ps3_gamma_held)
+		ps3_gamma_live = v_gamma.value;
+	want = ps3_gamma_live;
+	if (want == applied)
 		return;
-	applied = v_gamma.value;
-	exponent = v_gamma.value / 0.6f;
+	applied = want;
+	exponent = want / 0.6f;
 	if (exponent < 0.3f) exponent = 0.3f;
 	if (exponent > 0.97f && exponent < 1.03f) exponent = 1.0f;   /* no pass at all */
 	PS3_Video_SetColor(1.0f, exponent);
