@@ -336,10 +336,22 @@ void Sys_CaptureScreenshot(void)
 	Con_Printf("Screenshots are not supported on PS3.\n");
 }
 
+static volatile int ps3_xmb_pause;
+
 void Sys_SendKeyEvents(void)
 {
 	// Delivers the XMB's events (PS button menu, "Quit Game") to the callback below.
 	sysUtilCheckCallback();
+
+	// PS button menu opened during a match: the game's own pause menu, as Start.
+	if (ps3_xmb_pause) {
+		ps3_xmb_pause = 0;
+		if (key_dest == key_game && cls.state == ca_connected && cls.signon == SIGNONS) {
+			extern void Menu_ToggleMenu_f(void);
+			PS3_Log("XMB opened: game paused");
+			Menu_ToggleMenu_f();
+		}
+	}
 	PS3_Input_Poll();
 }
 
@@ -354,6 +366,7 @@ static void PS3_SysutilCallback(u64 status, u64 param, void *userdata)
 		break;
 	case SYSUTIL_MENU_OPEN:
 		PS3_Input_SetXMBOpen(true);
+		ps3_xmb_pause = 1;
 		break;
 	case SYSUTIL_MENU_CLOSE:
 		PS3_Input_SetXMBOpen(false);

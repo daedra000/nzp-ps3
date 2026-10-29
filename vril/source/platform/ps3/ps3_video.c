@@ -404,7 +404,11 @@ PS3_Video_Init(void)
 
 	for (i = 0; i < FB_COUNT; i++)
 	{
-		fb[i] = (u32 *)rsxMemalign(FB_ALIGN, disp_pitch * disp_h);
+		/* On 1 MB boundaries: the XMB's screenshot reads the buffer on screen
+		   straight out of RSX memory, and with 64-byte-aligned buffers it held
+		   the flip for good and the console froze (Grid Siege v2.6.9, the fix
+		   confirmed on HEN; tiny3d's buffers start at offset 0). */
+		fb[i] = (u32 *)rsxMemalign(1024 * 1024, disp_pitch * disp_h);
 
 		if (!fb[i])
 		{
@@ -1338,10 +1342,12 @@ flip:
 	last_flip_vblank = vblank_count;
 
 	PS3_Cmd_Reserve();
-	/* TyrQuakeCell's sequence: flip, flush, wait-flip. */
+	/* Flip and flush. No gcmSetWaitFlip: while the system holds a flip back
+	   (an XMB screenshot) the RSX would stall behind it, and a screenshot that
+	   waits for the RSX would wait forever (Grid Siege's freeze). The CPU
+	   checks the flips instead (WaitFlips) before reusing a buffer. */
 	gcmSetFlip(ctx, cur);
 	rsxFlushBuffer(ctx);
-	gcmSetWaitFlip(ctx);
 
 	flip_queued++;
 	cur = (cur + 1) % FB_COUNT;

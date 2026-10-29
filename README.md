@@ -17,6 +17,10 @@ Single player only for now (no LAN yet).
 - Video Options > GAMMA brightens or darkens the game world only; the HUD and menus
   keep their colours.
 - Both take effect on APPLY; BACK drops the change.
+- Pressing the PS button during a match pauses the game (the pause menu is up when
+  you come back). XMB screenshots work: the screen buffers sit on 1 MB boundaries and
+  the RSX never waits on a flip the system is holding (both from Grid Siege, where a
+  screenshot used to freeze the console).
 
 **Known issues**
 - The crash handler can't install on retail/HEN firmware (liblv2dbg refuses), so a
