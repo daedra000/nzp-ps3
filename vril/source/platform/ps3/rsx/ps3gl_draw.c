@@ -31,6 +31,7 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "ps3gl.h"
@@ -699,6 +700,135 @@ glDrawArrays(GLenum mode, GLint first, GLsizei count)
 	ps3gl.st_verts += (uint32_t)count;
 }
 
+/* ================================================================ */
+/* The world's vertices in RSX memory                                 */
+/* ================================================================ */
+
+/*
+ * As Halo CE PS3's vertex cache: the world's vertices never change during a
+ * map, but each frame copied every visible one into the ring again, and a
+ * detailed custom map (Croft Manor's fireplace room: 30 000-40 000 vertices
+ * in view) missed 60 fps on that alone. The renderer hands each page of the
+ * world's vertices over once, at the map's load (ps3glWorldPage); they're
+ * converted into RSX memory twice (the texture pass's coordinates, and the
+ * lightmap pass's) and the draws only send their indices.
+ *
+ * Only while the current colour is white (what the world draws with; the
+ * vertices carry it): any other colour, and the draw goes through the ring
+ * as before. A page without room in RSX memory goes through the ring too.
+ */
+typedef struct
+{
+	uint8_t *mem[2];   /* 0: texture coordinates, 1: lightmap coordinates */
+	uint32_t off[2];
+	int count;
+} world_page_t;
+
+#define WORLD_MAX_BYTES (48u * 1024 * 1024)
+
+static world_page_t *world_pages;
+static int world_npages;
+static uint32_t world_bytes;
+static int world_cur = -1, world_cur_lm;
+
+void
+ps3glWorldPagesFree(void)
+{
+	int i, j;
+
+	world_cur = -1;
+	if (!world_pages)
+	{
+		return;
+	}
+	PS3_Video_Finish();   /* the RSX may still read them */
+	for (i = 0; i < world_npages; i++)
+		for (j = 0; j < 2; j++)
+			if (world_pages[i].mem[j])
+				rsxFree(world_pages[i].mem[j]);
+	free(world_pages);
+	world_pages = NULL;
+	world_npages = 0;
+	world_bytes = 0;
+}
+
+/* 'v': count vertices of 'stride' bytes, the coordinates at those offsets */
+void
+ps3glWorldPage(int page, const void *v, int stride, int uv_off, int lm_off, int xyz_off, int count)
+{
+	uint32_t bytes = (uint32_t)count * PS3GL_VERTEX_SIZE;
+	int j, i;
+
+	if (page < 0 || count <= 0 || count > 65536)
+	{
+		return;
+	}
+	if (page >= world_npages)
+	{
+		world_page_t *n = (world_page_t *)realloc(world_pages, (size_t)(page + 1) * sizeof(*n));
+		if (!n)
+		{
+			return;
+		}
+		memset(n + world_npages, 0, (size_t)(page + 1 - world_npages) * sizeof(*n));
+		world_pages = n;
+		world_npages = page + 1;
+	}
+	world_pages[page].count = count;
+	for (j = 0; j < 2; j++)
+	{
+		ps3gl_vertex_t *out;
+
+		if (world_bytes + bytes > WORLD_MAX_BYTES ||
+			!(world_pages[page].mem[j] = (uint8_t *)rsxMemalign(128, bytes)))
+		{
+			static int warned;
+			if (!warned)
+			{
+				PS3_Log("[gl] world in RSX memory: no room for page %d (%u KB used), drawn through the ring",
+						page, (unsigned)(world_bytes >> 10));
+				warned = 1;
+			}
+			world_pages[page].mem[j] = NULL;
+			continue;
+		}
+		world_bytes += bytes;
+		rsxAddressToOffset(world_pages[page].mem[j], &world_pages[page].off[j]);
+		out = (ps3gl_vertex_t *)world_pages[page].mem[j];
+		for (i = 0; i < count; i++, out++)
+		{
+			const uint8_t *src = (const uint8_t *)v + (size_t)i * stride;
+			const float *xyz = (const float *)(src + xyz_off);
+			const float *uv = (const float *)(src + (j ? lm_off : uv_off));
+			const float *lm = (const float *)(src + lm_off);
+
+			out->x = xyz[0];
+			out->y = xyz[1];
+			out->z = xyz[2];
+			out->w = 1.0f;
+			out->u0 = uv[0];
+			out->v0 = uv[1];
+			out->u1 = lm[0];
+			out->v1 = lm[1];
+			out->color = 0xffffffffu;
+		}
+	}
+	__asm__ volatile("sync" ::: "memory");
+	/* the RSX's vertex cache may hold what this memory had before */
+	PS3_Cmd_Reserve();
+	rsxInvalidateVertexCache(ps3gl.ctx);
+	if (page == 0)
+		PS3_Log("[gl] world in RSX memory: the vertices are converted at the map's load");
+}
+
+/* The next draws are of this page's vertices (-1: not the world) */
+void
+ps3glUseWorldPage(int page, int lightmap)
+{
+	world_cur = page;
+	world_cur_lm = lightmap ? 1 : 0;
+}
+
 void APIENTRY
 glDrawElements(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices)
 {
@@ -745,6 +875,16 @@ glDrawElements(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices)
 
 	if (hi - lo >= 65536)
 	{
+		return;
+	}
+
+	/* the world: straight from RSX memory, only the indices sent */
+	if (world_cur >= 0 && world_cur < world_npages && ps3gl.color == 0xffffffffu &&
+		world_pages[world_cur].mem[world_cur_lm] && hi < world_pages[world_cur].count)
+	{
+		BindRing(world_pages[world_cur].off[world_cur_lm]);
+		DrawIndexedInline(prim, idx16, count);
+		ps3gl.st_draws++;
 		return;
 	}
 

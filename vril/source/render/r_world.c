@@ -21,6 +21,11 @@
 #include "../nzportable_def.h"
 #ifdef __PS3__
 #include "../platform/ps3/ps3_platform.h"
+// ps3gl: the world's vertices are put in RSX memory at the map's load and
+// drawn from there (only the indices go each frame)
+extern void ps3glWorldPage(int page, const void * v, int stride, int uv_off, int lm_off, int xyz_off, int count);
+extern void ps3glWorldPagesFree(void);
+extern void ps3glUseWorldPage(int page, int lightmap);
 #endif
 
 static r_world_layout_t world_layout;
@@ -39,6 +44,9 @@ R_DestroyWorldCache(void)
 {
     int i;
 
+#ifdef __PS3__
+    ps3glWorldPagesFree();
+#endif
     for (i = 0; i < world_page_count; ++i) {
         Hyena_DestroyBuffer(world_pages[i].vertices);
         Hyena_DestroyBuffer(world_pages[i].lightmap);
@@ -86,6 +94,10 @@ R_UploadWorldCachePage(int page, const world_vertex_t * vertices, int count)
         Hyena_UnmapBuffer(cached->lightmap);
     } else {
         cached->vertices = Hyena_CreateBuffer(HYE_ARRAY_BUFFER, vertices, count * sizeof(*vertices));
+#ifdef __PS3__
+        ps3glWorldPage(page, vertices, sizeof(*vertices), offsetof(world_vertex_t, uv),
+          offsetof(world_vertex_t, lightmap_uv), offsetof(world_vertex_t, xyz), count);
+#endif
         if (Hyena_NeedsColorArray()) {
             // Immutable white colors avoid rebuilding a picaGL color stream for each group.
             byte * colors = malloc(count * 4);
@@ -130,7 +142,13 @@ R_DrawWorldCachePage(int page, int first_index, int count, qboolean lightmap, qb
         Hyena_EnableCapability(HYE_ALPHA_TEST);
         Hyena_AlphaFunction(HYE_GREATER, 0xaa / 255.0f);
     }
+#ifdef __PS3__
+    ps3glUseWorldPage(page, lightmap);
+#endif
     Hyena_DrawElements(HYE_TRIANGLES, &arrays, count, world_indices, first_index * sizeof(unsigned short));
+#ifdef __PS3__
+    ps3glUseWorldPage(-1, 0);
+#endif
     if (alpha_test && !world_layout.alpha_test_all)
         Hyena_DisableCapability(HYE_ALPHA_TEST);
 }
