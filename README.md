@@ -35,7 +35,9 @@ Single player only for now (no LAN yet).
 3. Install it from Package Manager. It shows up as *Nazi Zombies: Portable*.
 
 Everything lives in `/dev_hdd0/game/NZPP00001/USRDIR/`: the game data in `nzp/`
-(most of it in `nzp/pak0.pak`), config and saves next to it, and `nzp_log.txt`,
+(most of it in `nzp/pak0.pak`), your settings in `nzp/config.cfg` (saved on every
+APPLY and when you leave a settings menu; updates don't overwrite it, and deleting it
+goes back to the defaults in `config_default.cfg`), and `nzp_log.txt`,
 the log to send when something goes wrong (the previous run's is kept as
 `nzp_log.old.txt`). The main menu shows the build it came from
 (`2.0.0-indev+ps3-<commit>`).
