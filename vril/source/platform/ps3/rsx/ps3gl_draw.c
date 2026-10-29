@@ -765,8 +765,11 @@ ps3gl_capture_end(void)
 		return;
 	}
 	capture_frame = 0;
-	captures++;
 	slot = ps3gl.frame % TRACE_FRAMES;
+	/* menus (a handful of draws) used up all four captures before a map */
+	if (trace[slot].n < 20)
+		return;
+	captures++;
 	n = trace[slot].n < TRACE_DRAWS ? trace[slot].n : TRACE_DRAWS;
 	/* the end mark for the last draw's GPU time; read when the frame is done */
 	/* (RSX timestamps per draw froze the console: not used) */

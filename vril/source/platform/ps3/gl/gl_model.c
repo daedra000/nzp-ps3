@@ -433,13 +433,13 @@ void Mod_LoadTextures (lump_t *l)
 					data = WAD3_LoadTexture(mt);
 
 					bool choosealpha = mt->name[0] == '{' ? true : false; // naievil -- need to choose alpha mode for certain textures
-					tx->gl_texturenum = Image_LoadTexture(mt->name, tx->width, tx->height, (byte *)data, HYE_TEXTURE_RGBA8, HYE_FILTER_LINEAR, 0, choosealpha, false, false);
+					tx->gl_texturenum = Image_LoadTexture(mt->name, tx->width, tx->height, (byte *)data, HYE_TEXTURE_RGBA8, HYE_FILTER_LINEAR, 1, choosealpha, false, false);
 					texture_mode = GL_LINEAR;
 					free(data);
 				}
 			} else {
 				texture_mode = GL_LINEAR_MIPMAP_NEAREST; //_LINEAR;
-				tx->gl_texturenum = Image_LoadTexture(mt->name, tx->width, tx->height, (byte *)(tx+1), HYE_TEXTURE_INDEX8, HYE_FILTER_LINEAR, 0, false, false, false);
+				tx->gl_texturenum = Image_LoadTexture(mt->name, tx->width, tx->height, (byte *)(tx+1), HYE_TEXTURE_INDEX8, HYE_FILTER_LINEAR, 1, false, false, false);
 				texture_mode = GL_LINEAR;
 			}
 		}
@@ -1701,7 +1701,7 @@ void *Mod_LoadAllSkins (int numskins, daliasskintype_t *pskintype)
 			pheader->gl_texturenum[i][0] =
 			pheader->gl_texturenum[i][1] =
 			pheader->gl_texturenum[i][2] =
-			pheader->gl_texturenum[i][3] = Image_LoadImage(model2, IMAGE_TGA | IMAGE_PCX, 0, true, false);
+			pheader->gl_texturenum[i][3] = Image_LoadImage(model2, IMAGE_TGA | IMAGE_PCX, 0, true, true);
 
 			if (pheader->gl_texturenum[i][0] < 0) // did not find a matching TGA...
 			{
@@ -1710,7 +1710,7 @@ void *Mod_LoadAllSkins (int numskins, daliasskintype_t *pskintype)
 				pheader->gl_texturenum[i][1] =
 				pheader->gl_texturenum[i][2] =
 				pheader->gl_texturenum[i][3] = Image_LoadTexture(name, pheader->skinwidth,
-					pheader->skinheight, (byte *)(pskintype + 1), HYE_TEXTURE_INDEX8, HYE_FILTER_LINEAR, 0, true, true, false);
+					pheader->skinheight, (byte *)(pskintype + 1), HYE_TEXTURE_INDEX8, HYE_FILTER_LINEAR, 1, true, true, false);
 			}
 			
 			pskintype = (daliasskintype_t *)((byte *)(pskintype+1) + s);
@@ -1728,10 +1728,10 @@ void *Mod_LoadAllSkins (int numskins, daliasskintype_t *pskintype)
 					Mod_FloodFillSkin( skin, pheader->skinwidth, pheader->skinheight );
 					COM_StripExtension(loadmodel->name, model);
 					snprintf(model2, 128, "%s_%i_%i", model, i, j);
-					pheader->gl_texturenum[i][j&3] = Image_LoadImage(model2, IMAGE_TGA | IMAGE_PCX, 0, true, false);
+					pheader->gl_texturenum[i][j&3] = Image_LoadImage(model2, IMAGE_TGA | IMAGE_PCX, 0, true, true);
 					if (pheader->gl_texturenum[i][j&3] == -1) {
 						pheader->gl_texturenum[i][j&3] = Image_LoadTexture(model2, pheader->skinwidth,
-						pheader->skinheight, (byte *)(pskintype), HYE_TEXTURE_INDEX8, HYE_FILTER_LINEAR, 0, true, true, false);
+						pheader->skinheight, (byte *)(pskintype), HYE_TEXTURE_INDEX8, HYE_FILTER_LINEAR, 1, true, true, false);
 					}
 					pskintype = (daliasskintype_t *)((byte *)(pskintype) + s);
 			}
@@ -1984,10 +1984,10 @@ void * Mod_LoadSpriteFrame (void * pin, mspriteframe_t **ppframe, int framenum)
 
 		COM_StripExtension(loadmodel->name, sprite);
 		snprintf(sprite2, 128, "%s.spr_%i", sprite, framenum);
-		pspriteframe->gl_texturenum = Image_LoadImage(sprite2, IMAGE_TGA, 0, true, false);
+		pspriteframe->gl_texturenum = Image_LoadImage(sprite2, IMAGE_TGA, 0, true, true);
 
 		if (pspriteframe->gl_texturenum < 0) // did not find a matching TGA...
-			pspriteframe->gl_texturenum = Image_LoadTexture(sprite2, width, height, (byte *)(pinframe + 1), HYE_TEXTURE_INDEX8, HYE_FILTER_LINEAR, 0, true, true, false);
+			pspriteframe->gl_texturenum = Image_LoadTexture(sprite2, width, height, (byte *)(pinframe + 1), HYE_TEXTURE_INDEX8, HYE_FILTER_LINEAR, 1, true, true, false);
 	}
 
 	return (void *)((byte *)pinframe + sizeof (dspriteframe_t) + size);
