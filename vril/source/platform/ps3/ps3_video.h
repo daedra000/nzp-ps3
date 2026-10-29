@@ -31,6 +31,7 @@ void PS3_Video_Finish(void);
 void PS3_Video_DumpFifo(void);
 /* room for the next batch of commands (see ps3_video.c) */
 void PS3_Cmd_Reserve(void);
+void PS3_Cmd_ReserveWords(unsigned int words);
 
 int  PS3_Video_Width(void);           /* TV mode, e.g. 1280x720 */
 int  PS3_Video_Height(void);

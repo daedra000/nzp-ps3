@@ -14,7 +14,7 @@
  * vertex ring (36 byte interleaved vertices, IoQuake3-PS3's format) and
  * draws from there: TyrQuake's arrays are in ordinary memory, which the
  * RSX can't read (only the IO mapped window). Indices go inline in the
- * ring as well (rsxDrawIndexArray), not inline in the command buffer.
+ * command buffer, in pieces that fit the room made for them.
  *
  * The fragment program follows from the texture units (GL's texture
  * environment, the way TyrQuake uses it):
@@ -404,23 +404,32 @@ RingAlloc(uint32_t bytes, ps3gl_vertex_t **out, uint32_t *offset)
 	return 1;
 }
 
-/* Indexed draw with the indices in the ring, not inline in the command
-   buffer: an inline list of a few thousand indices is longer than the room
-   kept free (PS3_Cmd_Reserve), and librsx wrapping the command buffer in the
-   middle of it corrupts it (the RSX hung reading indices as commands). */
+/* Indexed draw, the indices inline in the command buffer (as TyrQuakeCell
+   and IoQuake3-PS3) but in pieces that always fit the room made for them
+   first: a list of a few thousand indices is longer than the room kept free
+   (PS3_Cmd_Reserve), and librsx wrapping the command buffer in the middle of
+   it corrupts it (the RSX hung reading indices as commands at the stairs
+   light). Triangle lists split on whole triangles; other primitives are
+   drawn whole (they are short). */
+#define IDX_CHUNK 3000   /* indices: 1500 words */
+
 static void
-DrawIndexedFromRing(uint32_t prim, const uint16_t *idx, int count)
+DrawIndexedInline(uint32_t prim, const uint16_t *idx, int count)
 {
-	ps3gl_vertex_t *out;
-	uint32_t off;
-
-	if (!RingAlloc((uint32_t)count * sizeof(uint16_t), &out, &off))
+	while (count > 0)
 	{
-		return;
-	}
+		int n = count;
 
-	memcpy(out, idx, (size_t)count * sizeof(uint16_t));
-	rsxDrawIndexArray(ps3gl.ctx, prim, off, (u32)count, GCM_INDEX_TYPE_16B, GCM_LOCATION_RSX);
+		if (n > IDX_CHUNK && prim == GCM_TYPE_TRIANGLES)
+		{
+			n = IDX_CHUNK;   /* a multiple of 3 */
+		}
+
+		PS3_Cmd_ReserveWords((uint32_t)n / 2 + 64);
+		rsxDrawInlineIndexArray16(ps3gl.ctx, prim, 0, (u32)n, idx);
+		idx += n;
+		count -= n;
+	}
 }
 
 /* Copies vertices first..first+count-1 into the ring and gives the RSX
@@ -975,7 +984,7 @@ glDrawElements(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices)
 
 	BindRing(off);
 	TraceDrawAt(mode, count, units, off, hi - lo + 1);
-	DrawIndexedFromRing(prim, idx16, count);
+	DrawIndexedInline(prim, idx16, count);
 
 	ps3gl.st_draws++;
 	ps3gl.st_verts += (uint32_t)(hi - lo + 1);
@@ -1086,7 +1095,7 @@ ImFlush(int count)
 
 	if (nidx)
 	{
-		DrawIndexedFromRing(prim, im_idx, nidx);
+		DrawIndexedInline(prim, im_idx, nidx);
 	}
 	else
 	{

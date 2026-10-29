@@ -180,6 +180,13 @@ CallContextCallback(gcmContextData *c, u32 count)
 void
 PS3_Cmd_Reserve(void)
 {
+	PS3_Cmd_ReserveWords(PS3_CMD_ROOM);
+}
+
+/* Room for 'words' (at most a few thousand: the pieces are 32 KB). */
+void
+PS3_Cmd_ReserveWords(unsigned int words)
+{
 	static int logged;
 
 	if (!ctx)
@@ -187,18 +194,23 @@ PS3_Cmd_Reserve(void)
 		return;
 	}
 
-	if (ctx->current + PS3_CMD_ROOM <= ctx->end)
+	if (words < PS3_CMD_ROOM)
+	{
+		words = PS3_CMD_ROOM;
+	}
+
+	if (ctx->current + words <= ctx->end)
 	{
 		return;
 	}
 
-	if (CallContextCallback(ctx, PS3_CMD_ROOM) != 0 && !logged)
+	if (CallContextCallback(ctx, words) != 0 && !logged)
 	{
 		logged = 1;
 		PS3_Log("[video] WARNING: command buffer callback failed");
 	}
 
-	if (logged < 2 && ctx->current + PS3_CMD_ROOM > ctx->end)
+	if (logged < 2 && ctx->current + words > ctx->end)
 	{
 		logged = 2;
 		PS3_Log("[video] WARNING: still no command room after the callback (%p..%p)",
