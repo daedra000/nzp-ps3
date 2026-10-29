@@ -404,7 +404,8 @@ void R_DrawSpriteModel (entity_t *e)
 	// Blending that many pixels at 1280x720 was more than the RSX could fill
 	// at 60 fps (the stairs light in Nacht). A glow is kept to at most
 	// GLOW_MAX_FRACTION of the view's height, a little dimmer when it's shrunk.
-	if (psprite->type != SPR_ORIENTED && strstr(currententity->model->name, "glow"))
+	// (and explosions and flames, the same kind of sprite)
+	if (psprite->type != SPR_ORIENTED)
 	{
 		#define GLOW_MAX_FRACTION 0.35f
 		vec3_t	delta;

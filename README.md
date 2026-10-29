@@ -4,25 +4,35 @@ This fork ports NZ:P to the **PlayStation 3** as native homebrew (PSL1GHT), from
 Vril engine in [`vril/`](vril) with a PS3 platform in
 [`vril/source/platform/ps3`](vril/source/platform/ps3).
 
-**Status:** playable. Menus, map select, Solo on all 19 maps (tested on Nacht der
-Untoten), sound effects, menu and round music, DualShock 3 controls with PlayStation
-button prompts, and the PS3 account name on the main menu ("Welcome, <name>").
-Single player only for now (no LAN yet).
+**Status: preview build.** Playable start to finish in Solo: menus, map select, all 19
+maps load (Nacht der Untoten played into the late rounds; the others only briefly so
+far), sound effects, menu and round music, DualShock 3 controls with PlayStation
+button prompts and rumble, the PS3 account name on the main menu ("Welcome, <name>"),
+and settings that are saved and survive updates. Single player only (no LAN yet).
+Reports are welcome: send `nzp_log.txt` (see below) with what happened.
 
 **Video**
-- 1280x720 at a steady 60 fps (Nacht der Untoten, including the stairs and the perk
-  machines that used to drop it to 30).
+- 1280x720 at 60 fps in normal play (Nacht der Untoten, including the stairs and the
+  perk machines that used to drop it to 30).
 - Video Options > RESOLUTION: 1280x720 (default), 960x540 or 848x480, scaled to the
   TV. The HUD and menus are the same size at every resolution.
 - Video Options > GAMMA brightens or darkens the game world only; the HUD and menus
   keep their colours.
 - Both take effect on APPLY; BACK drops the change.
-- Pressing the PS button during a match pauses the game (the pause menu is up when
-  you come back). XMB screenshots work: the screen buffers sit on 1 MB boundaries and
-  the RSX never waits on a flip the system is holding (both from Grid Siege, where a
-  screenshot used to freeze the console).
+
+**System**
+- The PS button pauses a match (the pause menu is up when you come back).
+- XMB screenshots work: the screen buffers sit on 1 MB boundaries and the RSX never
+  waits on a flip the system is holding (both from Grid Siege, where a screenshot
+  used to freeze the console).
+- Switching PS3 user picks up the new account's name, unless you typed a name of your
+  own.
 
 **Known issues**
+- Late rounds with big crowds and explosions can dip to around 45-50 fps for a
+  moment. Explosions, fire and sprites right in front of the camera are now kept
+  smaller to help; this is the main thing being worked on.
+- Maps other than Nacht der Untoten have had little testing.
 - The crash handler can't install on retail/HEN firmware (liblv2dbg refuses), so a
   crash only ends the log; freezes are caught by the watchdog instead.
 - At 960x540 and 848x480 the HUD's small text can look slightly uneven (it's drawn
@@ -40,7 +50,7 @@ APPLY and when you leave a settings menu; updates don't overwrite it, and deleti
 goes back to the defaults in `config_default.cfg`), and `nzp_log.txt`,
 the log to send when something goes wrong (the previous run's is kept as
 `nzp_log.old.txt`). The main menu shows the build it came from
-(`2.0.0-indev+ps3-<commit>`).
+(`2.0.0-preview+ps3-<commit>`).
 
 ### What the log shows
 - `[slow]`: anything that held up a frame for more than 60 ms (model, sound, music

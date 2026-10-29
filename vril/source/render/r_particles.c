@@ -1483,6 +1483,25 @@ DRAW_PARTICLE_BILLBOARD(particle_texture_t * ptex, particle_t * p, vec3_t * coor
 
     vec3_t rotated[4];
 
+#ifdef __PS3__
+    // Late rounds: explosions and fire right in front of the camera stacked
+    // dozens of screen-sized blended quads, more than the RSX fills at 60 fps.
+    // A particle is kept to 35% of the view's height (as the lamp glows), and
+    // one at or behind the eye isn't drawn.
+    {
+        vec3_t delta;
+        float  depth, limit;
+
+        VectorSubtract(p->org, r_origin, delta);
+        depth = DotProduct(delta, vpn);
+        if (depth < 1.0f)
+            return;
+        limit = 0.35f * depth * tanf(r_refdef.fov_y * (float) M_PI / 360.0f);
+        if (scale > limit)
+            scale = limit;
+    }
+#endif
+
     if (p->rotspeed) {
         R_RotateParticleAxes((const vec3_t *) coord, rotated);
         coord = rotated;
