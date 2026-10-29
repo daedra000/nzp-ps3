@@ -97,13 +97,6 @@ byte* LoadPCX(FILE* f, int matchwidth, int matchheight)
     pcx->bytes_per_line = LittleShort(pcx->bytes_per_line);
     pcx->palette_type = LittleShort(pcx->palette_type);
 
-#ifdef __PS3__
-    {
-        extern void PS3_Log(const char *fmt, ...);
-        PS3_Log("pcx: at %ld, %ld bytes, %dx%d, %d bpp", base, filesize,
-            pcx->xmax + 1, pcx->ymax + 1, pcx->bits_per_pixel);
-    }
-#endif
 
     if (pcx->manufacturer != 0x0a || pcx->version != 5 || pcx->encoding != 1 ||
         pcx->bits_per_pixel != 8 || pcx->xmax >= 640 || pcx->ymax >= 480) {
@@ -266,12 +259,6 @@ image_t Image_LoadImageWithIdentifier(char *filename, char *identifier, int imag
 		return texture_index;
 	}
 
-#ifdef __PS3__
-	{
-		extern void PS3_Log(const char *fmt, ...);
-		PS3_Log("image %s", filename);
-	}
-#endif
 	data = Image_LoadPixels (filename, image_format);
 
 	if(data == NULL) {

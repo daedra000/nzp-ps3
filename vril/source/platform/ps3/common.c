@@ -1467,32 +1467,19 @@ int COM_FindFile (char *filename, int *handle, FILE **file)
 	
 	//Sys_Printf ("FindFile: can't find %s\n", filename);
 	{
-		// PS3: every missing file in the log (the first 200), the search paths once
+		// PS3: missing files in the log (the first 50). Not the expected misses
+		// (the PC build has none of these either): start-up HUD placeholders,
+		// other image formats tried before the one that exists, optional map
+		// settings.
 		static int missing;
 		extern void PS3_Log(const char *fmt, ...);
-		// expected misses (the PC build has none of these either): start-up HUD
-		// placeholders, other image formats tried before the one that exists
 		const char *ext = COM_FileExtension(filename);
 		if (!strncmp(filename, "gfx/hud/", 8) || strstr(filename, ".mdl_") ||
-			!strcmp(ext, "tga") || !strcmp(ext, "jpg") || !strcmp(ext, "jpeg"))
+			!strcmp(ext, "tga") || !strcmp(ext, "jpg") || !strcmp(ext, "jpeg") ||
+			!strcmp(ext, "png") || !strcmp(ext, "json"))
 			goto not_found;
-		if (missing == 0)
-			for (search = com_searchpaths; search; search = search->next)
-				PS3_Log("FindFile: search path %s", search->pack ? search->pack->filename : search->filename);
-		if (missing++ < 200) {
-			char full[MAX_OSPATH];
-			FILE *probe;
-			int err;
-			// errno of a direct open in the game folder (ENOENT = not there,
-			// EMFILE = out of handles)
-			snprintf(full, sizeof(full), "%s/%s", com_gamedir, filename);
-			errno = 0;
-			probe = fopen(full, "rb");
-			err = errno;
-			if (probe) fclose(probe);
-			PS3_Log("FindFile: can't find %s (open: %s, errno %d %s)",
-				filename, probe ? "ok" : "failed", err, strerror(err));
-		}
+		if (missing++ < 50)
+			PS3_Log("missing file: %s", filename);
 	}
 not_found:
 	

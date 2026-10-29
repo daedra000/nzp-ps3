@@ -631,256 +631,6 @@ Prim(GLenum mode, uint32_t *prim)
 	}
 }
 
-/* Bring-up trace: what each draw of the last frames sent, so a frame the RSX
-   never finishes (a GPU hang) can be listed from WaitForFrame. */
-#define TRACE_FRAMES 4
-#define TRACE_DRAWS  192
-
-typedef struct {
-	uint16_t mode, fp;
-	uint32_t count;
-	uint8_t  units;
-	uint8_t  blend, alpha, depth;
-	struct { int16_t name; uint16_t w, h; uint8_t swz, levels; } tex[PS3GL_MAX_TMUS];
-	uint32_t area;   /* screen pixels its bounding box covers (capture frames only) */
-} trace_draw_t;
-
-static struct {
-	uint32_t frame;
-	int n;
-	trace_draw_t d[TRACE_DRAWS];
-} trace[TRACE_FRAMES];
-
-static int last_fp;
-
-/* A GPU-heavy frame (the RSX made the CPU wait for a free framebuffer) is
-   captured: every draw's screen area from its vertices, the biggest listed.
-   Reading the ring back from RSX memory is slow: only that one frame, and
-   at most 48 vertices of each draw. */
-static uint32_t capture_frame;
-static int captures;
-
-void
-ps3gl_request_capture(void)
-{
-	if (captures < 4 && !capture_frame)
-	{
-		capture_frame = ps3gl.frame + 1;
-	}
-}
-
-static uint32_t
-DrawArea(const ps3gl_vertex_t *v, int n)
-{
-	/* Bounding box on screen. Vertices behind the eye are clipped at the near
-	   plane (along the edge to the previous/next vertex) instead of calling the
-	   whole draw full-screen: that made every world draw "1.00 screens". */
-	const float *m = ps3gl.mvp;
-	float x0 = 1e9f, y0 = 1e9f, x1 = -1e9f, y1 = -1e9f, sw, sh;
-	float c[4][49];
-	int i, k = 0, step = n > 48 ? n / 48 : 1;
-	const float near_w = 0.01f;
-
-	for (i = 0; i < n && k < 48; i += step, k++)
-	{
-		float x = v[i].x, y = v[i].y, z = v[i].z;
-		c[0][k] = m[0] * x + m[1] * y + m[2] * z + m[3];
-		c[1][k] = m[4] * x + m[5] * y + m[6] * z + m[7];
-		c[3][k] = m[12] * x + m[13] * y + m[14] * z + m[15];
-	}
-	for (i = 0; i < k; i++)
-	{
-		int j, e;
-		if (c[3][i] > near_w)
-		{
-			float px = c[0][i] / c[3][i], py = c[1][i] / c[3][i];
-			if (px < x0) x0 = px;
-			if (px > x1) x1 = px;
-			if (py < y0) y0 = py;
-			if (py > y1) y1 = py;
-			continue;
-		}
-		/* behind: where its edges to the neighbours cross the near plane */
-		for (e = 0; e < 2; e++)
-		{
-			float t, px, py;
-			j = e ? (i + 1) % k : (i + k - 1) % k;
-			if (c[3][j] <= near_w)
-				continue;
-			t = (near_w - c[3][i]) / (c[3][j] - c[3][i]);
-			px = (c[0][i] + t * (c[0][j] - c[0][i])) / near_w;
-			py = (c[1][i] + t * (c[1][j] - c[1][i])) / near_w;
-			if (px < x0) x0 = px;
-			if (px > x1) x1 = px;
-			if (py < y0) y0 = py;
-			if (py > y1) y1 = py;
-		}
-	}
-	if (x0 < -1.0f) x0 = -1.0f;
-	if (y0 < -1.0f) y0 = -1.0f;
-	if (x1 > 1.0f) x1 = 1.0f;
-	if (y1 > 1.0f) y1 = 1.0f;
-	if (x1 <= x0 || y1 <= y0)
-	{
-		return 0;
-	}
-	sw = (x1 - x0) * 0.5f * ps3gl.screen_w;
-	sh = (y1 - y0) * 0.5f * ps3gl.screen_h;
-	return (uint32_t)(sw * sh);
-}
-
-static void TraceDraw(GLenum mode, int count, unsigned units);
-
-/* GPU time per draw: in a captured frame the RSX writes its clock into
-   report TS_BASE+i before draw i (and TS_BASE+n after the last one); the
-   reports are read once that frame is done. */
-#define TS_BASE 256
-#define TS_MAX  (TRACE_DRAWS < 400 ? TRACE_DRAWS : 400)
-static uint32_t ts_pending_frame;
-static int ts_count;
-
-/* Glow test: when the RSX holds the CPU up, the next 2 s alternate drawing
-   and skipping blended quads (sprites: the lamp glows) a second each, and the
-   wait for the RSX in each half goes to the log. Shows whether the glows are
-   what's slow without timing the RSX itself. */
-int ps3gl_skip_glows;
-
-int
-ps3gl_skipped_draw(GLenum mode)
-{
-	/* sprites: blended quads in the 3D view (depth tested, not written); not the HUD */
-	return ps3gl_skip_glows && mode == GL_QUADS && ps3gl.rs.blend &&
-		ps3gl.rs.depth_test && !ps3gl.rs.depth_mask;
-}
-
-static void
-TraceDrawAt(GLenum mode, int count, unsigned units, uint32_t ring_off, int nverts)
-{
-	TraceDraw(mode, count, units);
-	if (capture_frame == ps3gl.frame)
-	{
-		int slot = ps3gl.frame % TRACE_FRAMES;
-		int idx = trace[slot].n - 1;
-		if (idx < TRACE_DRAWS)
-		{
-			const ps3gl_vertex_t *v = (const ps3gl_vertex_t *)(ps3gl.ring + (ring_off - ps3gl.ring_off));
-			trace[slot].d[idx].area = DrawArea(v, nverts);
-		}
-	}
-}
-
-/* Called at each frame start: the captured frame's GPU times, once the RSX
-   has finished it. */
-void
-ps3gl_capture_report(void)
-{
-	(void)ts_pending_frame;
-	(void)ts_count;
-}
-
-/* At the end of a captured frame: total coverage and the biggest draws. */
-void
-ps3gl_capture_end(void)
-{
-	int slot, i, j, n, top[12], ntop = 0;
-	double total = 0, screen;
-
-	if (capture_frame != ps3gl.frame)
-	{
-		return;
-	}
-	capture_frame = 0;
-	slot = ps3gl.frame % TRACE_FRAMES;
-	/* menus (a handful of draws) used up all four captures before a map */
-	if (trace[slot].n < 20)
-		return;
-	captures++;
-	{
-		extern void PS3_Video_StartGlowTest(void);
-		PS3_Video_StartGlowTest();
-	}
-	n = trace[slot].n < TRACE_DRAWS ? trace[slot].n : TRACE_DRAWS;
-	/* the end mark for the last draw's GPU time; read when the frame is done */
-	/* (RSX timestamps per draw froze the console: not used) */
-	screen = (double)ps3gl.screen_w * ps3gl.screen_h;
-	for (i = 0; i < n; i++)
-	{
-		total += trace[slot].d[i].area;
-		/* insertion into the top 12 by area */
-		for (j = ntop; j > 0 && trace[slot].d[top[j - 1]].area < trace[slot].d[i].area; j--)
-			if (j < 12) top[j] = top[j - 1];
-		if (j < 12) { top[j] = i; if (ntop < 12) ntop++; }
-	}
-	PS3_Log("[gpu] heavy frame %u: %d draws (%d traced), pixels drawn %.1f screens; biggest:",
-			(unsigned)ps3gl.frame, trace[slot].n, n, total / screen);
-	for (i = 0; i < ntop; i++)
-	{
-		const trace_draw_t *d = &trace[slot].d[top[i]];
-		PS3_Log("[gpu]  #%d %.2f screens, mode 0x%x count %u fp %u blend %d alpha %d depth %d t0 %d %ux%u lv %d",
-				top[i], d->area / screen, d->mode, (unsigned)d->count, d->fp, d->blend, d->alpha, d->depth,
-				d->tex[0].name, d->tex[0].w, d->tex[0].h, d->tex[0].levels);
-	}
-}
-
-static void
-TraceDraw(GLenum mode, int count, unsigned units)
-{
-	int slot = ps3gl.frame % TRACE_FRAMES, i;
-	trace_draw_t *d;
-
-	if (trace[slot].frame != ps3gl.frame)
-	{
-		trace[slot].frame = ps3gl.frame;
-		trace[slot].n = 0;
-	}
-	if (trace[slot].n >= TRACE_DRAWS)
-	{
-		trace[slot].n++;
-		return;
-	}
-	d = &trace[slot].d[trace[slot].n++];
-	d->mode = (uint16_t)mode;
-	d->fp = (uint16_t)last_fp;
-	d->count = (uint32_t)count;
-	d->area = 0;
-	d->units = (uint8_t)units;
-	d->blend = (uint8_t)ps3gl.rs.blend;
-	d->alpha = (uint8_t)ps3gl.rs.alpha_test;
-	d->depth = (uint8_t)ps3gl.rs.depth_test;
-	for (i = 0; i < PS3GL_MAX_TMUS; i++)
-	{
-		const ps3gl_texture_t *t = &ps3gl.textures[ps3gl.tmu[i].tex];
-		d->tex[i].name = (int16_t)((units & (1u << i)) ? ps3gl.tmu[i].tex : -1);
-		d->tex[i].w = t->width;
-		d->tex[i].h = t->height;
-		d->tex[i].swz = t->swizzled;
-		d->tex[i].levels = t->num_levels;
-	}
-}
-
-void
-ps3gl_trace_dump(uint32_t frame)
-{
-	static int dumped;
-	int slot = frame % TRACE_FRAMES, i, n;
-
-	if (dumped++ >= 2 || trace[slot].frame != frame)
-	{
-		return;
-	}
-	n = trace[slot].n;
-	PS3_Log("[gl] frame %u: %d draws (the RSX never finished it)", (unsigned)frame, n);
-	for (i = 0; i < n && i < TRACE_DRAWS; i++)
-	{
-		const trace_draw_t *d = &trace[slot].d[i];
-		PS3_Log("[gl]  #%d mode 0x%x count %u fp %u units %u blend %d alpha %d depth %d"
-				" t0 %d %ux%u swz %d lv %d t1 %d %ux%u",
-				i, d->mode, (unsigned)d->count, d->fp, d->units, d->blend, d->alpha, d->depth,
-				d->tex[0].name, d->tex[0].w, d->tex[0].h, d->tex[0].swz, d->tex[0].levels,
-				d->tex[1].name, d->tex[1].w, d->tex[1].h);
-	}
-}
-
 /* State, matrices, textures and shader to the RSX. Gives the samplers in
    use. */
 static void
@@ -902,7 +652,6 @@ PrepareState(unsigned *units_out)
 	}
 
 	fp = ChooseFP(&units);
-	last_fp = fp;
 
 	ps3gl_apply_states();
 	ps3gl_apply_matrices();
@@ -932,7 +681,7 @@ glDrawArrays(GLenum mode, GLint first, GLsizei count)
 	uint32_t prim, off;
 	unsigned units;
 
-	if (count <= 0 || first < 0 || ps3gl_skipped_draw(mode) || !Prim(mode, &prim) ||
+	if (count <= 0 || first < 0 || !Prim(mode, &prim) ||
 		!PrepareDraw(&units))
 	{
 		return;
@@ -944,7 +693,6 @@ glDrawArrays(GLenum mode, GLint first, GLsizei count)
 	}
 
 	BindRing(off);
-	TraceDrawAt(mode, count, units, off, count);
 	rsxDrawVertexArray(ps3gl.ctx, prim, 0, (u32)count);
 
 	ps3gl.st_draws++;
@@ -1055,7 +803,6 @@ glDrawElements(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices)
 	}
 
 	BindRing(off);
-	TraceDrawAt(mode, count, units, off, hi - lo + 1);
 	DrawIndexedInline(prim, idx16, count);
 
 	ps3gl.st_draws++;
@@ -1148,7 +895,7 @@ ImFlush(int count)
 			break;
 	}
 
-	if (count <= 0 || ps3gl_skipped_draw(ps3gl.im_mode))
+	if (count <= 0)
 	{
 		return;
 	}
@@ -1163,7 +910,6 @@ ImFlush(int count)
 	memcpy(out, im_buf, (size_t)count * PS3GL_VERTEX_SIZE);
 
 	BindRing(off);
-	TraceDrawAt(ps3gl.im_mode, count, units, off, count);
 
 	if (nidx)
 	{

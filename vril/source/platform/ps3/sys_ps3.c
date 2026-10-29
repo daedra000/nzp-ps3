@@ -414,7 +414,11 @@ MAIN
 */
 
 // "Welcome, <name>" on the main menu and the in-game name: the signed-in
-// PS3 user's name, unless the player has chosen one of their own.
+// PS3 user's name, unless the player has chosen one of their own. The name
+// last taken from the PS3 is kept (ps3_autoname) so that, after switching
+// PS3 user, the new user's name replaces it: config.cfg had saved the old one.
+cvar_t ps3_autoname = {"ps3_autoname", "", true};
+
 static void PS3_SetPlayerName(void)
 {
 	extern cvar_t cl_name;
@@ -423,8 +427,12 @@ static void PS3_SetPlayerName(void)
 	char user[SYSUTIL_SYSTEMPARAM_NICKNAME_SIZE + 1];
 	s32 rc, rc_nick = 0;
 
-	if (Q_strcasecmp(cl_name.string, "player") && cl_name.string[0])
+	// a name the player typed is kept (with no ps3_autoname yet, the config
+	// is from a build before it, whose name came from the PS3 too)
+	if (Q_strcasecmp(cl_name.string, "player") && cl_name.string[0] &&
+		ps3_autoname.string[0] && strcmp(cl_name.string, ps3_autoname.string))
 		return;
+
 	memset(user, 0, sizeof(user));
 	rc = sysUtilGetSystemParamString(SYSUTIL_SYSTEMPARAM_ID_CURRENT_USERNAME, user,
 		SYSUTIL_SYSTEMPARAM_CURRENT_USERNAME_SIZE);
@@ -440,6 +448,7 @@ static void PS3_SetPlayerName(void)
 		return;
 	}
 	Cvar_Set("_cl_name", user);
+	Cvar_Set("ps3_autoname", user);
 	PS3_Log("player name: %s (the PS3 user)", user);
 }
 

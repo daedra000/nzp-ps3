@@ -475,11 +475,6 @@ glTexImage2D(GLenum target, GLint level, GLint internalFormat, GLsizei width,
 	(void)internalFormat;
 	(void)border;
 
-	/* bring-up trace: the last upload before a hang is in the log */
-	if (level == 0)
-		PS3_Log("[gl] TexImage2D tex %d %dx%d fmt 0x%x type 0x%x", ps3gl.tmu[ps3gl.active_tmu].tex,
-				(int)width, (int)height, (unsigned)format, (unsigned)type);
-
 	if (!t || level < 0 || width <= 0 || height <= 0 || width > 4096 || height > 4096)
 	{
 		return;

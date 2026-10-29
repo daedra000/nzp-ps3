@@ -50,9 +50,7 @@ the log to send when something goes wrong (the previous run's is kept as
 - `[video]` / `[gl]`: every 10 s, frame time, time waiting for the RSX, draws and
   vertices per frame.
 - `[watchdog]`: if the game stops making progress for 6 s, the last 24 steps it took.
-- `[gpu]`: the first few in-game frames where the RSX holds the CPU up: the biggest
-  draws and how much of the screen each covers, then a test timing frames with the
-  lamp glows on and off (they blink for a second while it runs).
+- `missing file`: a file the game looked for and didn't find (the first 50).
 - `[fifo]`: on an RSX hang, where the command reader stopped.
 
 ## Controls (DualShock 3)

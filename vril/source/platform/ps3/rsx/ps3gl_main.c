@@ -117,10 +117,6 @@ WaitForFrame(uint32_t frame)
 		{
 			PS3_Log("[gl] WARNING: frame fence timed out (want %u, RSX at %u)",
 					(unsigned)frame, (unsigned)ps3gl_completed_frame());
-			{
-				extern void ps3gl_trace_dump(uint32_t frame);
-				ps3gl_trace_dump(ps3gl_completed_frame() + 1);
-			}
 			PS3_Video_DumpFifo();
 			break;
 		}
@@ -272,10 +268,6 @@ PS3GL_BeginFrame(void)
 	}
 
 	ps3gl_process_frees();
-	{
-		extern void ps3gl_capture_report(void);
-		ps3gl_capture_report();
-	}
 }
 
 /* Something else drew on the RSX mid-frame (the gamma pass): send all of
@@ -304,10 +296,6 @@ PS3GL_EndFrame(void)
 		return;
 	}
 
-	{
-		extern void ps3gl_capture_end(void);
-		ps3gl_capture_end();
-	}
 	PS3_Cmd_Reserve();
 	/* Written by the RSX once everything before it is drawn. */
 	rsxSetWriteBackendLabel(ps3gl.ctx, PS3GL_LABEL_FRAME, ps3gl.frame);

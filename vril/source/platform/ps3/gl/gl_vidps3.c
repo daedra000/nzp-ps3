@@ -202,14 +202,9 @@ void GL_BeginRendering(int *x, int *y, int *width, int *height)
 
 void GL_EndRendering(void)
 {
-	static int frames;
-
 	Draw_Flush();
 	PS3GL_EndFrame();
 	PS3_Video_Present();
-	if (frames < 30)
-		PS3_Log("GL_EndRendering: frame %d presented", frames);
-	frames++;
 }
 
 // Entries hold R, G, B, A in memory order (what the texture uploads read as
@@ -268,6 +263,11 @@ void VID_Init(unsigned char *palette)
 
 	Cvar_RegisterVariable(&gl_ztrick);
 	Cvar_RegisterVariable(&vid_ps3_res);
+	{
+		// sys_ps3.c: the PS3 user's name last used (registered before config.cfg runs)
+		extern cvar_t ps3_autoname;
+		Cvar_RegisterVariable(&ps3_autoname);
+	}
 	vid.maxwarpwidth = vid.width = width;
 	vid.maxwarpheight = vid.height = height;
 	ps3_rt_w = width;
