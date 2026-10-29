@@ -82,17 +82,54 @@ static int PS3_ResIndex(const char *s)
 	return 1;   /* 960x540 */
 }
 
-/* The menu's button: the next size. */
+/* The menu's button picks the next size; it takes effect on APPLY. */
+static int ps3_res_pending = -1;
+
 void PS3_VID_NextResolution(void)
 {
-	int i = (PS3_ResIndex(vid_ps3_res.string) + 1) % NUM_PS3_RES;
-	Cvar_Set("vid_ps3_res", va("%dx%d", ps3_res[i].w, ps3_res[i].h));
+	if (ps3_res_pending < 0)
+		ps3_res_pending = PS3_ResIndex(vid_ps3_res.string);
+	ps3_res_pending = (ps3_res_pending + 1) % NUM_PS3_RES;
+}
+
+/* Video Options opened: show what's in use. */
+void PS3_VID_ResetPendingResolution(void)
+{
+	ps3_res_pending = PS3_ResIndex(vid_ps3_res.string);
+}
+
+void PS3_VID_ApplyResolution(void)
+{
+	if (ps3_res_pending >= 0)
+		Cvar_Set("vid_ps3_res", va("%dx%d", ps3_res[ps3_res_pending].w, ps3_res[ps3_res_pending].h));
 }
 
 const char *PS3_VID_ResolutionString(void)
 {
-	int i = PS3_ResIndex(vid_ps3_res.string);
-	return va("%dx%d", ps3_res[i].w, ps3_res[i].h);
+	int i = ps3_res_pending >= 0 ? ps3_res_pending : PS3_ResIndex(vid_ps3_res.string);
+	int current = PS3_ResIndex(vid_ps3_res.string);
+	return va("%dx%d%s", ps3_res[i].w, ps3_res[i].h, i != current ? " (APPLY)" : "");
+}
+
+/*
+ * Gamma (Video Options > GAMMA, the "gamma" cvar): a pow() on the finished
+ * frame in the present pass. The palette already went through the engine's
+ * 0.7 curve at start-up, so the shipped setting (0.6) is "as is"; lower is
+ * brighter, higher darker.
+ */
+static void PS3_VID_CheckGamma(void)
+{
+	extern cvar_t v_gamma;
+	static float applied = -1.0f;
+	float exponent;
+
+	if (v_gamma.value == applied)
+		return;
+	applied = v_gamma.value;
+	exponent = v_gamma.value / 0.6f;
+	if (exponent < 0.3f) exponent = 0.3f;
+	if (exponent > 0.97f && exponent < 1.03f) exponent = 1.0f;   /* no pass at all */
+	PS3_Video_SetColor(1.0f, exponent);
 }
 
 static void PS3_VID_SetSize(int width, int height)
@@ -127,6 +164,7 @@ static void PS3_VID_CheckResolution(void)
 void GL_BeginRendering(int *x, int *y, int *width, int *height)
 {
 	PS3_VID_CheckResolution();
+	PS3_VID_CheckGamma();
 
 	// waits for a free render target and makes it the RSX's surface
 	PS3GL_BeginFrame();

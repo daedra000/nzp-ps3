@@ -29,6 +29,8 @@ char* dithering_string;
 char* ultrawide_string;
 #ifdef __PS3__
 extern void PS3_VID_NextResolution(void);
+extern void PS3_VID_ResetPendingResolution(void);
+extern void PS3_VID_ApplyResolution(void);
 extern const char *PS3_VID_ResolutionString(void);
 #endif
 #ifdef PLATFORM_SUPPORTS_VIDEO_OPTIONS
@@ -118,7 +120,9 @@ void Menu_Video_ApplyVSync (void)
 
 void Menu_Configuration_ApplySettings (void)
 {
-    // no op
+#ifdef __PS3__
+    PS3_VID_ApplyResolution();
+#endif
     Menu_SetSound(MENU_SND_ENTER);
 }
 
@@ -129,6 +133,9 @@ Menu_Video_Set
 */
 void Menu_Video_Set (void)
 {
+#ifdef __PS3__
+    PS3_VID_ResetPendingResolution();
+#endif
 #ifdef RENDERER_SUPPORTS_DITHERING
     platform_supports_dithering = true;
 #else
@@ -238,7 +245,7 @@ void Menu_Video_Draw (void)
 
 #ifdef __PS3__
     // Render resolution, scaled to the TV
-    Menu_DrawButton (8, video_items++, "RESOLUTION", "Lower draws faster; always scaled to your TV.", PS3_VID_NextResolution);
+    Menu_DrawButton (8, video_items++, "RESOLUTION", "Lower draws faster; scaled to your TV. Takes effect on APPLY.", PS3_VID_NextResolution);
     Menu_DrawOptionButton (8, (char *)PS3_VID_ResolutionString());
 #endif
 
