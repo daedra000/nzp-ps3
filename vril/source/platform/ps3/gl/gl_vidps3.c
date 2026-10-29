@@ -61,11 +61,12 @@ void GL_Init(void)
 
 /*
  * Render resolution (Video Options > RESOLUTION): the game draws at this size
- * and the RSX's scaler stretches it to the TV mode, as TyrQuakeCell. 960x540
- * draws 44% fewer pixels than 1280x720: the lamp glows and lights at 720p
- * were more than the RSX could fill at 60 fps.
+ * and the RSX's scaler stretches it to the TV mode, as TyrQuakeCell. 1280x720
+ * holds 60 fps since the render targets are tiled; the lower sizes stay for
+ * headroom. (The cvar's name changed with the default, so a config.cfg saved
+ * by an older build, with the old 960x540 default in it, doesn't keep it.)
  */
-cvar_t vid_ps3_res = {"vid_ps3_res", "960x540", true};
+cvar_t vid_ps3_res = {"vid_ps3_resolution", "1280x720", true};
 
 static const struct { int w, h; } ps3_res[] = {
 	{1280, 720}, {960, 540}, {848, 480},
@@ -79,7 +80,7 @@ static int PS3_ResIndex(const char *s)
 		for (i = 0; i < NUM_PS3_RES; i++)
 			if (ps3_res[i].w == w && ps3_res[i].h == h)
 				return i;
-	return 1;   /* 960x540 */
+	return 0;   /* 1280x720 */
 }
 
 /* The menu's button picks the next size; it takes effect on APPLY. */
@@ -120,7 +121,7 @@ void PS3_VID_ApplyGamma(void)
 void PS3_VID_ApplyResolution(void)
 {
 	if (ps3_res_pending >= 0)
-		Cvar_Set("vid_ps3_res", va("%dx%d", ps3_res[ps3_res_pending].w, ps3_res[ps3_res_pending].h));
+		Cvar_Set("vid_ps3_resolution", va("%dx%d", ps3_res[ps3_res_pending].w, ps3_res[ps3_res_pending].h));
 }
 
 const char *PS3_VID_ResolutionString(void)
@@ -175,7 +176,7 @@ static void PS3_VID_CheckResolution(void)
 		return;
 	if (PS3_Video_SetRenderTarget(w, h) != 0) {
 		PS3_Log("VID: no %dx%d render target, staying at %dx%d", w, h, ps3_rt_w, ps3_rt_h);
-		Cvar_Set("vid_ps3_res", va("%dx%d", ps3_rt_w, ps3_rt_h));
+		Cvar_Set("vid_ps3_resolution", va("%dx%d", ps3_rt_w, ps3_rt_h));
 		PS3_Video_SetRenderTarget(ps3_rt_w, ps3_rt_h);
 		return;
 	}

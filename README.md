@@ -9,15 +9,20 @@ Untoten), sound effects, menu and round music, DualShock 3 controls with PlaySta
 button prompts, and the PS3 account name on the main menu ("Welcome, <name>").
 Single player only for now (no LAN yet).
 
+**Video**
+- 1280x720 at a steady 60 fps (Nacht der Untoten, including the stairs and the perk
+  machines that used to drop it to 30).
+- Video Options > RESOLUTION: 1280x720 (default), 960x540 or 848x480, scaled to the
+  TV. The HUD and menus are the same size at every resolution.
+- Video Options > GAMMA brightens or darkens the game world only; the HUD and menus
+  keep their colours.
+- Both take effect on APPLY; BACK drops the change.
+
 **Known issues**
-- Frame rate: 50-60 fps in normal play; busy rounds and some lights (the stairs light,
-  perk machines) dropped it to 30 or below at 1280x720, more than the RSX could fill.
-  The game now renders at 960x540 by default and scales to the TV; Video Options >
-  RESOLUTION switches between 1280x720, 960x540 and 848x480.
-- A freeze at the stairs light in Nacht (an RSX command-buffer bug in librsx's own
-  buffer wrapping) has a fix in testing.
 - The crash handler can't install on retail/HEN firmware (liblv2dbg refuses), so a
   crash only ends the log; freezes are caught by the watchdog instead.
+- At 960x540 and 848x480 the HUD's small text can look slightly uneven (it's drawn
+  smaller into the lower-resolution image).
 
 ## Install
 1. A PS3 that runs homebrew (HEN or CFW).
@@ -39,7 +44,9 @@ the log to send when something goes wrong (the previous run's is kept as
 - `[video]` / `[gl]`: every 10 s, frame time, time waiting for the RSX, draws and
   vertices per frame.
 - `[watchdog]`: if the game stops making progress for 6 s, the last 24 steps it took.
-- `[gpu]`: a frame where the RSX holds the CPU up, with each draw's GPU time.
+- `[gpu]`: the first few in-game frames where the RSX holds the CPU up: the biggest
+  draws and how much of the screen each covers, then a test timing frames with the
+  lamp glows on and off (they blink for a second while it runs).
 - `[fifo]`: on an RSX hang, where the command reader stopped.
 
 ## Controls (DualShock 3)
@@ -63,6 +70,10 @@ All rebindable in the game's controls menu.
   and [IoQuake3-PS3](https://github.com/Mayo1970/IoQuake3-PS3)), with linear fog and
   the texture matrix added for NZ:P. The RSX programs are NV40 assembly, assembled by
   PSL1GHT's `cgcomp -a` at build time (`tools/build_shaders.py`).
+- **Fill rate:** the render targets and depth buffer sit in the RSX's tiled memory
+  regions (plain rows made every blended or depth-tested pixel slower; this alone
+  took 1280x720 from 30 to 60 fps at the worst spots). World, model and sprite
+  textures have mipmaps. Gamma is a pass over the 3D view before the HUD is drawn.
 - **Big-endian:** NZ:P had only run on little-endian CPUs; the loaders were fixed for
   the Cell PPU (PCX skins, palettes, Half-Life BSP lightmaps, PAK headers).
 - **Command buffer:** librsx moves to the next 32 KB piece of the command buffer from
