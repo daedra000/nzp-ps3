@@ -78,6 +78,11 @@ static u32 src_pitch;
 static int gl_mode;
 static u32 *depth;
 static u32 depth_offset, depth_pitch;
+/* Tile regions (render targets in the RSX's tiled layout: blending and depth
+   go much faster than in plain rows). One per source image, one for depth. */
+#define TILE_ALIGN    0x10000
+static int tiles_bound;
+static void UnbindTiles(void);
 static u32 *gm_buf;             /* gamma: the 3D view graded into this, then back */
 static u32 gm_offset;
 
@@ -436,6 +441,7 @@ PS3_Video_FreeSource(void)
 	{
 		PS3_Video_Finish();
 	}
+	UnbindTiles();
 
 	for (i = 0; i < FB_COUNT; i++)
 	{
@@ -493,18 +499,84 @@ PS3_Video_Shutdown(void)
 	ready = 0;
 }
 
+/* The pitches the RSX can tile, smallest first. */
+static u32
+TiledPitch(u32 bytes)
+{
+	static const u32 pitches[] = {
+		0x200, 0x300, 0x400, 0x500, 0x600, 0x700, 0x800, 0xA00, 0xC00, 0xD00,
+		0xE00, 0x1000, 0x1400, 0x1800, 0x1A00, 0x1C00, 0x2000, 0x2800, 0x3000,
+		0x3400, 0x3800, 0x4000
+	};
+	unsigned i;
+
+	for (i = 0; i < sizeof(pitches) / sizeof(pitches[0]); i++)
+	{
+		if (pitches[i] >= bytes)
+		{
+			return pitches[i];
+		}
+	}
+	return 0;
+}
+
+static void
+UnbindTiles(void)
+{
+	int i;
+
+	for (i = 0; i < tiles_bound; i++)
+	{
+		gcmUnbindTile((u8)i);
+	}
+	tiles_bound = 0;
+}
+
+/* Tiles a buffer (in RSX memory, TILE_ALIGN-aligned, 'size' a multiple of it). */
+static void
+TileBuffer(u32 offset, u32 size, u32 pitch)
+{
+	s32 rc = gcmSetTileInfo((u8)tiles_bound, GCM_LOCATION_RSX, offset, size, pitch,
+			GCM_COMPMODE_DISABLED, 0, 0);
+
+	if (rc == 0)
+	{
+		rc = gcmBindTile((u8)tiles_bound);
+	}
+	if (rc != 0)
+	{
+		PS3_Log("[video] tile %d not set (0x%08x): that buffer stays untiled", tiles_bound, (unsigned)rc);
+		return;
+	}
+	tiles_bound++;
+}
+
 /* Allocates the source images: w x h, 'pitch' bytes per row, plus the
    depth buffer in OpenGL mode. */
 static int
 AllocSource(int w, int h, u32 pitch, int with_depth)
 {
 	int i;
+	u32 align = FB_ALIGN, size;
 
 	PS3_Video_FreeSource();
 
+	/* OpenGL: tiled (the CPU never draws into these) */
+	if (with_depth && TiledPitch(pitch))
+	{
+		pitch = TiledPitch(pitch);
+		align = TILE_ALIGN;
+	}
+	size = pitch * h;
+	if (align == TILE_ALIGN)
+	{
+		size = pitch * (((u32)h + 31) & ~31u);
+		size = (size + TILE_ALIGN - 1) & ~(TILE_ALIGN - 1);
+	}
+
 	for (i = 0; i < FB_COUNT; i++)
 	{
-		src[i] = (u32 *)rsxMemalign(FB_ALIGN, pitch * h);
+		src[i] = (u32 *)rsxMemalign(align, size);
 
 		if (!src[i])
 		{
@@ -515,12 +587,16 @@ AllocSource(int w, int h, u32 pitch, int with_depth)
 
 		memset(src[i], 0, pitch * h);
 		rsxAddressToOffset(src[i], &src_offset[i]);
+		if (align == TILE_ALIGN)
+		{
+			TileBuffer(src_offset[i], size, pitch);
+		}
 	}
 
 	if (with_depth)
 	{
 		depth_pitch = pitch;   /* Z24S8: 4 bytes per pixel too */
-		depth = (u32 *)rsxMemalign(FB_ALIGN, depth_pitch * h);
+		depth = (u32 *)rsxMemalign(align, align == TILE_ALIGN ? size : depth_pitch * h);
 
 		if (!depth)
 		{
@@ -530,6 +606,10 @@ AllocSource(int w, int h, u32 pitch, int with_depth)
 		}
 
 		rsxAddressToOffset(depth, &depth_offset);
+		if (align == TILE_ALIGN)
+		{
+			TileBuffer(depth_offset, size, depth_pitch);
+		}
 	}
 
 	src_w = w;
@@ -583,8 +663,8 @@ PS3_Video_SetRenderTarget(int w, int h)
 		return -1;
 	}
 
-	PS3_Log("[video] render targets %dx%d (x%d, pitch %u) + depth/stencil",
-			w, h, FB_COUNT, (unsigned)src_pitch);
+	PS3_Log("[video] render targets %dx%d (x%d, pitch %u) + depth/stencil, %d tiled",
+			w, h, FB_COUNT, (unsigned)src_pitch, tiles_bound);
 
 	return 0;
 }
