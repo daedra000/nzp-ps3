@@ -601,6 +601,47 @@ PS3_Video_RenderTargetInfo(uint32_t *offset, uint32_t *pitch)
 	return 0;
 }
 
+/* Glow test (see ps3gl_draw.c): 60 frames as normal, 60 with the blended
+   quads skipped, the average RSX wait of each. At most 3 tests a run. */
+static int glow_test_frame = -1, glow_tests;
+static u64 glow_wait[2];
+
+static void
+GlowTestStart(void)
+{
+	if (glow_test_frame >= 0 || glow_tests >= 3)
+	{
+		return;
+	}
+	glow_test_frame = 0;
+	glow_wait[0] = glow_wait[1] = 0;
+	glow_tests++;
+}
+
+static void
+GlowTestFrame(u64 wait_us)
+{
+	extern int ps3gl_skip_glows;
+
+	if (glow_test_frame < 0)
+	{
+		return;
+	}
+	if (glow_test_frame > 0)   /* the wait for the frame before */
+	{
+		glow_wait[glow_test_frame > 60] += wait_us;
+	}
+	glow_test_frame++;
+	ps3gl_skip_glows = glow_test_frame > 60;
+	if (glow_test_frame > 120)
+	{
+		ps3gl_skip_glows = 0;
+		glow_test_frame = -1;
+		PS3_Log("[gpu] glow test %d: RSX wait %.1f ms per frame with the glows, %.1f without",
+				glow_tests, glow_wait[0] / 1000.0 / 60, glow_wait[1] / 1000.0 / 60);
+	}
+}
+
 void
 PS3_Video_BindRenderTarget(void)
 {
@@ -622,12 +663,14 @@ PS3_Video_BindRenderTarget(void)
 		prof_wait_us += t0;
 #ifdef GLQUAKE
 		/* the RSX is behind: list what this frame draws (the wait is here,
-		   at the start of a frame, not in Present) */
+		   at the start of a frame, not in Present), and start a glow test */
 		if (t0 > 6000 && frames_presented > 600)
 		{
 			extern void ps3gl_request_capture(void);
 			ps3gl_request_capture();
+			GlowTestStart();
 		}
+		GlowTestFrame(t0);
 #endif
 	}
 
