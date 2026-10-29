@@ -437,7 +437,18 @@ DrawIndexedInline(uint32_t prim, const uint16_t *idx, int count)
    are only read for the units the fragment program samples: an array
    left enabled on an unused unit may point at anything. */
 static int
+CopyVertexList(int first, int count, unsigned units, uint32_t *ring_offset, const int *list);
+
+static int
 CopyVertices(int first, int count, unsigned units, uint32_t *ring_offset)
+{
+	return CopyVertexList(first, count, units, ring_offset, NULL);
+}
+
+/* As CopyVertices, but with 'list' the vertices list[0..count-1] (first is 0):
+   only the vertices an indexed draw uses. */
+static int
+CopyVertexList(int first, int count, unsigned units, uint32_t *ring_offset, const int *list)
 {
 	const ps3gl_array_t *va = &ps3gl.va_vertex;
 	const ps3gl_array_t *vc = ps3gl.va_color.enabled ? &ps3gl.va_color : NULL;
@@ -479,6 +490,8 @@ CopyVertices(int first, int count, unsigned units, uint32_t *ring_offset)
 		pt1 = (const uint8_t *)vt1->ptr + (size_t)first * st1;
 	}
 
+	const uint8_t *bv = pv, *bc = pc, *bt0 = pt0, *bt1 = pt1;
+
 	/* the usual case: float positions, float texcoords, byte colors */
 	fast = (va->type == GL_FLOAT) &&
 		(!pt0 || (vt0->type == GL_FLOAT && vt0->size >= 2)) &&
@@ -487,6 +500,15 @@ CopyVertices(int first, int count, unsigned units, uint32_t *ring_offset)
 
 	for (i = 0; i < count; i++, out++)
 	{
+		if (list)
+		{
+			size_t v = (size_t)list[i];
+			pv = bv + v * sv;
+			if (pc) pc = bc + v * sc;
+			if (pt0) pt0 = bt0 + v * st0;
+			if (pt1) pt1 = bt1 + v * st1;
+		}
+
 		if (fast)
 		{
 			const float *p = (const float *)pv;
@@ -946,16 +968,57 @@ glDrawElements(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices)
 		return;
 	}
 
-	if (!CopyVertices(lo, hi - lo + 1, units, &off))
+	/* The world draws each texture's surfaces from one big vertex array:
+	   the range lo..hi spans thousands of vertices the draw doesn't use.
+	   Copy only the ones it does (the world's CPU time was mostly this). */
+	if (hi - lo + 1 > count && hi < 65536)
 	{
-		return;
-	}
+		static uint32_t stamp[65536], gen;
+		static uint16_t remap[65536];
+		static int list[65536];
+		int n = 0;
 
-	if (lo)
-	{
+		if (++gen == 0)
+		{
+			memset(stamp, 0, sizeof(stamp));
+			gen = 1;
+		}
+
 		for (i = 0; i < count; i++)
 		{
-			idx16[i] = (uint16_t)(idx16[i] - lo);
+			int v = idx16[i];
+
+			if (stamp[v] != gen)
+			{
+				stamp[v] = gen;
+				remap[v] = (uint16_t)n;
+				list[n++] = v;
+			}
+
+			idx16[i] = remap[v];
+		}
+
+		if (!CopyVertexList(0, n, units, &off, list))
+		{
+			return;
+		}
+
+		lo = 0;
+		hi = n - 1;
+	}
+	else
+	{
+		if (!CopyVertices(lo, hi - lo + 1, units, &off))
+		{
+			return;
+		}
+
+		if (lo)
+		{
+			for (i = 0; i < count; i++)
+			{
+				idx16[i] = (uint16_t)(idx16[i] - lo);
+			}
 		}
 	}
 
