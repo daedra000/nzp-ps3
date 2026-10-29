@@ -52,6 +52,19 @@ the log to send when something goes wrong (the previous run's is kept as
 `nzp_log.old.txt`). The main menu shows the build it came from
 (`2.0.0-preview+ps3-<commit>`).
 
+### Installing custom maps
+1. Download a map from the [NZ:P map releases](https://github.com/nzp-team/nzportable/discussions/categories/map-releases) page.
+2. Extract the `.zip` with WinRAR or 7-Zip.
+3. By FTP, copy the map's folders (`gfx`, `maps`, `sounds` and so on) into
+   `/dev_hdd0/game/NZPP00001/USRDIR/nzp/`, merging them with the folders already there.
+4. Restart the game if it's open. The map should now show up in map select.
+
+Map art goes in `/dev_hdd0/game/NZPP00001/USRDIR/nzp/gfx/menu/custom/`.
+Custom maps are made by the community, so some will have bugs.
+
+Note: bigger maps are heavier on the PS3. If the frame rate struggles, drop the
+resolution in Video Options (960×540 or 848×480) and lower Max FPS.
+
 ### What the log shows
 - `[slow]`: anything that held up a frame for more than 60 ms (model, sound, music
   loads, map spawn steps).
