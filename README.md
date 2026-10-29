@@ -4,8 +4,19 @@ This fork ports NZ:P to the **PlayStation 3** as native homebrew (PSL1GHT), from
 Vril engine in [`vril/`](vril) with a PS3 platform in
 [`vril/source/platform/ps3`](vril/source/platform/ps3).
 
-**Status:** early. Video, input and audio are written; the game boots on hardware and
-is being brought up. Single player only for now (no LAN yet).
+**Status:** playable. Menus, map select, Solo on all 19 maps (tested on Nacht der
+Untoten), sound effects, menu and round music, DualShock 3 controls with PlayStation
+button prompts, and the PS3 account name on the main menu ("Welcome, <name>").
+Single player only for now (no LAN yet).
+
+**Known issues**
+- Frame rate: 50-60 fps in normal play; busy rounds and some lights (the stairs light,
+  perk machines) drop it to 30 or below. Being worked on: zombie drawing is already
+  faster, the light slowdown is on the RSX side and still being measured.
+- A freeze at the stairs light in Nacht (an RSX command-buffer bug in librsx's own
+  buffer wrapping) has a fix in testing.
+- The crash handler can't install on retail/HEN firmware (liblv2dbg refuses), so a
+  crash only ends the log; freezes are caught by the watchdog instead.
 
 ## Install
 1. A PS3 that runs homebrew (HEN or CFW).
@@ -15,7 +26,20 @@ is being brought up. Single player only for now (no LAN yet).
 
 Everything lives in `/dev_hdd0/game/NZPP00001/USRDIR/`: the game data in `nzp/`
 (most of it in `nzp/pak0.pak`), config and saves next to it, and `nzp_log.txt`,
-the log to send when something goes wrong.
+the log to send when something goes wrong (the previous run's is kept as
+`nzp_log.old.txt`). The main menu shows the build it came from
+(`2.0.0-indev+ps3-<commit>`).
+
+### What the log shows
+- `[slow]`: anything that held up a frame for more than 60 ms (model, sound, music
+  loads, map spawn steps).
+- `[alive]`: every 30 s, fps and where each frame's time goes (input, server, world,
+  entities, particles, 2D) and the audio thread's load.
+- `[video]` / `[gl]`: every 10 s, frame time, time waiting for the RSX, draws and
+  vertices per frame.
+- `[watchdog]`: if the game stops making progress for 6 s, the last 24 steps it took.
+- `[gpu]`: a frame where the RSX holds the CPU up, with each draw's GPU time.
+- `[fifo]`: on an RSX hang, where the command reader stopped.
 
 ## Controls (DualShock 3)
 | Button | Action |
@@ -40,17 +64,33 @@ All rebindable in the game's controls menu.
   PSL1GHT's `cgcomp -a` at build time (`tools/build_shaders.py`).
 - **Big-endian:** NZ:P had only run on little-endian CPUs; the loaders were fixed for
   the Cell PPU (PCX skins, palettes, Half-Life BSP lightmaps, PAK headers).
-- **Audio:** one audio port at 48 kHz: Quake's mixer plus the MP3 music (minimp3).
+- **Command buffer:** librsx moves to the next 32 KB piece of the command buffer from
+  inside its functions through an asm call GCC 13 doesn't treat as clobbering memory,
+  and the commands written right after came out corrupted (RSX hangs). The port makes
+  that move itself before every batch (`PS3_Cmd_Reserve` in `ps3_video.c`) so librsx
+  never has to, and long index lists go in pieces that fit.
+- **CPU:** the Cell PPU stalls on every int/float conversion, so alias models (the
+  zombies) go from bytes to floats through a table and straight into the GL layer's
+  fast path; each model's triangle list is cached instead of rebuilt per draw.
+- **Audio:** one audio port at 48 kHz: Quake's mixer plus the MP3 music (minimp3,
+  decoded on the audio thread, which needs a 256 KB stack for it).
+- **Log:** written by a low-priority thread once the game runs: a direct HDD write
+  can take 2 s.
 - **Data:** a PKG install drops entries past a limit, so the 1100+ data files are
   packed into `pak0.pak` (`tools/make_pak.py`); what the engine opens by path stays
-  loose.
+  loose. PlayStation button prompts are the default (`cl_controllerglyphs "sony"`).
 
 ## Building
 GitHub Actions ([`.github/workflows/ps3.yml`](.github/workflows/ps3.yml)) builds the
 PS3 toolchain once (cached), compiles progs.dat from
 [nzp-team/quakec](https://github.com/nzp-team/quakec), takes the PC data from
-[nzp-team/assets](https://github.com/nzp-team/assets) (both at pinned revisions) and
-makes `nzp-ps3.pkg` on every push.
+[nzp-team/assets](https://github.com/nzp-team/assets) (both at pinned revisions),
+adds the compiled maps (`.bsp`, which the assets repo doesn't have) from the official
+PC nightly build, and makes `nzp-ps3.pkg` on every push. The artifact is the PKG
+only.
+
+Crash addresses from a log can be named by running the workflow by hand with them as
+its `addrs` input (`ppu-addr2line` against the same commit's ELF).
 
 Locally, with `PS3DEV`/`PSL1GHT` set:
 ```
