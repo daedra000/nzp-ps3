@@ -106,7 +106,11 @@ static void
 FlipHandler(const u32 head)
 {
 	(void)head;
-	flip_completed++;
+	/* after a forced sync (WaitFlips gave up on a held flip) the held flips
+	   still complete: don't count past what was queued, or WaitFlips stops
+	   waiting and a buffer on screen gets drawn over */
+	if (flip_completed != flip_queued)
+		flip_completed++;
 }
 
 static void
