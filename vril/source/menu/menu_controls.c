@@ -168,6 +168,9 @@ void Menu_Controls_ApplyAnubMode (void)
 
 void Menu_Controls_ApplySettings (void)
 {
+#ifdef __PS3__
+	{ extern void PS3_SaveSettings(void); PS3_SaveSettings(); }
+#endif
     // no op
     Menu_SetSound(MENU_SND_ENTER);
 }

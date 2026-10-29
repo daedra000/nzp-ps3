@@ -124,6 +124,7 @@ void Menu_Configuration_ApplySettings (void)
 #ifdef __PS3__
     PS3_VID_ApplyResolution();
     PS3_VID_ApplyGamma();
+    { extern void PS3_SaveSettings(void); PS3_SaveSettings(); }
 #endif
     Menu_SetSound(MENU_SND_ENTER);
 }

@@ -310,6 +310,17 @@ void Cmd_Exec_f (void)
 		f = (char *)COM_LoadHunkFile (Cmd_Argv(1));
 	}
 
+#ifdef __PS3__
+	// No settings saved yet (the PKG doesn't carry a config.cfg, so updates
+	// don't reset them): the shipped defaults.
+	if (!f && !strcmp(Cmd_Argv(1), "config.cfg"))
+	{
+		f = (char *)COM_LoadHunkFile ("config_default.cfg");
+		if (f)
+			Con_Printf ("execing config_default.cfg (no saved settings yet)\n");
+	}
+#endif
+
 	if (!f)
 	{
 		Con_Printf ("couldn't exec %s\n",Cmd_Argv(1));

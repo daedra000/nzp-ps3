@@ -39,6 +39,9 @@ void Menu_Audio_Set (void)
 
 void Menu_Volume_ApplySettings (void)
 {
+#ifdef __PS3__
+	{ extern void PS3_SaveSettings(void); PS3_SaveSettings(); }
+#endif
 	// no op
 	Menu_SetSound(MENU_SND_ENTER);
 }

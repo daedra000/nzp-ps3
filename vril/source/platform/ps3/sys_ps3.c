@@ -338,6 +338,35 @@ void Sys_CaptureScreenshot(void)
 
 static volatile int ps3_xmb_pause;
 
+/* Settings to the HDD now (APPLY, leaving a settings menu), not only on a clean
+   quit: a crash or the power button would lose them. The log says so only
+   when the file changed. */
+extern void Host_WriteConfiguration(void);
+
+void PS3_SaveSettings(void)
+{
+	static char last[16384];
+	char path[MAX_OSPATH];
+	FILE *f;
+	long n;
+	static char now[16384];
+
+	Host_WriteConfiguration();
+	snprintf(path, sizeof(path), "%s/config.cfg", com_gamedir);
+	f = fopen(path, "rb");
+	if (!f) {
+		PS3_Log("settings: couldn't write %s", path);
+		return;
+	}
+	n = (long)fread(now, 1, sizeof(now) - 1, f);
+	fclose(f);
+	now[n > 0 ? n : 0] = 0;
+	if (strcmp(now, last)) {
+		PS3_Log("settings saved (%ld bytes)", n);
+		memcpy(last, now, sizeof(last));
+	}
+}
+
 void Sys_SendKeyEvents(void)
 {
 	// Delivers the XMB's events (PS button menu, "Quit Game") to the callback below.

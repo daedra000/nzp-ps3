@@ -284,6 +284,10 @@ jobs:
           sed -i 's/^cl_controllerglyphs .*/cl_controllerglyphs "sony"/' "$RUNNER_TEMP/nzp/config.cfg"
           grep -q '^cl_controllerglyphs "sony"' "$RUNNER_TEMP/nzp/config.cfg" \
             || { echo "::error title=config.cfg::glyphs not set to sony"; exit 1; }
+          # The player's settings live in config.cfg, which the game writes: the
+          # PKG must not carry one, or every update would reset them. The PC
+          # defaults ship as config_default.cfg, run when there's no config.cfg yet.
+          mv "$RUNNER_TEMP/nzp/config.cfg" "$RUNNER_TEMP/nzp/config_default.cfg"
           # A PKG install drops entries past a limit and NZ:P has 1100+ files: the
           # bulk goes into pak0.pak. Loose: what the engine opens by path (maps/
           # waypoints and the map list, data/ for QuakeC, tracks/ music, configs).

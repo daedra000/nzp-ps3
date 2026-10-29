@@ -111,6 +111,9 @@ static void Menu_Accessibility_ApplyLightbar(void)
 
 void Menu_Accessibility_ApplySettings (void)
 {
+#ifdef __PS3__
+	{ extern void PS3_SaveSettings(void); PS3_SaveSettings(); }
+#endif
 	// no op
 	Menu_SetSound(MENU_SND_ENTER);
 }
