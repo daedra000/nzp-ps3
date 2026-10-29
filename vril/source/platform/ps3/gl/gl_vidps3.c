@@ -59,8 +59,75 @@ void GL_Init(void)
 	glClear(GL_COLOR_BUFFER_BIT);
 }
 
+/*
+ * Render resolution (Video Options > RESOLUTION): the game draws at this size
+ * and the RSX's scaler stretches it to the TV mode, as TyrQuakeCell. 960x540
+ * draws 44% fewer pixels than 1280x720: the lamp glows and lights at 720p
+ * were more than the RSX could fill at 60 fps.
+ */
+cvar_t vid_ps3_res = {"vid_ps3_res", "960x540", true};
+
+static const struct { int w, h; } ps3_res[] = {
+	{1280, 720}, {960, 540}, {848, 480},
+};
+#define NUM_PS3_RES ((int)(sizeof(ps3_res) / sizeof(ps3_res[0])))
+
+static int PS3_ResIndex(const char *s)
+{
+	int i, w = 0, h = 0;
+	if (sscanf(s, "%dx%d", &w, &h) == 2)
+		for (i = 0; i < NUM_PS3_RES; i++)
+			if (ps3_res[i].w == w && ps3_res[i].h == h)
+				return i;
+	return 1;   /* 960x540 */
+}
+
+/* The menu's button: the next size. */
+void PS3_VID_NextResolution(void)
+{
+	int i = (PS3_ResIndex(vid_ps3_res.string) + 1) % NUM_PS3_RES;
+	Cvar_Set("vid_ps3_res", va("%dx%d", ps3_res[i].w, ps3_res[i].h));
+}
+
+const char *PS3_VID_ResolutionString(void)
+{
+	int i = PS3_ResIndex(vid_ps3_res.string);
+	return va("%dx%d", ps3_res[i].w, ps3_res[i].h);
+}
+
+static void PS3_VID_SetSize(int width, int height)
+{
+	vid.maxwarpwidth = vid.width = width;
+	vid.maxwarpheight = vid.height = height;
+	vid.aspect = ((float)vid.height / vid.width) * (320.0f / 240.0f);
+	vid.scale = vid.height / STD_UI_HEIGHT;
+	if (vid.scale < 1) vid.scale = 1;
+	vid.recalc_refdef = 1;
+}
+
+/* Between frames: a new size from the cvar (the config, or the menu). */
+static void PS3_VID_CheckResolution(void)
+{
+	int i = PS3_ResIndex(vid_ps3_res.string);
+	int w = ps3_res[i].w, h = ps3_res[i].h;
+
+	if (w == vid.width && h == vid.height)
+		return;
+	if (PS3_Video_SetRenderTarget(w, h) != 0) {
+		PS3_Log("VID: no %dx%d render target, staying at %dx%d", w, h, vid.width, vid.height);
+		Cvar_Set("vid_ps3_res", va("%dx%d", vid.width, vid.height));
+		PS3_Video_SetRenderTarget(vid.width, vid.height);
+		return;
+	}
+	PS3GL_Init(w, h);   /* only the size changes: the GL state stays */
+	PS3_VID_SetSize(w, h);
+	PS3_Log("VID: rendering at %dx%d, scaled to %dx%d", w, h, PS3_Video_Width(), PS3_Video_Height());
+}
+
 void GL_BeginRendering(int *x, int *y, int *width, int *height)
 {
+	PS3_VID_CheckResolution();
+
 	// waits for a free render target and makes it the RSX's surface
 	PS3GL_BeginFrame();
 	*x = *y = 0;
@@ -135,6 +202,7 @@ void VID_Init(unsigned char *palette)
 	PS3_Video_SetColor(1.0f, 1.0f);
 
 	Cvar_RegisterVariable(&gl_ztrick);
+	Cvar_RegisterVariable(&vid_ps3_res);
 	vid.maxwarpwidth = vid.width = width;
 	vid.maxwarpheight = vid.height = height;
 	vid.colormap = host_colormap;

@@ -606,7 +606,7 @@ PS3_Video_RenderTargetInfo(uint32_t *offset, uint32_t *pitch)
 static int glow_test_frame = -1, glow_tests;
 static u64 glow_wait[2];
 
-static void
+static void __attribute__((unused))
 GlowTestStart(void)
 {
 	if (glow_test_frame >= 0 || glow_tests >= 3)
@@ -668,7 +668,6 @@ PS3_Video_BindRenderTarget(void)
 		{
 			extern void ps3gl_request_capture(void);
 			ps3gl_request_capture();
-			GlowTestStart();
 		}
 		GlowTestFrame(t0);
 #endif

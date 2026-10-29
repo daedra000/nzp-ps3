@@ -11,8 +11,9 @@ Single player only for now (no LAN yet).
 
 **Known issues**
 - Frame rate: 50-60 fps in normal play; busy rounds and some lights (the stairs light,
-  perk machines) drop it to 30 or below. Being worked on: zombie drawing is already
-  faster, the light slowdown is on the RSX side and still being measured.
+  perk machines) dropped it to 30 or below at 1280x720, more than the RSX could fill.
+  The game now renders at 960x540 by default and scales to the TV; Video Options >
+  RESOLUTION switches between 1280x720, 960x540 and 848x480.
 - A freeze at the stairs light in Nacht (an RSX command-buffer bug in librsx's own
   buffer wrapping) has a fix in testing.
 - The crash handler can't install on retail/HEN firmware (liblv2dbg refuses), so a

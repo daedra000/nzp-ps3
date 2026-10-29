@@ -27,6 +27,10 @@ char* particles_string;
 char* retro_string;
 char* dithering_string;
 char* ultrawide_string;
+#ifdef __PS3__
+extern void PS3_VID_NextResolution(void);
+extern const char *PS3_VID_ResolutionString(void);
+#endif
 #ifdef PLATFORM_SUPPORTS_VIDEO_OPTIONS
 char* fullscreen_string;
 char* vsync_string;
@@ -231,6 +235,12 @@ void Menu_Video_Draw (void)
         Menu_DrawButton (8, video_items++, "DITHERING", "Toggle Decrease in Color Banding", Menu_Video_ApplyDithering);
         Menu_DrawOptionButton (8, dithering_string);
     }
+
+#ifdef __PS3__
+    // Render resolution, scaled to the TV
+    Menu_DrawButton (8, video_items++, "RESOLUTION", "Lower draws faster; always scaled to your TV.", PS3_VID_NextResolution);
+    Menu_DrawOptionButton (8, (char *)PS3_VID_ResolutionString());
+#endif
 
 #ifdef PLATFORM_SUPPORTS_VIDEO_OPTIONS
     Menu_DrawButton (8, video_items++, "FULLSCREEN", "Toggle desktop fullscreen mode.", Menu_Video_ApplyFullscreen);
