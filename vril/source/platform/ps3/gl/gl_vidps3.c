@@ -156,15 +156,14 @@ static void PS3_VID_CheckGamma(void)
 	PS3_Video_SetColor(1.0f, exponent);
 }
 
-static void PS3_VID_SetSize(int width, int height)
-{
-	vid.maxwarpwidth = vid.width = width;
-	vid.maxwarpheight = vid.height = height;
-	vid.aspect = ((float)vid.height / vid.width) * (320.0f / 240.0f);
-	vid.scale = vid.height / STD_UI_HEIGHT;
-	if (vid.scale < 1) vid.scale = 1;
-	vid.recalc_refdef = 1;
-}
+/*
+ * The render target can be smaller than the screen (vid_ps3_res), but the
+ * game's 2D (HUD, menus) keeps laying out at the screen's size: vid.width and
+ * vid.height stay the screen's, and the 3D view and the 2D are scaled into the
+ * render target through the viewport (R_SetupGL, Hyena_Set2D). The HUD is the
+ * same size on screen at every resolution.
+ */
+static int ps3_rt_w, ps3_rt_h;
 
 /* Between frames: a new size from the cvar (the config, or the menu). */
 static void PS3_VID_CheckResolution(void)
@@ -172,17 +171,20 @@ static void PS3_VID_CheckResolution(void)
 	int i = PS3_ResIndex(vid_ps3_res.string);
 	int w = ps3_res[i].w, h = ps3_res[i].h;
 
-	if (w == vid.width && h == vid.height)
+	if (w == ps3_rt_w && h == ps3_rt_h)
 		return;
 	if (PS3_Video_SetRenderTarget(w, h) != 0) {
-		PS3_Log("VID: no %dx%d render target, staying at %dx%d", w, h, vid.width, vid.height);
-		Cvar_Set("vid_ps3_res", va("%dx%d", vid.width, vid.height));
-		PS3_Video_SetRenderTarget(vid.width, vid.height);
+		PS3_Log("VID: no %dx%d render target, staying at %dx%d", w, h, ps3_rt_w, ps3_rt_h);
+		Cvar_Set("vid_ps3_res", va("%dx%d", ps3_rt_w, ps3_rt_h));
+		PS3_Video_SetRenderTarget(ps3_rt_w, ps3_rt_h);
 		return;
 	}
 	PS3GL_Init(w, h);   /* only the size changes: the GL state stays */
-	PS3_VID_SetSize(w, h);
-	PS3_Log("VID: rendering at %dx%d, scaled to %dx%d", w, h, PS3_Video_Width(), PS3_Video_Height());
+	ps3_rt_w = w;
+	ps3_rt_h = h;
+	vid.recalc_refdef = 1;
+	PS3_Log("VID: rendering at %dx%d, scaled to %dx%d (2D laid out at %dx%d)", w, h,
+		PS3_Video_Width(), PS3_Video_Height(), vid.width, vid.height);
 }
 
 void GL_BeginRendering(int *x, int *y, int *width, int *height)
@@ -193,8 +195,8 @@ void GL_BeginRendering(int *x, int *y, int *width, int *height)
 	// waits for a free render target and makes it the RSX's surface
 	PS3GL_BeginFrame();
 	*x = *y = 0;
-	*width = vid.width;
-	*height = vid.height;
+	*width = ps3_rt_w;
+	*height = ps3_rt_h;
 }
 
 void GL_EndRendering(void)
@@ -267,6 +269,8 @@ void VID_Init(unsigned char *palette)
 	Cvar_RegisterVariable(&vid_ps3_res);
 	vid.maxwarpwidth = vid.width = width;
 	vid.maxwarpheight = vid.height = height;
+	ps3_rt_w = width;
+	ps3_rt_h = height;
 	vid.colormap = host_colormap;
 	vid.fullbright = 256 - LittleLong(*((int *)vid.colormap + 2048));
 	vid.conwidth = 640;
