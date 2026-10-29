@@ -398,12 +398,40 @@ void R_DrawSpriteModel (entity_t *e)
 		right = vright;
 	}
 
+	float	alpha = 1.0f;
+#ifdef __PS3__
+	// Lamp glows: up close one covers most of the screen, and several stack.
+	// Blending that many pixels at 1280x720 was more than the RSX could fill
+	// at 60 fps (the stairs light in Nacht). A glow is kept to at most
+	// GLOW_MAX_FRACTION of the view's height, a little dimmer when it's shrunk.
+	if (psprite->type != SPR_ORIENTED && strstr(currententity->model->name, "glow"))
+	{
+		#define GLOW_MAX_FRACTION 0.35f
+		vec3_t	delta;
+		float	radius, dist, limit;
+
+		radius = max(max(fabsf(frame->up), fabsf(frame->down)),
+			max(fabsf(frame->left), fabsf(frame->right))) * scale;
+		VectorSubtract (e->origin, r_origin, delta);
+		dist = DotProduct (delta, vpn);
+		if (dist < 1.0f)
+			return;   // at or behind the eye
+		limit = GLOW_MAX_FRACTION * dist * tanf(r_refdef.fov_y * (float)M_PI / 360.0f);
+		if (radius > limit)
+		{
+			float ratio = limit / radius;
+			scale *= ratio;
+			alpha = 0.6f + 0.4f * ratio;
+		}
+	}
+#endif
+
 	if (e->effects & EF_FULLBRIGHT)
-		glColor3f (1,1,1);
+		glColor4f (1,1,1,alpha);
 	else
 	{
 		R_LightPoint (e->origin);
-		glColor3f (lightcolor[0]/255, lightcolor[1]/255, lightcolor[2]/255);
+		glColor4f (lightcolor[0]/255, lightcolor[1]/255, lightcolor[2]/255, alpha);
 	}
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
