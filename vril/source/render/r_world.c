@@ -21,6 +21,10 @@
 #include "../nzportable_def.h"
 #ifdef __PS3__
 #include "../platform/ps3/ps3_platform.h"
+// ps3gl: the world's arrays don't change during a map, so they're drawn
+// from RSX memory instead of copied each frame
+extern void ps3glStaticArrays(int count);
+extern void ps3glStaticArraysFlush(void);
 #endif
 
 static r_world_layout_t world_layout;
@@ -39,6 +43,9 @@ R_DestroyWorldCache(void)
 {
     int i;
 
+#ifdef __PS3__
+    ps3glStaticArraysFlush();
+#endif
     for (i = 0; i < world_page_count; ++i) {
         Hyena_DestroyBuffer(world_pages[i].vertices);
         Hyena_DestroyBuffer(world_pages[i].lightmap);
@@ -130,7 +137,13 @@ R_DrawWorldCachePage(int page, int first_index, int count, qboolean lightmap, qb
         Hyena_EnableCapability(HYE_ALPHA_TEST);
         Hyena_AlphaFunction(HYE_GREATER, 0xaa / 255.0f);
     }
+#ifdef __PS3__
+    ps3glStaticArrays(cached->count);
+#endif
     Hyena_DrawElements(HYE_TRIANGLES, &arrays, count, world_indices, first_index * sizeof(unsigned short));
+#ifdef __PS3__
+    ps3glStaticArrays(0);
+#endif
     if (alpha_test && !world_layout.alpha_test_all)
         Hyena_DisableCapability(HYE_ALPHA_TEST);
 }

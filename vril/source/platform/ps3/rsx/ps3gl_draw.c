@@ -31,6 +31,7 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "ps3gl.h"
@@ -439,6 +440,10 @@ DrawIndexedInline(uint32_t prim, const uint16_t *idx, int count)
 static int
 CopyVertexList(int first, int count, unsigned units, uint32_t *ring_offset, const int *list);
 
+/* Set: CopyVertexList converts into this memory instead of the ring (the
+   static arrays below). */
+static ps3gl_vertex_t *copy_to;
+
 static int
 CopyVertices(int first, int count, unsigned units, uint32_t *ring_offset)
 {
@@ -464,7 +469,11 @@ CopyVertexList(int first, int count, unsigned units, uint32_t *ring_offset, cons
 	uint32_t color = ps3gl.color;
 	int fast, i;
 
-	if (!RingAlloc(bytes, &out, ring_offset))
+	if (copy_to)
+	{
+		out = copy_to;
+	}
+	else if (!RingAlloc(bytes, &out, ring_offset))
 	{
 		return 0;
 	}
@@ -699,6 +708,141 @@ glDrawArrays(GLenum mode, GLint first, GLsizei count)
 	ps3gl.st_verts += (uint32_t)count;
 }
 
+/* ================================================================ */
+/* Static arrays                                                      */
+/* ================================================================ */
+
+/*
+ * The world's vertices never change during a map, but each frame copied every
+ * visible one into the ring again: on a detailed custom map (Croft Manor's
+ * fireplace room, 30 000-40 000 vertices in view) that alone missed 60 fps.
+ * The renderer says when the bound arrays are immutable (ps3glStaticArrays);
+ * they're converted once into RSX memory and drawn from there, only the
+ * indices go in the command buffer. Keyed by the arrays' addresses and what
+ * the draw reads from them; ps3glStaticArraysFlush drops them all (a new map).
+ */
+typedef struct static_arrays_s
+{
+	const void *vp, *t0, *t1, *cp;
+	int sv, st0, st1, sc, vsize, count;
+	GLenum vtype;
+	uint32_t color;
+	uint8_t *mem;
+	uint32_t off;
+	struct static_arrays_s *next;
+} static_arrays_t;
+
+#define STATIC_MAX_SETS  96
+#define STATIC_MAX_BYTES (32u * 1024 * 1024)
+
+static static_arrays_t *static_sets;
+static int static_count;   /* > 0: the bound arrays are immutable, this many vertices */
+static int static_nsets;
+static uint32_t static_bytes;
+
+void
+ps3glStaticArrays(int count)
+{
+	static_count = count;
+}
+
+void
+ps3glStaticArraysFlush(void)
+{
+	static_arrays_t *s, *next;
+
+	if (!static_sets)
+	{
+		return;
+	}
+	PS3_Video_Finish();   /* the RSX may still read them */
+	for (s = static_sets; s; s = next)
+	{
+		next = s->next;
+		rsxFree(s->mem);
+		free(s);
+	}
+	PS3_Log("[gl] static arrays freed (%d sets, %u KB)", static_nsets, (unsigned)(static_bytes >> 10));
+	static_sets = NULL;
+	static_nsets = 0;
+	static_bytes = 0;
+}
+
+/* The RSX offset of the bound arrays, converted (once) for 'units'; 0 if not
+   available (then the draw goes through the ring as before). */
+static int
+StaticArrays(unsigned units, uint32_t *off)
+{
+	const ps3gl_array_t *va = &ps3gl.va_vertex;
+	const ps3gl_array_t *vc = ps3gl.va_color.enabled ? &ps3gl.va_color : NULL;
+	const ps3gl_array_t *vt0 = ((units & 5) && ps3gl.va_texcoord[0].enabled) ? &ps3gl.va_texcoord[0] : NULL;
+	const ps3gl_array_t *vt1 = ((units & 2) && ps3gl.va_texcoord[1].enabled) ? &ps3gl.va_texcoord[1] : NULL;
+	static_arrays_t key, *s;
+	uint32_t bytes;
+
+	memset(&key, 0, sizeof(key));
+	key.vp = va->ptr;
+	key.sv = Stride(va);
+	key.vsize = va->size;
+	key.vtype = va->type;
+	key.count = static_count;
+	if (vc && vc->ptr) { key.cp = vc->ptr; key.sc = Stride(vc); }
+	else key.color = ps3gl.color;
+	if (vt0 && vt0->ptr) { key.t0 = vt0->ptr; key.st0 = Stride(vt0); }
+	if (vt1 && vt1->ptr) { key.t1 = vt1->ptr; key.st1 = Stride(vt1); }
+
+	for (s = static_sets; s; s = s->next)
+	{
+		if (s->vp == key.vp && s->t0 == key.t0 && s->t1 == key.t1 && s->cp == key.cp &&
+			s->sv == key.sv && s->st0 == key.st0 && s->st1 == key.st1 && s->sc == key.sc &&
+			s->vsize == key.vsize && s->vtype == key.vtype && s->count == key.count &&
+			s->color == key.color)
+		{
+			*off = s->off;
+			return 1;
+		}
+	}
+
+	bytes = (uint32_t)key.count * PS3GL_VERTEX_SIZE;
+	/* a bound on RSX memory (a colour that keeps changing would otherwise
+	   make new sets every frame): past it, the ring as before */
+	if (static_nsets >= STATIC_MAX_SETS || !key.vp || static_bytes + bytes > STATIC_MAX_BYTES)
+	{
+		return 0;
+	}
+	s = (static_arrays_t *)malloc(sizeof(*s));
+	if (!s)
+	{
+		return 0;
+	}
+	*s = key;
+	s->mem = (uint8_t *)rsxMemalign(128, bytes);
+	if (!s->mem)
+	{
+		static int warned;
+		if (!warned)
+		{
+			PS3_Log("[gl] static arrays: no RSX memory for %u KB, drawing through the ring", (unsigned)(bytes >> 10));
+			warned = 1;
+		}
+		free(s);
+		return 0;
+	}
+	rsxAddressToOffset(s->mem, &s->off);
+	copy_to = (ps3gl_vertex_t *)s->mem;
+	CopyVertexList(0, key.count, units, NULL, NULL);
+	copy_to = NULL;
+	__asm__ volatile("sync" ::: "memory");
+	s->next = static_sets;
+	static_sets = s;
+	static_nsets++;
+	static_bytes += bytes;
+	if (static_nsets == 1)
+		PS3_Log("[gl] static arrays: the world is drawn from RSX memory");
+	*off = s->off;
+	return 1;
+}
+
 void APIENTRY
 glDrawElements(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices)
 {
@@ -745,6 +889,15 @@ glDrawElements(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices)
 
 	if (hi - lo >= 65536)
 	{
+		return;
+	}
+
+	/* immutable arrays (the world): straight from RSX memory, no copy */
+	if (static_count > 0 && hi < static_count && StaticArrays(units, &off))
+	{
+		BindRing(off);
+		DrawIndexedInline(prim, idx16, count);
+		ps3gl.st_draws++;
 		return;
 	}
 
