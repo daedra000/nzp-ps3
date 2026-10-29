@@ -126,11 +126,14 @@ make -f Makefile.ps3 PS3PY_DIR=$PSL1GHT_SRC/tools/ps3py DATA_DIR=/path/to/nzp pk
 `PS3PY_DIR` points at PSL1GHT's `tools/ps3py` with `pkgcrypt` built: the C `pkg`
 tool silently drops entries past 1024.
 
-## License
-The engine and this port are GPL-2.0 ([`LICENSE`](LICENSE), as the Vril engine in
-[`vril/LICENSE`](vril/LICENSE)). The game data the build packs into the PKG (from
-[nzp-team/assets](https://github.com/nzp-team/assets) and the NZ:P nightly) is the
-NZ:P Team's, under its own terms.
+## Licence
+This port is free software, released under the GNU General Public License v2
+([`LICENSE`](LICENSE)), the same licence as the Quake engine NZ:P is built on.
+
+NZ:P game assets (maps, models, textures, sounds) belong to the NZ:P Team and are
+covered by their own terms: https://github.com/nzp-team/assets
+
+Based on NZ:P by the NZ:P Team: https://github.com/nzp-team/nzportable
 
 ---
 
