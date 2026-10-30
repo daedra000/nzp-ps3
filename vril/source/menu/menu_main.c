@@ -69,20 +69,27 @@ void Menu_Main_Draw (void)
 
 	if (!in_submenu) {
 		Menu_DrawButton(1, 0, "SOLO", "Play Solo.", Menu_Solo);
+#ifdef __PS3__
+		// no co-op on PS3 yet: its row gets custom maps from the internet
+		Menu_DrawButton(2, 1, "DOWNLOAD MAPS", "Download Custom Maps", Menu_MapDownload_Set);
+#define MAIN_IDX(n) ((n) + 1)
+#else
 		Menu_DrawGreyButton(2, "COOPERATIVE");
+#define MAIN_IDX(n) (n)
+#endif
 
 		Menu_DrawDivider(3);
 
-		Menu_DrawButton(3, 1, "CONFIGURATION", "Tweak Game Related Options", Menu_Configuration_Set);
-		Menu_DrawButton(4, 2, "CHARACTER BIOS", "View Character Bios", Menu_Bios_Set);
+		Menu_DrawButton(3, MAIN_IDX(1), "CONFIGURATION", "Tweak Game Related Options", Menu_Configuration_Set);
+		Menu_DrawButton(4, MAIN_IDX(2), "CHARACTER BIOS", "View Character Bios", Menu_Bios_Set);
 
 		Menu_DrawDivider(5);
 
-		Menu_DrawButton(5, 3, "CREDITS", "NZ:P Team + Special Thanks", Menu_Credits_Set);
+		Menu_DrawButton(5, MAIN_IDX(3), "CREDITS", "NZ:P Team + Special Thanks", Menu_Credits_Set);
 
 		Menu_DrawDivider(6);
 
-		Menu_DrawButton(6, 4, "QUIT GAME", "Return to Home Screen", Menu_EnterSubMenu);
+		Menu_DrawButton(6, MAIN_IDX(4), "QUIT GAME", "Return to Home Screen", Menu_EnterSubMenu);
 
 		Menu_DrawSocialBadge (1, MENU_SOC_YOUTUBE);
 		Menu_DrawSocialBadge (2, MENU_SOC_BLUESKY);
@@ -90,7 +97,11 @@ void Menu_Main_Draw (void)
 		Menu_DrawSocialBadge (4, MENU_SOC_DOCS);
 	} else {
 		Menu_DrawGreyButton(1, "SOLO");
+#ifdef __PS3__
+		Menu_DrawGreyButton(2, "DOWNLOAD MAPS");
+#else
 		Menu_DrawGreyButton(2, "COOPERATIVE");
+#endif
 		Menu_DrawDivider(3);
 		Menu_DrawGreyButton(3, "CONFIGURATION");
 		Menu_DrawGreyButton(4, "CHARACTER BIOS");

@@ -301,6 +301,9 @@ void VID_Init(unsigned char *palette)
 		// sys_ps3.c: the PS3 user's name last used (registered before config.cfg runs)
 		extern cvar_t ps3_autoname;
 		Cvar_RegisterVariable(&ps3_autoname);
+		// ps3_mapdl.c: where DOWNLOAD MAPS gets its list
+		extern void PS3_MapDL_Init(void);
+		PS3_MapDL_Init();
 	}
 	vid.maxwarpwidth = vid.width = width;
 	vid.maxwarpheight = vid.height = height;

@@ -48,6 +48,7 @@ extern int				m_previous_state;
 #define m_bindings		22
 #define m_bios 			23
 #define m_gyro			24
+#define m_mapdownload	25
 ///////////////////////////
 ///////////////////////////
 ///////////////////////////
@@ -328,6 +329,11 @@ void Menu_Controls_Set (void);
 void Menu_Gyro_Set (void);
 #endif
 void Menu_Bindings_Set (void);
+#ifdef __PS3__
+void Menu_MapDownload_Set (void);
+void Menu_MapDownload_Draw (void);
+void Menu_MapDownload_Poll (void);
+#endif
 void Menu_Accessibility_Set (void);
 
 // Platform specifics

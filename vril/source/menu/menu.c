@@ -174,6 +174,10 @@ void Menu_Draw (void)
 		Menu_DrawInitLoadScreen();
 	}
 
+#ifdef __PS3__
+	Menu_MapDownload_Poll ();		// a finished install joins CUSTOM MAPS
+#endif
+
 	if (m_state == m_none || (key_dest != key_menu && key_dest != key_menu_pause)) {
 		return;
 	}
@@ -263,6 +267,12 @@ void Menu_Draw (void)
 	case m_bindings:
 		Menu_Bindings_Draw ();
 		break;
+
+#ifdef __PS3__
+	case m_mapdownload:
+		Menu_MapDownload_Draw ();
+		break;
+#endif
 
 	case m_accessibility:
 		Menu_Accessibility_Draw ();
