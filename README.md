@@ -8,7 +8,8 @@ Vril engine in [`vril/`](vril) with a PS3 platform in
 maps load (Nacht der Untoten played into the late rounds; the others only briefly so
 far), sound effects, menu and round music, DualShock 3 controls with PlayStation
 button prompts and rumble, the PS3 account name on the main menu ("Welcome, <name>"),
-and settings that are saved and survive updates. Single player only.
+settings that are saved and survive updates, and custom maps downloaded straight
+from the main menu. Single player only.
 Reports are welcome: send `nzp_log.txt` (see below) with what happened.
 
 **Video**
@@ -31,11 +32,24 @@ Reports are welcome: send `nzp_log.txt` (see below) with what happened.
 - Switching PS3 user picks up the new account's name, unless you typed a name of your
   own.
 
+**Custom maps**
+- Main menu > DOWNLOAD MAPS lists the community maps from the
+  [NZ:P map releases](https://github.com/nzp-team/nzportable/discussions/categories/map-releases)
+  (89 so far). Press one to download and install it; it shows up in
+  SOLO > CUSTOM MAPS straight away, no restart.
+- DOWNLOAD MAPS > MANAGE MAPS lists the installed custom maps; press one to delete it.
+- The list is rebuilt daily from those release posts by
+  [`tools/maps_list.py`](tools/maps_list.py) (the `Map list` workflow) and published
+  to the `maps-list` branch. Maps are downloaded from where their authors posted them.
+- Downloads use HTTPS through mbedTLS: the PS3's own HTTPS is too old for GitHub and
+  archive.org. If the PS3's date is wrong, certificates are rejected.
+
 **Known issues**
 - Late rounds with big crowds and explosions can dip to around 45-50 fps for a
   moment. Explosions, fire and sprites right in front of the camera are now kept
   smaller to help; this is the main thing being worked on.
 - Maps other than Nacht der Untoten have had little testing.
+- Very big map downloads are unpacked in memory and haven't been tested much yet.
 - The crash handler can't install on retail/HEN firmware (liblv2dbg refuses), so a
   crash only ends the log; freezes are caught by the watchdog instead.
 
@@ -51,9 +65,10 @@ APPLY and when you leave a settings menu; updates don't overwrite it, and deleti
 goes back to the defaults in `config_default.cfg`), and `nzp_log.txt`,
 the log to send when something goes wrong (the previous run's is kept as
 `nzp_log.old.txt`). The main menu shows the build it came from
-(`2.0.0-preview+ps3-<commit>`).
+(`2.0.1-preview+ps3-<commit>`).
 
-### Installing custom maps
+### Installing custom maps by hand
+DOWNLOAD MAPS is the easy way. For a map that isn't in its list:
 1. Download a map from the [NZ:P map releases](https://github.com/nzp-team/nzportable/discussions/categories/map-releases) page.
 2. Extract the `.zip` with WinRAR or 7-Zip.
 3. By FTP, copy the map's folders (`gfx`, `maps`, `sounds` and so on) into
@@ -114,6 +129,11 @@ All rebindable in the game's controls menu.
   fast path; each model's triangle list is cached instead of rebuilt per draw.
 - **Audio:** one audio port at 48 kHz: Quake's mixer plus the MP3 music (minimp3,
   decoded on the audio thread, which needs a 256 KB stack for it).
+- **Map downloader:** `ps3_https.c` is a small HTTP/1.1 client on the PS3's sockets
+  with TLS 1.2 from mbedTLS 2.28 (built by CI), checking certificates against
+  Mozilla's roots. `ps3_mapdl.c` fetches the list, downloads a zip on a worker thread
+  and unpacks it into `nzp/` (map art moved to `gfx/menu/custom/`), recording what it
+  installed in `maps/<map>.mapdl` so MANAGE MAPS can remove it.
 - **Log:** written by a low-priority thread once the game runs: a direct HDD write
   can take 2 s.
 - **Data:** a PKG install drops entries past a limit, so the 1100+ data files are
