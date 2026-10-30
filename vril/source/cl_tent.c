@@ -598,13 +598,15 @@ void CL_AddPlayerWeapons (void)
 		AngleVectors (aim, fwd, right, up);
 
 		// a hand's height: below the eyes, which drop when crouched or prone
-		height = ed->v.view_ofs[2] - 16;
-		VectorMA (pl->origin, 12, fwd, gun->origin);
-		VectorMA (gun->origin, 7, right, gun->origin);
+		// (first look on the console: low, near the belly; the hand is higher and
+		// further out to the right)
+		height = ed->v.view_ofs[2] - 8;
+		VectorMA (pl->origin, 10, fwd, gun->origin);
+		VectorMA (gun->origin, 13, right, gun->origin);
 		gun->origin[2] += height;
 
 		gun->angles[0] = -aim[0];	// models pitch the other way to views
-		gun->angles[1] = aim[1];
+		gun->angles[1] = aim[1] + 90;	// the g_ models point along their side (it pointed right)
 		gun->angles[2] = 0;
 		gun->model = m;
 		gun->frame = 0;
