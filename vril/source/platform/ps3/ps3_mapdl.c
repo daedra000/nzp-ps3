@@ -24,6 +24,7 @@ e.g. "croft/maps/..." or "nzp/maps/...", is stripped), then deleted.
 #include <sys/stat.h>
 #include <sys/dirent.h>
 #include <stdint.h>
+#include <ctype.h>
 
 #ifndef PS3_MAPS_URL_DEFAULT
 // tools/maps_list.py builds it daily (.github/workflows/maps.yml)
@@ -323,6 +324,47 @@ static void WriteManifests(void)
 	}
 }
 
+static char	zip_bsp[16][64];
+static int	zip_bsps;
+
+/*
+A map's menu picture belongs in gfx/menu/custom/<bsp>.png (the name's case
+too: the PS3's disk is case sensitive). Zips put it at their root, in maps/,
+or gfx/menu/: move it, and name it after its map.
+*/
+static void ThumbnailPath(char *name, int size)
+{
+	int len = strlen(name), i;
+	const char *ext, *base;
+	char dir[MAX_OSPATH], stem[64];
+
+	if (len < 5)
+		return;
+	ext = name + len - 4;
+	if (strcasecmp(ext, ".png") && strcasecmp(ext, ".tga") && strcasecmp(ext, ".jpg"))
+		return;
+	base = strrchr(name, '/');
+	base = base ? base + 1 : name;
+	snprintf(dir, sizeof(dir), "%.*s", (int)(base - name), name);
+	if (dir[0] && strcasecmp(dir, "maps/") && strcasecmp(dir, "gfx/menu/")
+	 && strcasecmp(dir, "gfx/menu/custom/") && strcasecmp(dir, "menu/custom/") && strcasecmp(dir, "custom/"))
+		return;		// a texture or HUD picture: leave it
+	BaseNoExt(base, stem, sizeof(stem));
+	for (i = 0; i < zip_bsps; i++)
+		if (!strcasecmp(stem, zip_bsp[i]))
+			break;
+	if (i < zip_bsps)
+		snprintf(stem, sizeof(stem), "%s", zip_bsp[i]);		// the map's own spelling
+	else if (zip_bsps == 1 && strcasecmp(dir, "gfx/menu/custom/"))
+		snprintf(stem, sizeof(stem), "%s", zip_bsp[0]);		// the one picture of the one map
+	else if (strcasecmp(dir, "gfx/menu/custom/"))
+		return;
+	char ext_l[5];
+	snprintf(ext_l, sizeof(ext_l), "%s", ext);
+	for (char *p = ext_l; *p; p++) *p = tolower((unsigned char)*p);
+	snprintf(name, size, "gfx/menu/custom/%s%s", stem, ext_l);
+}
+
 static qboolean Zip_Extract(const char *zip_path)
 {
 	FILE *f, *out = NULL;
@@ -381,6 +423,21 @@ static qboolean Zip_Extract(const char *zip_path)
 			strip = 0;
 	}
 
+	// the zip's maps, for naming thumbnails after them
+	zip_bsps = 0;
+	for (e = 0, pos = 0; e < count; e++) {
+		unsigned nlen;
+		if (pos + 46 > cd_size || LE32(cd + pos) != 0x02014b50)
+			goto bad;
+		nlen = LE16(cd + pos + 28);
+		if (CleanName(cd + pos + 46, nlen, strip, name, sizeof(name) - 6)) {
+			int l = strlen(name);
+			if (l > 4 && !strcasecmp(name + l - 4, ".bsp") && zip_bsps < 16)
+				BaseNoExt(name, zip_bsp[zip_bsps++], 64);
+		}
+		pos += 46 + nlen + LE16(cd + pos + 30) + LE16(cd + pos + 32);
+	}
+
 	dl_state = MAPDL_EXTRACTING;
 	dl_got = 0;
 	dl_total = count;
@@ -412,6 +469,7 @@ static qboolean Zip_Extract(const char *zip_path)
 				len += 5;
 			}
 		}
+		ThumbnailPath(name, sizeof(name) - 6);
 		snprintf(path, sizeof(path), "%s/%s", com_gamedir, name);
 		MakeDirs(path);
 		if (name[len - 1] == '/')

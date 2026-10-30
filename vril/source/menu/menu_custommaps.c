@@ -291,6 +291,21 @@ void Menu_CustomMaps_AddMap (char *map_name)
 		custom_maps[num_user_maps].map_use_thumbnail = 0;
 		custom_maps[num_user_maps].map_allow_game_settings = 0;
 	}
+#ifdef __PS3__
+	// a picture in gfx/menu/custom/ is shown even when the .txt doesn't say so
+	// (or there's no .txt): downloaded maps often have one without the flag
+	if (!custom_maps[num_user_maps].map_use_thumbnail) {
+		static const char *exts[] = {"png", "tga", "jpg"};
+		for (int i = 0; i < 3; i++) {
+			FILE *f;
+			if (COM_FOpenFile(va("gfx/menu/custom/%s.%s", map_name, exts[i]), &f) != -1) {
+				fclose(f);
+				custom_maps[num_user_maps].map_use_thumbnail = 1;
+				break;
+			}
+		}
+	}
+#endif
 	// Set the thumbnail path for loadscreens
 	if (custom_maps[num_user_maps].map_use_thumbnail) {
 		snprintf(custom_maps[num_user_maps].map_thumbnail_path, MAX_OSPATH+MAX_QPATH, "gfx/menu/custom/%s", map_name);
