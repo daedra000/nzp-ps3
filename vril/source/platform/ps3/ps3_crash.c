@@ -196,8 +196,11 @@ void PS3_Crash_NoteCommand(const char *text)
 static void PS3_CrashHandler(u64 cause, sys_ppu_thread_t tid, u64 dar)
 {
 	static sys_dbg_ppu_thread_context_t ctx;   // big: not on the handler's stack
+	extern volatile int ps3_log_emergency;
 	unsigned i;
 	s32 ret;
+
+	ps3_log_emergency = 1;   // the faulting thread may hold the log's lock
 
 	PS3_Log("[crash] PPU exception: cause 0x%llx, thread 0x%llx, DAR 0x%08llx",
 		(unsigned long long)cause, (unsigned long long)tid, (unsigned long long)dar);

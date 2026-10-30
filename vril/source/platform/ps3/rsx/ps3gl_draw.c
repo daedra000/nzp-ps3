@@ -417,19 +417,87 @@ RingAlloc(uint32_t bytes, ps3gl_vertex_t **out, uint32_t *offset)
 static void
 DrawIndexedInline(uint32_t prim, const uint16_t *idx, int count)
 {
+	/* Every kind of primitive in pieces of at most IDX_CHUNK indices: one
+	   batch must fit in a 32 KB piece of the command buffer (a longer one is
+	   the corruption that hung the RSX). Lists split anywhere on a whole
+	   primitive; strips carry their last vertices over; fans, polygons and
+	   quads that long are drawn as triangles. */
+	static uint16_t tri[IDX_CHUNK];
+	int overlap = 0, unit = 1;
+
+	switch (prim)
+	{
+		case GCM_TYPE_TRIANGLES:      unit = 3; break;
+		case GCM_TYPE_LINES:          unit = 2; break;
+		case GCM_TYPE_TRIANGLE_STRIP: overlap = 2; unit = 2; break;   /* keeps the winding */
+		case GCM_TYPE_QUAD_STRIP:     overlap = 2; unit = 2; break;
+		case GCM_TYPE_LINE_STRIP:     overlap = 1; break;
+		case GCM_TYPE_TRIANGLE_FAN:
+		case GCM_TYPE_POLYGON:
+			if (count > IDX_CHUNK)
+			{
+				/* fan (0, i, i+1) as triangles, IDX_CHUNK indices at a time */
+				int i = 1;
+				while (i + 1 < count)
+				{
+					int n = 0;
+					while (i + 1 < count && n + 3 <= IDX_CHUNK)
+					{
+						tri[n++] = idx[0];
+						tri[n++] = idx[i];
+						tri[n++] = idx[i + 1];
+						i++;
+					}
+					PS3_Cmd_ReserveWords((uint32_t)n / 2 + 64);
+					rsxDrawInlineIndexArray16(ps3gl.ctx, GCM_TYPE_TRIANGLES, 0, (u32)n, tri);
+				}
+				return;
+			}
+			break;
+		case GCM_TYPE_QUADS:
+			if (count > IDX_CHUNK)
+			{
+				int q = 0;
+				while (q + 3 < count)
+				{
+					int n = 0;
+					while (q + 3 < count && n + 6 <= IDX_CHUNK)
+					{
+						tri[n++] = idx[q];     tri[n++] = idx[q + 1]; tri[n++] = idx[q + 2];
+						tri[n++] = idx[q];     tri[n++] = idx[q + 2]; tri[n++] = idx[q + 3];
+						q += 4;
+					}
+					PS3_Cmd_ReserveWords((uint32_t)n / 2 + 64);
+					rsxDrawInlineIndexArray16(ps3gl.ctx, GCM_TYPE_TRIANGLES, 0, (u32)n, tri);
+				}
+				return;
+			}
+			break;
+		default:   /* points; a line loop that long (none here) is cut */
+			if (prim == GCM_TYPE_LINE_LOOP && count > IDX_CHUNK)
+			{
+				count = IDX_CHUNK;
+			}
+			break;
+	}
+
 	while (count > 0)
 	{
 		int n = count;
 
-		if (n > IDX_CHUNK && prim == GCM_TYPE_TRIANGLES)
+		if (n > IDX_CHUNK)
 		{
-			n = IDX_CHUNK;   /* a multiple of 3 */
+			n = IDX_CHUNK - IDX_CHUNK % unit;
 		}
 
 		PS3_Cmd_ReserveWords((uint32_t)n / 2 + 64);
 		rsxDrawInlineIndexArray16(ps3gl.ctx, prim, 0, (u32)n, idx);
-		idx += n;
-		count -= n;
+		if (n == count)
+		{
+			break;
+		}
+		idx += n - overlap;
+		count -= n - overlap;
 	}
 }
 

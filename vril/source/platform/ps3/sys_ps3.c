@@ -83,10 +83,20 @@ static int log_dropped;
 static volatile int log_buf_lock, log_file_lock;
 static volatile int log_async;
 
+// Set by the crash handler: the faulting thread may hold a log lock and will
+// never let go, so the handler's own log lines take it after a short wait.
+volatile int ps3_log_emergency;
+
 static void SpinLock(volatile int *lock)
 {
-	while (!__sync_bool_compare_and_swap(lock, 0, 1))
+	int tries = 0;
+	while (!__sync_bool_compare_and_swap(lock, 0, 1)) {
+		if (ps3_log_emergency && ++tries > 2000) {   // ~100 ms
+			*lock = 1;
+			break;
+		}
 		usleep(50);
+	}
 	__asm__ volatile("isync" ::: "memory");
 }
 

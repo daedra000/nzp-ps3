@@ -77,7 +77,11 @@ cvar_t	teamplay = {"teamplay","0",false,true};
 cvar_t	samelevel = {"samelevel","0"};
 
 #ifndef __WII__
+#ifdef __PS3__
+cvar_t	cl_maxfps = {"cl_maxfps", "60", true}; // PS3: 60 without a config too
+#else
 cvar_t	cl_maxfps = {"cl_maxfps", "30", true}; // dr_mabuse1981: maxfps setting
+#endif
 #endif // __WII__ creates a timing issue within Dolphin emu - and vsync is always on anyhow
 
 #ifdef __PSP__

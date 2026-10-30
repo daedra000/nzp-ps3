@@ -875,9 +875,10 @@ ColorPassInit(void)
 	rsxFragmentProgramGetUCode(cp_fp, &ucode, &cp_fp_size);
 	cp_fp_ucode = rsxMemalign(64, cp_fp_size);
 	cp_verts = (u8 *)rsxMemalign(128, 3 * FB_COUNT * 4 * PS3GL_VERTEX_SIZE + 128);
-	cp_depth = (u32 *)rsxMemalign(FB_ALIGN, disp_pitch * disp_h);
+	/* cp_depth: only for the pass onto the screen (ColorPass), made when
+	   that's first used; the gamma pass on the 3D view doesn't need it */
 
-	if (!cp_mvp || !cp_fp_ucode || !cp_verts || !cp_depth)
+	if (!cp_mvp || !cp_fp_ucode || !cp_verts)
 	{
 		PS3_Log("[video] brightness/gamma pass: init failed, staying with the plain blit");
 		return cp_state;
@@ -886,7 +887,6 @@ ColorPassInit(void)
 	memcpy(cp_fp_ucode, ucode, cp_fp_size);
 	rsxAddressToOffset(cp_fp_ucode, &cp_fp_offset);
 	rsxAddressToOffset(cp_verts, &cp_verts_offset);
-	rsxAddressToOffset(cp_depth, &cp_depth_offset);
 
 	cp_state = 1;
 	PS3_Log("[video] brightness/gamma pass ready");
@@ -1073,6 +1073,16 @@ static void
 ColorPass(int off_x, int off_y, int out_w, int out_h)
 {
 	pass_t p;
+
+	if (!cp_depth)
+	{
+		cp_depth = (u32 *)rsxMemalign(FB_ALIGN, disp_pitch * disp_h);
+		if (!cp_depth)
+		{
+			return;
+		}
+		rsxAddressToOffset(cp_depth, &cp_depth_offset);
+	}
 
 	memset(&p, 0, sizeof(p));
 	p.dst_off = fb_offset[cur];

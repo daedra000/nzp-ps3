@@ -136,6 +136,8 @@ void PS3_Input_Poll(void)
 	}
 	if (port < 0) {
 		now = 0;
+		// and the sticks centred, or the last deflection keeps moving the player
+		pad_sticks[0] = pad_sticks[1] = pad_sticks[2] = pad_sticks[3] = 128;
 	} else {
 		memset(&data, 0, sizeof(data));
 		if (ioPadGetData(port, &data) != 0 || data.len <= 0)

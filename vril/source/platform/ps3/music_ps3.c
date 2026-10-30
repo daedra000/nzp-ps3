@@ -69,12 +69,13 @@ static void Music_Lock(void)
 	int waited = 0;
 	music_want = 1;
 	__asm__ volatile("sync" ::: "memory");
+	// Never taken from the audio thread while it holds it: it may be in the
+	// middle of decoding the track this thread is about to free. It lets go
+	// between frames (music_want); a hang here shows in the watchdog's log.
 	while (!Music_TryLock()) {
 		usleep(100);
-		if (++waited == 20000) {   // ~2 s: the audio thread never holds it this long
-			PS3_Log("music_ps3: WARNING: lock held for 2 s, taking it");
-			music_lock = 0;
-		}
+		if (++waited == 20000)   // ~2 s: the audio thread never holds it this long
+			PS3_Log("music_ps3: WARNING: the audio thread has held the music for 2 s");
 	}
 	music_want = 0;
 }
