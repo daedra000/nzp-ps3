@@ -205,6 +205,15 @@ jobs:
             CFLAGS="-O2 -mcpu=cell -mtune=cell -mno-altivec -mminimal-toc -fno-strict-aliasing -I$PSL1GHT/ppu/include -I$PS3DEV/ppu/include" \
             WARNING_CFLAGS="-w" static
           echo "MBEDTLS_DIR=$RUNNER_TEMP/mbedtls" >> "$GITHUB_ENV"
+          # zlib's inflate: big zips unpack a piece at a time (ps3_mapdl.c)
+          cd "$RUNNER_TEMP"
+          git clone -q --depth 1 -b v1.3.1 https://github.com/madler/zlib.git
+          cd zlib
+          for f in adler32 crc32 inffast inflate inftrees zutil; do
+            ppu-gcc -O2 -mcpu=cell -mtune=cell -mno-altivec -mminimal-toc -c $f.c -o $f.o
+          done
+          ppu-ar rcs libz.a adler32.o crc32.o inffast.o inflate.o inftrees.o zutil.o
+          echo "ZLIB_DIR=$RUNNER_TEMP/zlib" >> "$GITHUB_ENV"
           # Mozilla's root certificates, as the runner has them, for ps3_https.c
           python3 - <<'PY'
           import os
@@ -223,7 +232,7 @@ jobs:
         run: |
           set -o pipefail
           ppu-gcc --version | head -1
-          make -f Makefile.ps3 CGCOMP_BIN="$CGCOMP_BIN" MBEDTLS_DIR="$MBEDTLS_DIR" -k -j"$(nproc)" self 2>&1 | tee build.log
+          make -f Makefile.ps3 CGCOMP_BIN="$CGCOMP_BIN" MBEDTLS_DIR="$MBEDTLS_DIR" ZLIB_DIR="$ZLIB_DIR" -k -j"$(nproc)" self 2>&1 | tee build.log
 
       # The errors also go into annotations: readable through the API (gh api
       # .../check-runs/<id>/annotations) where the raw logs aren't.

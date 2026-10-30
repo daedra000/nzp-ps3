@@ -25,6 +25,8 @@ e.g. "croft/maps/..." or "nzp/maps/...", is stripped), then deleted.
 #include <sys/dirent.h>
 #include <stdint.h>
 #include <ctype.h>
+#include <lv2/sysfs.h>
+#include <zlib.h>			// zlib, built by CI like mbedTLS: zips unpack a piece at a time
 
 #ifndef PS3_MAPS_URL_DEFAULT
 // tools/maps_list.py builds it daily (.github/workflows/maps.yml)
@@ -33,13 +35,8 @@ e.g. "croft/maps/..." or "nzp/maps/...", is stripped), then deleted.
 
 cvar_t ps3_maps_url = {"ps3_maps_url", PS3_MAPS_URL_DEFAULT, false};
 
-// stb_image.h (images.c): raw deflate into a buffer of known size
-extern int stbi_zlib_decode_noheader_buffer(char *obuffer, int olen, const char *ibuffer, int ilen);
-
 #define LIST_MAX		(512 * 1024)
 #define RECV_CHUNK		(64 * 1024)
-
-enum { JOB_LIST, JOB_DOWNLOAD };
 
 static mapdl_entry_t		entries[MAPDL_MAX_MAPS];
 static volatile int			num_entries;
@@ -55,8 +52,30 @@ static char					new_bsps[16][64];
 static volatile int			num_new_bsps;
 static volatile int			new_taken = 1;
 
-static volatile int			busy;
 static char					recv_buf[RECV_CHUNK];
+static byte					inflate_buf[RECV_CHUNK];
+
+// one worker thread runs while there's something to do (see Kick)
+static volatile int			worker_alive;
+static volatile int			want_list;
+static volatile int			want_dl = -1;
+static volatile int			want_thumb = -1;	// the menu's highlighted map
+static volatile int			thumbs_next;		// the next picture to fetch in order
+
+static qboolean ListBusy(void) { return list_state == MAPDL_LIST_LOADING; }
+static qboolean DownloadBusy(void) { return dl_state == MAPDL_DOWNLOADING || dl_state == MAPDL_EXTRACTING; }
+
+// free space on the game's disk, bytes (or ~0 if lv2 won't say)
+static unsigned long long FreeBytes(void)
+{
+	u32 block = 0;
+	u64 blocks = 0;
+	if (sysFsGetFreeSize("/dev_hdd0", &block, &blocks) < 0)
+		return ~0ULL;
+	return (unsigned long long)block * blocks;
+}
+
+#define SPACE_SPARE		(64ULL * 1024 * 1024)	// left free for saves, logs, the system
 
 /*
 ===================
@@ -126,6 +145,33 @@ static void CopyStr(char *dst, int size, cJSON *item)
 }
 
 // worker thread: no va()/COM_ helpers here, they share static buffers with the game
+static qboolean FileExistsRel(const char *rel)
+{
+	struct stat st;
+	char path[MAX_OSPATH * 2];
+	snprintf(path, sizeof(path), "%s/%s", com_gamedir, rel);
+	return stat(path, &st) == 0;
+}
+
+// maps/<bsp>.mapdl starts "#src <url> <size>": which zip it was installed from
+static qboolean ManifestSource(const char *bsp, char *src, int size)
+{
+	char path[MAX_OSPATH * 2], line[640];
+	FILE *f;
+
+	snprintf(path, sizeof(path), "%s/maps/%s.mapdl", com_gamedir, bsp);
+	src[0] = 0;
+	if (!(f = fopen(path, "rb")))
+		return false;
+	if (fgets(line, sizeof(line), f) && !strncmp(line, "#src ", 5)) {
+		int l = strlen(line);
+		while (l && (line[l - 1] == '\n' || line[l - 1] == '\r')) line[--l] = 0;
+		snprintf(src, size, "%s", line + 5);
+	}
+	fclose(f);
+	return true;
+}
+
 static qboolean BspExists(const char *bsp)
 {
 	struct stat st;
@@ -160,6 +206,13 @@ static void ResolveUrl(const char *list_url, const char *file, char *out, int si
 		snprintf(out, size, "%s/%s", list_url, file);
 	else
 		snprintf(out, size, "%.*s%s", (int)(slash + 1 - list_url), list_url, file);
+}
+
+static const char *va_safe_thumb(const char *key)	// worker-thread safe: its own buffer
+{
+	static char rel[96];
+	snprintf(rel, sizeof(rel), "gfx/menu/dlthumbs/%s.jpg", key);
+	return rel;
 }
 
 static void Job_List(void)
@@ -218,10 +271,24 @@ static void Job_List(void)
 		} else {
 			CopyStr(e->desc[0], sizeof(e->desc[0]), desc);
 		}
+		CopyStr(e->date, sizeof(e->date), cJSON_GetObjectItem(m, "date"));
 		e->installed = BspExists(e->bsp);
+		if (e->installed) {
+			// installed by DOWNLOAD MAPS from another zip than the list has now: an update
+			char src[640], now[640];
+			snprintf(now, sizeof(now), "%s %u", e->url, e->size);
+			e->update = ManifestSource(e->bsp, src, sizeof(src)) && src[0] && strcmp(src, now);
+		}
+		CopyStr(file, sizeof(file), cJSON_GetObjectItem(m, "thumb"));
+		if (file[0]) {
+			ResolveUrl(url, file, e->thumb_url, sizeof(e->thumb_url));
+			BaseNoExt(file, e->thumb_key, sizeof(e->thumb_key));
+			e->thumb_state = FileExistsRel(va_safe_thumb(e->thumb_key)) ? THUMB_READY : THUMB_WANTED;
+		}
 		n++;
 	}
 	cJSON_Delete(root);
+	thumbs_next = 0;
 	num_entries = n;
 	PS3_Log("mapdl: list has %d maps", n);
 	list_state = MAPDL_LIST_READY;
@@ -311,13 +378,14 @@ static void NoteFile(const char *name)
 	installed_len += len;
 }
 
-static void WriteManifests(void)
+static void WriteManifests(const mapdl_entry_t *e)
 {
 	char path[MAX_OSPATH * 2];
 	for (int i = 0; i < num_new_bsps; i++) {
 		FILE *f;
 		snprintf(path, sizeof(path), "%s/maps/%s.mapdl", com_gamedir, new_bsps[i]);
 		if ((f = fopen(path, "wb"))) {
+			fprintf(f, "#src %s %u\n", e->url, e->size);
 			fwrite(installed_files, 1, installed_len, f);
 			fclose(f);
 		}
@@ -368,7 +436,7 @@ static void ThumbnailPath(char *name, int size)
 static qboolean Zip_Extract(const char *zip_path)
 {
 	FILE *f, *out = NULL;
-	byte *tail = NULL, *cd = NULL, *comp = NULL, *raw = NULL;
+	byte *tail = NULL, *cd = NULL;
 	long size, tail_len, i;
 	unsigned count, cd_size, cd_off, e, pos;
 	int strip = -1;
@@ -438,6 +506,19 @@ static qboolean Zip_Extract(const char *zip_path)
 		pos += 46 + nlen + LE16(cd + pos + 30) + LE16(cd + pos + 32);
 	}
 
+	{
+		// everything it unpacks has to fit, with room to spare
+		unsigned long long need = SPACE_SPARE, have = FreeBytes();
+		for (e = 0, pos = 0; e < count; e++) {
+			need += LE32(cd + pos + 24);
+			pos += 46 + LE16(cd + pos + 28) + LE16(cd + pos + 30) + LE16(cd + pos + 32);
+		}
+		if (have < need) {
+			snprintf(dl_msg, sizeof(dl_msg), "Not enough space: needs %llu MB free", need >> 20);
+			goto fail;
+		}
+	}
+
 	dl_state = MAPDL_EXTRACTING;
 	dl_got = 0;
 	dl_total = count;
@@ -446,7 +527,7 @@ static qboolean Zip_Extract(const char *zip_path)
 
 	for (e = 0, pos = 0; e < count; e++, dl_got = e) {
 		unsigned flags = LE16(cd + pos + 8), method = LE16(cd + pos + 10);
-		unsigned csize = LE32(cd + pos + 20), usize = LE32(cd + pos + 24);
+		unsigned crc = LE32(cd + pos + 16), csize = LE32(cd + pos + 20), usize = LE32(cd + pos + 24);
 		unsigned nlen = LE16(cd + pos + 28), lho = LE32(cd + pos + 42);
 		byte lh[30];
 		const byte *nm = cd + pos + 46;
@@ -482,27 +563,60 @@ static qboolean Zip_Extract(const char *zip_path)
 
 		out = fopen(path, "wb");
 		if (!out) { snprintf(dl_msg, sizeof(dl_msg), "Can't write %.80s", name); goto fail; }
-		if (method == 0) {
-			unsigned left = csize;
-			while (left) {
-				unsigned n = left < sizeof(recv_buf) ? left : sizeof(recv_buf);
-				if (fread(recv_buf, 1, n, f) != n || fwrite(recv_buf, 1, n, out) != n)
-					goto bad;
-				left -= n;
+		// a piece at a time: a 50 MB map needs no more memory than a small one
+		{
+			unsigned left = csize, written = 0;
+			uLong sum = crc32(0, Z_NULL, 0);
+			z_stream zs;
+			int zr = Z_OK, zinit = 0;
+
+			if (method == 8) {
+				memset(&zs, 0, sizeof(zs));
+				if (inflateInit2(&zs, -MAX_WBITS) != Z_OK) { snprintf(dl_msg, sizeof(dl_msg), "Out of memory"); goto fail; }
+				zinit = 1;
 			}
-		} else {
-			comp = malloc(csize ? csize : 1);
-			raw = malloc(usize ? usize : 1);
-			if (!comp || !raw) { snprintf(dl_msg, sizeof(dl_msg), "Not enough memory for %.70s", name); goto fail; }
-			if (fread(comp, 1, csize, f) != csize)
-				goto bad;
-			if (usize && stbi_zlib_decode_noheader_buffer((char *)raw, usize, (const char *)comp, csize) != (int)usize) {
+			while (left || (zinit && zr != Z_STREAM_END)) {
+				unsigned n = left < sizeof(recv_buf) ? left : sizeof(recv_buf);
+				if (n && fread(recv_buf, 1, n, f) != n) { if (zinit) inflateEnd(&zs); goto bad; }
+				left -= n;
+				if (!zinit) {
+					sum = crc32(sum, (const Bytef *)recv_buf, n);
+					written += n;
+					if (fwrite(recv_buf, 1, n, out) != n) { snprintf(dl_msg, sizeof(dl_msg), "Disk full?"); goto fail; }
+					continue;
+				}
+				zs.next_in = (Bytef *)recv_buf;
+				zs.avail_in = n;
+				do {
+					unsigned got;
+					zs.next_out = inflate_buf;
+					zs.avail_out = sizeof(inflate_buf);
+					zr = inflate(&zs, Z_NO_FLUSH);
+					if (zr != Z_OK && zr != Z_STREAM_END && !(zr == Z_BUF_ERROR && !n)) {
+						inflateEnd(&zs);
+						snprintf(dl_msg, sizeof(dl_msg), "Corrupt file in zip: %.70s", name);
+						goto fail;
+					}
+					got = sizeof(inflate_buf) - zs.avail_out;
+					sum = crc32(sum, inflate_buf, got);
+					written += got;
+					if (got && fwrite(inflate_buf, 1, got, out) != got) {
+						inflateEnd(&zs);
+						snprintf(dl_msg, sizeof(dl_msg), "Disk full?");
+						goto fail;
+					}
+				} while (zs.avail_out == 0 && zr != Z_STREAM_END);
+				if (!n && zr != Z_STREAM_END) {		// input over, stream not finished
+					inflateEnd(&zs);
+					goto bad;
+				}
+			}
+			if (zinit)
+				inflateEnd(&zs);
+			if (written != usize || sum != crc) {
 				snprintf(dl_msg, sizeof(dl_msg), "Corrupt file in zip: %.70s", name);
 				goto fail;
 			}
-			if (fwrite(raw, 1, usize, out) != usize) { snprintf(dl_msg, sizeof(dl_msg), "Disk full?"); goto fail; }
-			free(comp); comp = NULL;
-			free(raw); raw = NULL;
 		}
 		fclose(out);
 		out = NULL;
@@ -519,7 +633,7 @@ fail:
 done:
 	if (out) fclose(out);
 	fclose(f);
-	free(tail); free(cd); free(comp); free(raw);
+	free(tail); free(cd);
 	return ok;
 }
 
@@ -535,6 +649,13 @@ static void Job_Download(int idx)
 	FILE *fp;
 	qboolean ok;
 
+	if (e->size && FreeBytes() < (unsigned long long)e->size * 4 + SPACE_SPARE) {
+		// the zip, and what it unpacks to (maps compress about 3:1)
+		snprintf(dl_msg, sizeof(dl_msg), "Not enough space: needs about %llu MB free",
+			((unsigned long long)e->size * 4 + SPACE_SPARE) >> 20);
+		dl_state = MAPDL_FAILED;
+		return;
+	}
 	snprintf(tmp, sizeof(tmp), "%s/mapdl.tmp", com_gamedir);
 	fp = fopen(tmp, "wb");
 	if (!fp) {
@@ -555,8 +676,9 @@ static void Job_Download(int idx)
 		dl_state = MAPDL_FAILED;
 		return;
 	}
-	WriteManifests();
+	WriteManifests(e);
 	e->installed = BspExists(e->bsp) || num_new_bsps > 0;
+	e->update = 0;
 	snprintf(dl_msg, sizeof(dl_msg), "Installed");
 	PS3_Log("mapdl: %s installed (%d maps)", e->name, num_new_bsps);
 	new_taken = 0;
@@ -565,39 +687,102 @@ static void Job_Download(int idx)
 
 /*
 ===================
-Worker
+Pictures: gfx/menu/dlthumbs/<key>.jpg, small JPEGs made by maps_list.py
+===================
+*/
+static void FetchThumb(int i)
+{
+	mapdl_entry_t *e = &entries[i];
+	char path[MAX_OSPATH * 2], part[MAX_OSPATH * 2], err[128];
+	volatile unsigned long long got, total;
+	volatile int no_cancel = 0;
+	sink_ctx_t s = {NULL, NULL, 0, 0};
+	int ok;
+
+	if (e->thumb_state != THUMB_WANTED)
+		return;
+	snprintf(path, sizeof(path), "%s/gfx/menu/dlthumbs/%s.jpg", com_gamedir, e->thumb_key);
+	snprintf(part, sizeof(part), "%s.part", path);
+	MakeDirs(path);
+	if (!(s.fp = fopen(part, "wb"))) {
+		e->thumb_state = THUMB_FAILED;
+		return;
+	}
+	ok = PS3_HttpGet(e->thumb_url, Sink, &s, &got, &total, &no_cancel, err, sizeof(err));
+	fclose(s.fp);
+	if (ok && rename(part, path) == 0) {
+		e->thumb_state = THUMB_READY;
+	} else {
+		unlink(part);
+		PS3_Log("mapdl: picture %s: %s", e->thumb_key, ok ? "rename failed" : err);
+		e->thumb_state = THUMB_FAILED;
+	}
+}
+
+// the next picture to fetch: the highlighted map's first, then in order
+static int NextThumb(void)
+{
+	int w = want_thumb;
+	if (list_state != MAPDL_LIST_READY)
+		return -1;
+	if (w >= 0 && w < num_entries && entries[w].thumb_state == THUMB_WANTED)
+		return w;
+	while (thumbs_next < num_entries && entries[thumbs_next].thumb_state != THUMB_WANTED)
+		thumbs_next++;
+	return thumbs_next < num_entries ? thumbs_next : -1;
+}
+
+static qboolean HasWork(void)
+{
+	return want_list || want_dl >= 0 || NextThumb() >= 0;
+}
+
+/*
+===================
+Worker: the list first, then a requested download, then pictures; it ends
+when there's nothing left, and Kick starts it again.
 ===================
 */
 static void Worker(void *arg)
 {
-	int job = (int)(intptr_t)arg;
-
-	if (job == JOB_LIST)
-		Job_List();
-	else
-		Job_Download(dl_index);
-	busy = 0;
+	for (;;) {
+		while (HasWork()) {
+			int i;
+			if (want_list) {
+				want_list = 0;
+				Job_List();
+			} else if ((i = want_dl) >= 0) {
+				want_dl = -1;
+				Job_Download(i);
+			} else if ((i = NextThumb()) >= 0) {
+				FetchThumb(i);
+			}
+		}
+		worker_alive = 0;
+		__sync_synchronize();
+		// a request that came in as it was finishing: carry on, unless Kick got there first
+		if (!HasWork() || !__sync_bool_compare_and_swap(&worker_alive, 0, 1))
+			break;
+	}
 	sysThreadExit(0);
 }
 
-static qboolean StartJob(int job)
+static void Kick(void)
 {
 	sys_ppu_thread_t tid;
 	s32 ret;
 
-	if (busy)
-		return false;
-	busy = 1;
-	dl_cancel = 0;
+	__sync_synchronize();
+	if (!__sync_bool_compare_and_swap(&worker_alive, 0, 1))
+		return;		// running: it sees the request
 	// below the game (1000) and audio: the menu keeps its frame rate
-	ret = sysThreadCreate(&tid, Worker, (void *)(intptr_t)job, 2000, 256 * 1024, 0, (char *)"nzp_mapdl");
+	ret = sysThreadCreate(&tid, Worker, NULL, 2000, 256 * 1024, 0, (char *)"nzp_mapdl");
 	if (ret < 0) {
 		PS3_Log("mapdl: sysThreadCreate 0x%08x", (unsigned)ret);
-		snprintf(dl_msg, sizeof(dl_msg), "Couldn't start");
-		busy = 0;
-		return false;
+		worker_alive = 0;
+		if (want_list) { want_list = 0; snprintf(dl_msg, sizeof(dl_msg), "Couldn't start"); list_state = MAPDL_LIST_FAILED; }
+		if (want_dl >= 0) { want_dl = -1; snprintf(dl_msg, sizeof(dl_msg), "Couldn't start"); dl_state = MAPDL_FAILED; }
 	}
-	return true;
 }
 
 /*
@@ -612,7 +797,7 @@ void PS3_MapDL_Init(void)
 
 void PS3_MapDL_FetchList(void)
 {
-	if (busy)
+	if (ListBusy() || DownloadBusy())
 		return;
 	if (!ps3_maps_url.string[0]) {
 		snprintf(dl_msg, sizeof(dl_msg), "No map list set (ps3_maps_url)");
@@ -620,8 +805,18 @@ void PS3_MapDL_FetchList(void)
 		return;
 	}
 	list_state = MAPDL_LIST_LOADING;
-	if (!StartJob(JOB_LIST))
-		list_state = MAPDL_LIST_FAILED;
+	want_thumb = -1;
+	want_list = 1;
+	Kick();
+}
+
+void PS3_MapDL_WantThumb(int i)
+{
+	if (i == want_thumb)
+		return;
+	want_thumb = i;
+	if (i >= 0 && i < num_entries && entries[i].thumb_state == THUMB_WANTED)
+		Kick();
 }
 
 int PS3_MapDL_ListState(void) { return list_state; }
@@ -630,17 +825,18 @@ mapdl_entry_t *PS3_MapDL_Entry(int i) { return (i >= 0 && i < num_entries) ? &en
 
 void PS3_MapDL_Download(int i)
 {
-	if (busy || i < 0 || i >= num_entries)
+	if (ListBusy() || DownloadBusy() || i < 0 || i >= num_entries)
 		return;
 	dl_index = i;
 	dl_msg[0] = 0;
 	dl_got = dl_total = 0;
+	dl_cancel = 0;
 	dl_state = MAPDL_DOWNLOADING;
-	if (!StartJob(JOB_DOWNLOAD))
-		dl_state = MAPDL_FAILED;
+	want_dl = i;
+	Kick();
 }
 
-void PS3_MapDL_Cancel(void) { if (busy) dl_cancel = 1; }
+void PS3_MapDL_Cancel(void) { if (DownloadBusy()) dl_cancel = 1; }
 int PS3_MapDL_State(void) { return dl_state; }
 int PS3_MapDL_Active(void) { return dl_index; }
 const char *PS3_MapDL_Message(void) { return dl_msg; }
@@ -721,7 +917,7 @@ int PS3_MapDL_Delete(const char *bsp)
 	DIR *dir;
 	struct dirent *de;
 
-	if (busy && (dl_state == MAPDL_DOWNLOADING || dl_state == MAPDL_EXTRACTING))
+	if (DownloadBusy())
 		return -1;
 
 	snprintf(path, sizeof(path), "%s/maps/%s.mapdl", com_gamedir, bsp);
@@ -756,7 +952,7 @@ int PS3_MapDL_Delete(const char *bsp)
 		for (char *p = mine; *p; ) {
 			char *nl = strchr(p, '\n');
 			int l = nl ? (int)(nl - p) : (int)strlen(p);
-			if (l > 0 && l < (int)sizeof(line)) {
+			if (l > 0 && l < (int)sizeof(line) && p[0] != '#') {
 				memcpy(line, p, l);
 				line[l] = 0;
 				if (!ListHas(others, line))

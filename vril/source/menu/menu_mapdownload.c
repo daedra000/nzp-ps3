@@ -13,11 +13,61 @@ void Menu_CustomMaps_RemoveMap (int index);
 void Menu_DrawPicStretch (int x, int y, int index, int width, int height);	// menu_helper.c
 void Menu_DrawMapBorder (int x_pos, int y_pos, int image_width, int image_height);
 
-#define DL_PER_PAGE		6		// rows 1-6; 7/8 pages; bottom: manage, refresh, back
+#define DL_PER_PAGE		6		// rows 1-6; 7/8 pages; bottom: manage, sort, back
 #define DL_NAME_CHARS	17		// what fits left of the panel
 
 static int	dl_page;
 static int	dl_shown = -1;	// list size the buttons were built for
+static int	dl_sort;		// 0 A-Z (the list's order), 1 newest first
+static int	dl_order[MAPDL_MAX_MAPS];	// list position -> entry
+static int	dl_ordered = -1;			// count dl_order was built for
+static double dl_list_time = -1;		// realtime the list arrived
+
+// pictures loaded into textures, by their file's key (they outlive a list refresh)
+static struct { char key[32]; int image; } dl_thumbs[MAPDL_MAX_MAPS];
+static int	dl_num_thumbs;
+
+static int Menu_MapDownload_DateCmp (const void *a, const void *b)
+{
+	mapdl_entry_t *ea = PS3_MapDL_Entry(*(const int *)a), *eb = PS3_MapDL_Entry(*(const int *)b);
+	int c = strcmp(eb->date, ea->date);		// newest first; undated last
+	return c ? c : *(const int *)a - *(const int *)b;
+}
+
+static void Menu_MapDownload_Order (void)
+{
+	int n = PS3_MapDL_Count();
+	for (int i = 0; i < n; i++)
+		dl_order[i] = i;
+	if (dl_sort == 1)
+		qsort(dl_order, n, sizeof(int), Menu_MapDownload_DateCmp);
+	dl_ordered = n;
+}
+
+static int Menu_MapDownload_Index (int position)
+{
+	if (dl_ordered != PS3_MapDL_Count())
+		Menu_MapDownload_Order();
+	return (position >= 0 && position < dl_ordered) ? dl_order[position] : -1;
+}
+
+// the highlighted map's picture: asked for first, loaded once it's on disk
+static int Menu_MapDownload_Thumb (mapdl_entry_t *e, int index)
+{
+	int i;
+
+	if (!e->thumb_key[0])
+		return -1;
+	for (i = 0; i < dl_num_thumbs; i++)
+		if (!strcmp(dl_thumbs[i].key, e->thumb_key))
+			return dl_thumbs[i].image;
+	PS3_MapDL_WantThumb(index);
+	if (e->thumb_state != THUMB_READY || dl_num_thumbs >= MAPDL_MAX_MAPS)
+		return -1;
+	snprintf(dl_thumbs[dl_num_thumbs].key, sizeof(dl_thumbs[0].key), "%s", e->thumb_key);
+	dl_thumbs[dl_num_thumbs].image = Image_LoadImage(va("gfx/menu/dlthumbs/%s", e->thumb_key), IMAGE_JPG, 1, false, false);
+	return dl_thumbs[dl_num_thumbs++].image;
+}
 static char	slot_names[DL_PER_PAGE][DL_NAME_CHARS + 1];
 
 /*
@@ -60,7 +110,7 @@ static qboolean Menu_MapDownload_Busy (void)
 
 static void Menu_MapDownload_Pressed (void)
 {
-	int i = dl_page * DL_PER_PAGE + current_menu.cursor;
+	int i = Menu_MapDownload_Index(dl_page * DL_PER_PAGE + current_menu.cursor);
 
 	if (!PS3_MapDL_Entry(i))
 		return;
@@ -86,19 +136,23 @@ static void Menu_MapDownload_PrevPage (void)
 	dl_page--;
 }
 
-static void Menu_MapDownload_Refresh (void)
+static void Menu_MapDownload_Sort (void)
 {
-	if (Menu_MapDownload_Busy() || PS3_MapDL_ListState() == MAPDL_LIST_LOADING)
-		return;
 	Menu_ResetMenuButtons();
+	Menu_SetSound(MENU_SND_ENTER);
+	dl_sort = !dl_sort;
 	dl_page = 0;
-	PS3_MapDL_FetchList();
+	Menu_MapDownload_Order();
 }
 
 void Menu_MapDownload_Set (void)
 {
+	int list = PS3_MapDL_ListState();
+
 	Menu_ResetMenuButtons();
-	if (PS3_MapDL_ListState() != MAPDL_LIST_READY && PS3_MapDL_ListState() != MAPDL_LIST_LOADING)
+	// a failed list, or one over 10 minutes old (new releases): fetch it again
+	if (list == MAPDL_LIST_NONE || list == MAPDL_LIST_FAILED
+	 || (list == MAPDL_LIST_READY && !Menu_MapDownload_Busy() && realtime - dl_list_time > 600))
 		PS3_MapDL_FetchList();
 	dl_page = 0;
 	dl_shown = PS3_MapDL_Count();
@@ -116,12 +170,14 @@ static void Menu_MapDownload_Size (char *out, int size, unsigned long long bytes
 }
 
 // one line of the right-hand panel, centered like the map descriptions
+static int dl_line_y0;		// pixels: where line 0 goes (under the picture, if there is one)
+
 static void Menu_MapDownload_Line (int line, char *text, int r, int g, int b)
 {
 	int image_width = vid.width / 3;
 	int map_region_center = (150 + (((vid.width - 150) / 2) + 2));
 	int x = map_region_center - ((image_width / vid.scale) / 2) + image_width / 2;
-	int y = 40 * vid.scale + line * 12 * vid.scale;
+	int y = (dl_line_y0 ? dl_line_y0 : 40 * vid.scale) + line * 12 * vid.scale;
 
 	UI_SetAlignment(UI_ANCHOR_LEFT, UI_ANCHOR_TOP);
 	Menu_DrawStringCentered(x, y, text, r, g, b, 255);
@@ -132,10 +188,23 @@ static void Menu_MapDownload_Info (int i)
 	mapdl_entry_t *e = PS3_MapDL_Entry(i);
 	char buf[160], a[32], b[32];
 	unsigned long long got, total;
-	int line = 0, st = PS3_MapDL_State();
+	int line = 0, st = PS3_MapDL_State(), img, desc_lines = MAPDL_DESC_LINES;
 
 	if (!e)
 		return;
+	img = Menu_MapDownload_Thumb(e, i);
+	if (e->thumb_key[0]) {
+		// the picture where CUSTOM MAPS shows one; the text under it
+		int image_width = vid.width / 3, image_height = vid.height / 3;
+		int x = (150 + (((vid.width - 150) / 2) + 2)) - ((image_width / vid.scale) / 2);
+		if (img >= 0) {
+			UI_SetAlignment(UI_ANCHOR_LEFT, UI_ANCHOR_TOP);
+			Menu_DrawPicStretch(x, 40 * vid.scale, img, image_width, image_height);
+			Menu_DrawMapBorder(x / vid.scale, 40, image_width, image_height);
+		}
+		dl_line_y0 = 40 * vid.scale + image_height + 6 * vid.scale;
+		desc_lines = 2;
+	}
 	snprintf(buf, sizeof(buf), "%s", e->name);
 	strtoupper(buf);
 	Menu_MapDownload_Line(line++, buf, 255, 255, 0);
@@ -153,7 +222,7 @@ static void Menu_MapDownload_Info (int i)
 	if (buf[0])
 		Menu_MapDownload_Line(line++, buf, 200, 200, 200);
 	line++;
-	for (int j = 0; j < MAPDL_DESC_LINES; j++)
+	for (int j = 0; j < desc_lines; j++)
 		if (e->desc[j][0])
 			Menu_MapDownload_Line(line++, e->desc[j], 255, 255, 255);
 	line++;
@@ -188,6 +257,8 @@ static void Menu_MapDownload_Info (int i)
 	}
 	if (Menu_MapDownload_Busy())
 		Menu_MapDownload_Line(line++, "Another map is downloading", 160, 160, 160);
+	else if (e->update)
+		Menu_MapDownload_Line(line++, "UPDATE AVAILABLE  (press to update)", 255, 255, 0);
 	else if (e->installed)
 		Menu_MapDownload_Line(line++, "INSTALLED  (press to download again)", 0, 255, 0);
 	else
@@ -337,8 +408,13 @@ void Menu_MapDownload_Draw (void)
 	Menu_DrawCustomBackground(true);
 	Menu_DrawTitle("DOWNLOAD MAPS", MENU_COLOR_WHITE);
 	Menu_DrawMapPanel();
+	dl_line_y0 = 0;
 
 	count = PS3_MapDL_Count();
+	if (list == MAPDL_LIST_READY && dl_list_time < 0)
+		dl_list_time = realtime;
+	else if (list != MAPDL_LIST_READY)
+		dl_list_time = -1;
 	if (count != dl_shown) {
 		// the list arrived (or changed): buttons were built for another layout
 		Menu_ResetMenuButtons();
@@ -358,21 +434,22 @@ void Menu_MapDownload_Draw (void)
 	} else if (list == MAPDL_LIST_FAILED) {
 		Menu_MapDownload_Line(0, "Couldn't get the map list", 255, 64, 64);
 		Menu_MapDownload_Line(1, (char *)PS3_MapDL_Message(), 200, 200, 200);
-		Menu_MapDownload_Line(3, "Check the PS3 is online, then REFRESH", 160, 160, 160);
+		Menu_MapDownload_Line(3, "Check the PS3 is online, then come back here", 160, 160, 160);
 	} else if (list == MAPDL_LIST_READY && count == 0) {
 		Menu_MapDownload_Line(0, "The map list is empty", 255, 255, 255);
 	}
 
 	for (i = 0; i < on_page; i++) {
-		mapdl_entry_t *e = PS3_MapDL_Entry(start + i);
+		mapdl_entry_t *e = PS3_MapDL_Entry(Menu_MapDownload_Index(start + i));
 		snprintf(slot_names[i], sizeof(slot_names[i]), "%s", e->name);
 		strtoupper(slot_names[i]);
 		Menu_DrawButton(i + 1, items++, slot_names[i],
+			e->update ? "Update available. Press to update." :
 			e->installed ? "Installed. Press to download again." : "Download and install this map.",
 			Menu_MapDownload_Pressed);
 	}
 	if (current_menu.cursor >= 0 && current_menu.cursor < on_page)
-		Menu_MapDownload_Info(start + current_menu.cursor);
+		Menu_MapDownload_Info(Menu_MapDownload_Index(start + current_menu.cursor));
 
 	Menu_DrawDivider(7);
 	if (start + on_page < count)
@@ -386,7 +463,7 @@ void Menu_MapDownload_Draw (void)
 
 	// always buttons, so the indices (and the callbacks they keep) never shift
 	Menu_DrawButton(-3, items++, "MANAGE MAPS", "See and delete installed maps.", Menu_MapManage_Set);
-	Menu_DrawButton(-2, items++, "REFRESH", "Fetch the map list again.", Menu_MapDownload_Refresh);
+	Menu_DrawButton(-2, items++, dl_sort ? "SORT: NEWEST" : "SORT: A-Z", "Change the order of the list.", Menu_MapDownload_Sort);
 	Menu_DrawButton(-1, items, "BACK", "Return to Main Menu. Downloads carry on.", Menu_Main_Set);
 }
 #endif

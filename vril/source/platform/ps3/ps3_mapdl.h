@@ -2,7 +2,8 @@
 ps3_mapdl.h: the map downloader (ps3_mapdl.c).
 
 A list (maps.json) is fetched from ps3_maps_url over HTTP(S). Each map's zip
-is downloaded to nzp/ and unpacked there, on a worker thread. The menu polls.
+is downloaded to nzp/ and unpacked there, on a worker thread, which also
+fetches the list's pictures. The menu polls.
 */
 #ifndef PS3_MAPDL_H
 #define PS3_MAPDL_H
@@ -10,15 +11,22 @@ is downloaded to nzp/ and unpacked there, on a worker thread. The menu polls.
 #define MAPDL_MAX_MAPS		128
 #define MAPDL_DESC_LINES	6
 
+enum { THUMB_NONE, THUMB_WANTED, THUMB_READY, THUMB_FAILED };
+
 typedef struct {
 	char		name[64];
 	char		author[64];
 	char		version[24];
 	char		bsp[64];			// maps/<bsp>.bsp: how "installed" is decided
 	char		url[512];
+	char		date[24];			// ISO date it was posted or last changed ("" unknown)
 	unsigned	size;				// bytes, from the list (0 = unknown)
 	char		desc[MAPDL_DESC_LINES][64];
 	int			installed;
+	int			update;				// installed from another zip than the list's now
+	char		thumb_url[512];
+	char		thumb_key[32];		// the picture's file: gfx/menu/dlthumbs/<key>.jpg
+	volatile int thumb_state;		// THUMB_*
 } mapdl_entry_t;
 
 enum { MAPDL_LIST_NONE, MAPDL_LIST_LOADING, MAPDL_LIST_READY, MAPDL_LIST_FAILED };
@@ -29,6 +37,7 @@ void			PS3_MapDL_FetchList(void);		// (re)loads the list
 int				PS3_MapDL_ListState(void);
 int				PS3_MapDL_Count(void);
 mapdl_entry_t	*PS3_MapDL_Entry(int i);
+void			PS3_MapDL_WantThumb(int i);		// fetch this one's picture next
 
 void			PS3_MapDL_Download(int i);		// one at a time
 void			PS3_MapDL_Cancel(void);

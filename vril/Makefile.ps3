@@ -72,7 +72,9 @@ DEFINES := -DGLQUAKE -D__PS3__ -DPLATFORM_DIRECTORY=ps3 -DPLATFORM_RENDERER=gl \
 # platform/ps3/include first: its setjmp.h gives jmp_buf room for ps3_setjmp.S.
 # mbedTLS (HTTPS for DOWNLOAD MAPS): CI builds it into MBEDTLS_DIR
 MBEDTLS_DIR ?= $(PORTLIBS)
-INCLUDES := -I$(PLAT)/include -Isource -I$(PLAT)/rsx -I$(BUILD) $(LIBPSL1GHT_INC) -I$(MBEDTLS_DIR)/include -I$(PORTLIBS)/include
+# zlib (inflate for the map zips): CI builds it into ZLIB_DIR
+ZLIB_DIR ?= $(PORTLIBS)
+INCLUDES := -I$(PLAT)/include -Isource -I$(PLAT)/rsx -I$(BUILD) $(LIBPSL1GHT_INC) -I$(MBEDTLS_DIR)/include -I$(ZLIB_DIR) -I$(PORTLIBS)/include
 
 OPT      := -O2
 CFLAGS   := $(OPT) -mcpu=cell -mtune=cell -mno-altivec -mminimal-toc $(MACHDEP) \
@@ -81,8 +83,8 @@ CFLAGS   := $(OPT) -mcpu=cell -mtune=cell -mno-altivec -mminimal-toc $(MACHDEP) 
 	-Wno-unused-function -Wno-format-truncation -Wno-stringop-truncation \
 	-MMD -MP $(DEFINES) $(INCLUDES)
 ASFLAGS  := -mcpu=cell $(MACHDEP)
-LDFLAGS  := $(MACHDEP) -Wl,--no-multi-toc $(LIBPSL1GHT_LIB) -L$(MBEDTLS_DIR)/library -L$(PORTLIBS)/lib
-LIBS     := -lrsx -lgcm_sys -laudio -lio -llv2dbg -lmbedtls -lmbedx509 -lmbedcrypto -lsysmodule -lsysutil -lnet -lrt -llv2 -lm
+LDFLAGS  := $(MACHDEP) -Wl,--no-multi-toc $(LIBPSL1GHT_LIB) -L$(MBEDTLS_DIR)/library -L$(ZLIB_DIR) -L$(PORTLIBS)/lib
+LIBS     := -lrsx -lgcm_sys -laudio -lio -llv2dbg -lmbedtls -lmbedx509 -lmbedcrypto -lz -lsysfs -lsysmodule -lsysutil -lnet -lrt -llv2 -lm
 
 ifeq ($(WERROR),1)
 CFLAGS += -Werror

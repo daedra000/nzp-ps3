@@ -17,19 +17,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Previous list
+      - name: Previous list and pictures
         run: |
-          git fetch origin maps-list 2>/dev/null && git show origin/maps-list:maps.json > "$RUNNER_TEMP/old.json" || echo '{}' > "$RUNNER_TEMP/old.json"
+          mkdir -p "$RUNNER_TEMP/pub"
+          if git fetch origin maps-list 2>/dev/null; then
+            git --work-tree="$RUNNER_TEMP/pub" checkout origin/maps-list -- . 2>/dev/null || true
+            git reset -q
+          fi
+          cp "$RUNNER_TEMP/pub/maps.json" "$RUNNER_TEMP/old.json" 2>/dev/null || echo '{}' > "$RUNNER_TEMP/old.json"
       - name: Build maps.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python3 tools/maps_list.py "$RUNNER_TEMP/old.json" "$RUNNER_TEMP/maps.json"
+        run: |
+          pip install -q pillow
+          python3 tools/maps_list.py "$RUNNER_TEMP/old.json" "$RUNNER_TEMP/pub"
       - name: Publish to maps-list
         run: |
-          cd "$RUNNER_TEMP" && rm -rf pub && mkdir pub && cd pub
+          cd "$RUNNER_TEMP/pub"
+          rm -rf .git
           git init -q -b maps-list
-          cp ../maps.json .
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add maps.json && git commit -qm "maps.json: $(python3 -c 'import json;print(len(json.load(open("maps.json"))["maps"]))') maps"
+          git add -A && git commit -qm "maps.json: $(python3 -c 'import json;print(len(json.load(open("maps.json"))["maps"]))') maps"
           git push -qf "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" maps-list
