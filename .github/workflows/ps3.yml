@@ -186,12 +186,44 @@ jobs:
             echo "CGCOMP_BIN=$RUNNER_TEMP/ps3dev/bin/cgcomp" >> "$GITHUB_ENV"
           fi
 
+      # HTTPS for DOWNLOAD MAPS: the PS3's own (cellHttps) can't talk to
+      # GitHub/archive.org any more. mbedTLS 2.28 LTS, no sockets/timing/PSA
+      # layers (ps3_https.c does the I/O), entropy from lv2.
+      - name: mbedTLS
+        run: |
+          set -e
+          cd "$RUNNER_TEMP"
+          git clone -q --depth 1 -b v2.28.9 https://github.com/Mbed-TLS/mbedtls.git
+          cd mbedtls
+          for o in MBEDTLS_NET_C MBEDTLS_TIMING_C MBEDTLS_FS_IO MBEDTLS_PSA_CRYPTO_C \
+                   MBEDTLS_PSA_CRYPTO_STORAGE_C MBEDTLS_PSA_ITS_FILE_C MBEDTLS_SELF_TEST \
+                   MBEDTLS_HAVE_ASM MBEDTLS_AESNI_C MBEDTLS_PADLOCK_C; do
+            python3 scripts/config.py unset $o
+          done
+          python3 scripts/config.py set MBEDTLS_NO_PLATFORM_ENTROPY
+          make -C library -j"$(nproc)" CC=ppu-gcc AR=ppu-ar \
+            CFLAGS="-O2 -mcpu=cell -mtune=cell -mno-altivec -mminimal-toc -fno-strict-aliasing -I$PSL1GHT/ppu/include -I$PS3DEV/ppu/include" \
+            WARNING_CFLAGS="-w" static
+          echo "MBEDTLS_DIR=$RUNNER_TEMP/mbedtls" >> "$GITHUB_ENV"
+          # Mozilla's root certificates, as the runner has them, for ps3_https.c
+          python3 - <<'PY'
+          import os
+          pem = open("/etc/ssl/certs/ca-certificates.crt").read()
+          out = os.path.join(os.environ["GITHUB_WORKSPACE"], "vril/source/platform/ps3/ca_bundle.h")
+          with open(out, "w") as f:
+              f.write("// made by CI from /etc/ssl/certs/ca-certificates.crt\nstatic const char ca_bundle_pem[] =\n")
+              for line in pem.splitlines():
+                  f.write('"%s\\n"\n' % line.replace('"', ''))
+              f.write(";\n")
+          print(pem.count("BEGIN CERTIFICATE"), "root certificates")
+          PY
+
       - name: Build
         working-directory: vril
         run: |
           set -o pipefail
           ppu-gcc --version | head -1
-          make -f Makefile.ps3 CGCOMP_BIN="$CGCOMP_BIN" -k -j"$(nproc)" self 2>&1 | tee build.log
+          make -f Makefile.ps3 CGCOMP_BIN="$CGCOMP_BIN" MBEDTLS_DIR="$MBEDTLS_DIR" -k -j"$(nproc)" self 2>&1 | tee build.log
 
       # The errors also go into annotations: readable through the API (gh api
       # .../check-runs/<id>/annotations) where the raw logs aren't.

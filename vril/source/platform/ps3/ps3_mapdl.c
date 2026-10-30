@@ -18,11 +18,7 @@ e.g. "croft/maps/..." or "nzp/maps/...", is stripped), then deleted.
 #include "ps3_mapdl.h"
 #include "qcvm/cJSON.h"
 
-#include <http/https.h>
-#include <http/util.h>
-#include <ssl/ssl.h>
-#include <net/net.h>
-#include <sysmodule/sysmodule.h>
+#include "ps3_https.h"
 #include <sys/thread.h>
 #include <lv2/thread.h>
 #include <sys/stat.h>
@@ -39,7 +35,6 @@ cvar_t ps3_maps_url = {"ps3_maps_url", PS3_MAPS_URL_DEFAULT, false};
 // stb_image.h (images.c): raw deflate into a buffer of known size
 extern int stbi_zlib_decode_noheader_buffer(char *obuffer, int olen, const char *ibuffer, int ilen);
 
-#define USER_AGENT		"Mozilla/5.0 (PLAYSTATION 3; 4.90) NZP"
 #define LIST_MAX		(512 * 1024)
 #define RECV_CHUNK		(64 * 1024)
 
@@ -60,154 +55,58 @@ static volatile int			num_new_bsps;
 static volatile int			new_taken = 1;
 
 static volatile int			busy;
-static int					net_ready;		// 0 not tried, 1 ok, -1 failed
 static char					recv_buf[RECV_CHUNK];
 
 /*
 ===================
-HTTP(S)
+HTTP(S): ps3_https.c
 ===================
 */
-static void *http_pool, *ssl_pool, *cert_buf;
-static httpsData ca_list;
+typedef struct {
+	FILE	*fp;
+	char	*mem;
+	u32		cap, len;
+} sink_ctx_t;
 
-static int Net_Init(void)
+static int Sink(void *ctx, const void *data, int len)
 {
-	s32 ret;
-	u32 cert_size = 0;
-
-	if (net_ready)
-		return net_ready > 0;
-	net_ready = -1;
-
-	if ((ret = sysModuleLoad(SYSMODULE_NET)) < 0) { PS3_Log("mapdl: load NET 0x%08x", (unsigned)ret); return 0; }
-	if ((ret = netInitialize()) < 0) { PS3_Log("mapdl: netInitialize 0x%08x", (unsigned)ret); return 0; }
-	if ((ret = sysModuleLoad(SYSMODULE_HTTP)) < 0) { PS3_Log("mapdl: load HTTP 0x%08x", (unsigned)ret); return 0; }
-	http_pool = malloc(0x10000);
-	if (!http_pool || (ret = httpInit(http_pool, 0x10000)) < 0) { PS3_Log("mapdl: httpInit 0x%08x", (unsigned)ret); return 0; }
-	net_ready = 1;		// plain http works from here
-
-	if ((ret = sysModuleLoad(SYSMODULE_HTTPS)) < 0 || (ret = sysModuleLoad(SYSMODULE_SSL)) < 0) {
-		PS3_Log("mapdl: load HTTPS/SSL 0x%08x (http only)", (unsigned)ret);
+	sink_ctx_t *s = ctx;
+	if (s->fp) {
+		if (fwrite(data, 1, len, s->fp) != (size_t)len) {
+			snprintf(dl_msg, sizeof(dl_msg), "Disk full?");
+			return 0;
+		}
 		return 1;
 	}
-	ssl_pool = malloc(0x40000);
-	if (!ssl_pool || (ret = sslInit(ssl_pool, 0x40000)) < 0) { PS3_Log("mapdl: sslInit 0x%08x (http only)", (unsigned)ret); return 1; }
-	if ((ret = sslCertificateLoader(SSL_LOAD_CERT_ALL, NULL, 0, &cert_size)) < 0 || !(cert_buf = malloc(cert_size))) {
-		PS3_Log("mapdl: cert size 0x%08x (http only)", (unsigned)ret);
-		return 1;
+	if (s->len + len >= s->cap) {
+		snprintf(dl_msg, sizeof(dl_msg), "List too big");
+		return 0;
 	}
-	if ((ret = sslCertificateLoader(SSL_LOAD_CERT_ALL, cert_buf, cert_size, NULL)) < 0) {
-		PS3_Log("mapdl: certs 0x%08x (http only)", (unsigned)ret);
-		return 1;
-	}
-	ca_list.ptr = cert_buf;
-	ca_list.size = cert_size;
-	if ((ret = httpsInit(1, &ca_list)) < 0)
-		PS3_Log("mapdl: httpsInit 0x%08x (http only)", (unsigned)ret);
+	memcpy(s->mem + s->len, data, len);
+	s->len += len;
+	s->mem[s->len] = 0;
 	return 1;
-}
-
-// The PS3's root certificates are from ~2017: a newer chain fails to verify.
-// The files are maps from the list's own site, so carry on and log it.
-static int SslCallback(s32 verErr, sslCert const sslCerts[], int certNum, const char *host, httpSslId id, void *arg)
-{
-	if (verErr)
-		PS3_Log("mapdl: %s: certificate check 0x%08x, continuing", host ? host : "?", (unsigned)verErr);
-	return 0;
-}
-
-// Spaces (and nothing else) need escaping in the names people give zips.
-static void EscapeUrl(const char *in, char *out, int size)
-{
-	int o = 0;
-	for (; *in && o < size - 4; in++) {
-		if (*in == ' ') { memcpy(out + o, "%20", 3); o += 3; }
-		else out[o++] = *in;
-	}
-	out[o] = 0;
 }
 
 /*
 Http_Get: url into fp (a file) or mem (up to memcap-1 bytes, 0-terminated).
-Returns true on a 200 with the whole body; dl_msg says why not.
+Returns true with the whole body; dl_msg says why not.
 */
-static qboolean Http_Get(const char *url_in, FILE *fp, char *mem, u32 memcap, u32 *memlen)
+static qboolean Http_Get(const char *url, FILE *fp, char *mem, u32 memcap, u32 *memlen)
 {
-	httpClientId client = 0;
-	httpTransId trans = 0;
-	httpUri uri;
-	void *uri_pool = NULL;
-	u32 pool_size = 0, recvd;
-	u64 length = 0;
-	s32 code = 0, ret;
-	qboolean ok = false;
-	char url[1024];
+	sink_ctx_t s = {fp, mem, memcap, 0};
+	char err[128];
+	int ok;
 
-	EscapeUrl(url_in, url, sizeof(url));
-	dl_got = 0;
-	dl_total = 0;
-	if (memlen) *memlen = 0;
-
-	if (!Net_Init()) { snprintf(dl_msg, sizeof(dl_msg), "Network unavailable"); return false; }
-
-	if ((ret = httpCreateClient(&client)) < 0) { snprintf(dl_msg, sizeof(dl_msg), "httpCreateClient %08x", (unsigned)ret); goto end; }
-	httpClientSetConnTimeout(client, 10 * 1000 * 1000);
-	httpClientSetRecvTimeout(client, 30 * 1000 * 1000);
-	httpClientSetUserAgent(client, USER_AGENT);
-	httpClientSetAutoRedirect(client, 1);
-	if (!strncasecmp(url, "https:", 6))
-		httpClientSetSslCallback(client, SslCallback, NULL);
-
-	if ((ret = httpUtilParseUri(&uri, url, NULL, 0, &pool_size)) < 0 || !(uri_pool = malloc(pool_size))
-	 || (ret = httpUtilParseUri(&uri, url, uri_pool, pool_size, NULL)) < 0) {
-		snprintf(dl_msg, sizeof(dl_msg), "Bad URL");
-		goto end;
+	dl_msg[0] = 0;
+	ok = PS3_HttpGet(url, Sink, &s, &dl_got, &dl_total, &dl_cancel, err, sizeof(err));
+	if (memlen)
+		*memlen = s.len;
+	if (!ok) {
+		if (!dl_msg[0])
+			snprintf(dl_msg, sizeof(dl_msg), "%s", err);
+		PS3_Log("mapdl: %s: %s", url, dl_msg);
 	}
-	if ((ret = httpCreateTransaction(&trans, client, HTTP_METHOD_GET, &uri)) < 0
-	 || (ret = httpSendRequest(trans, NULL, 0, NULL)) < 0) {
-		snprintf(dl_msg, sizeof(dl_msg), "Can't connect (%08x)", (unsigned)ret);
-		PS3_Log("mapdl: %s: send 0x%08x", url, (unsigned)ret);
-		goto end;
-	}
-	if ((ret = httpResponseGetStatusCode(trans, &code)) < 0 || code != 200) {
-		snprintf(dl_msg, sizeof(dl_msg), "Server said %d", (int)code);
-		PS3_Log("mapdl: %s: status %d (0x%08x)", url, (int)code, (unsigned)ret);
-		goto end;
-	}
-	if (httpResponseGetContentLength(trans, &length) >= 0)
-		dl_total = length;
-
-	for (;;) {
-		recvd = 0;
-		if ((ret = httpRecvResponse(trans, recv_buf, sizeof(recv_buf), &recvd)) < 0) {
-			snprintf(dl_msg, sizeof(dl_msg), "Connection lost (%08x)", (unsigned)ret);
-			PS3_Log("mapdl: %s: recv 0x%08x at %llu", url, (unsigned)ret, dl_got);
-			goto end;
-		}
-		if (recvd == 0)
-			break;
-		if (dl_cancel) { snprintf(dl_msg, sizeof(dl_msg), "Cancelled"); goto end; }
-		if (fp) {
-			if (fwrite(recv_buf, 1, recvd, fp) != recvd) { snprintf(dl_msg, sizeof(dl_msg), "Disk full?"); goto end; }
-		} else {
-			if (*memlen + recvd >= memcap) { snprintf(dl_msg, sizeof(dl_msg), "List too big"); goto end; }
-			memcpy(mem + *memlen, recv_buf, recvd);
-			*memlen += recvd;
-			mem[*memlen] = 0;
-		}
-		dl_got += recvd;
-	}
-	if (dl_total && dl_got != dl_total) {
-		snprintf(dl_msg, sizeof(dl_msg), "Download cut short");
-		goto end;
-	}
-	ok = true;
-
-end:
-	if (trans) httpDestroyTransaction(trans);
-	if (client) httpDestroyClient(client);
-	free(uri_pool);
 	return ok;
 }
 
