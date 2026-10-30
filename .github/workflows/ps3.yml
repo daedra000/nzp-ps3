@@ -288,6 +288,8 @@ jobs:
           # PKG must not carry one, or every update would reset them. The PC
           # defaults ship as config_default.cfg, run when there's no config.cfg yet.
           mv "$RUNNER_TEMP/nzp/config.cfg" "$RUNNER_TEMP/nzp/config_default.cfg"
+          # PS3: no FPS counter by default (Video Options > SHOW FPS turns it on)
+          sed -i 's/^show_fps .*/show_fps "0"/' "$RUNNER_TEMP/nzp/config_default.cfg"
           # A PKG install drops entries past a limit and NZ:P has 1100+ files: the
           # bulk goes into pak0.pak. Loose: what the engine opens by path (maps/
           # waypoints and the map list, data/ for QuakeC, tracks/ music, configs).
