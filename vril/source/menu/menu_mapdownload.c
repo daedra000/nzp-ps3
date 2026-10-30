@@ -178,9 +178,27 @@ static void Menu_MapDownload_Line (int line, char *text, int r, int g, int b)
 	int map_region_center = (150 + (((vid.width - 150) / 2) + 2));
 	int x = map_region_center - ((image_width / vid.scale) / 2) + image_width / 2;
 	int y = (dl_line_y0 ? dl_line_y0 : 40 * vid.scale) + line * 12 * vid.scale;
+	int left = (150 + 6) * vid.scale, right = vid.width - 6 * vid.scale, w;
+	char fit[160];
+
+	// keep it inside the panel: cut what doesn't fit, then push it off the edges
+	snprintf(fit, sizeof(fit), "%s", text);
+	w = getTextWidth(fit, vid.scale);
+	if (w > right - left) {
+		int len = strlen(fit);
+		while (len > 3 && getTextWidth(fit, vid.scale) > right - left) {
+			fit[--len] = 0;
+			if (len > 3) memcpy(fit + len - 2, "..", 2);
+		}
+		w = getTextWidth(fit, vid.scale);
+	}
+	if (x - w / 2 < left)
+		x = left + w / 2;
+	if (x + w / 2 > right)
+		x = right - w / 2;
 
 	UI_SetAlignment(UI_ANCHOR_LEFT, UI_ANCHOR_TOP);
-	Menu_DrawStringCentered(x, y, text, r, g, b, 255);
+	Menu_DrawStringCentered(x, y, fit, r, g, b, 255);
 }
 
 static void Menu_MapDownload_Info (int i)
