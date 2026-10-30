@@ -199,6 +199,12 @@ static void PS3_VID_CheckResolution(void)
 	int i = PS3_ResIndex(vid_ps3_res.string);
 	int w = ps3_res[i].w, h = ps3_res[i].h;
 
+	// split screen: the two views fill the render target's halves at its size
+	if (cl_numseats > 1) {
+		w = ps3_rt_w;
+		h = ps3_rt_h;
+	}
+
 	if (w > ps3_rt_w) w = ps3_rt_w;
 	if (h > ps3_rt_h) h = ps3_rt_h;
 	if (w == last_w && h == last_h)
@@ -223,7 +229,8 @@ void GL_BeginRendering(int *x, int *y, int *width, int *height)
 	}
 	{
 		extern void PS3_Video_SetDynamicRes(int on);
-		PS3_Video_SetDynamicRes(vid_ps3_dynres.value != 0);
+		// not in split screen: the views are drawn into halves of the screen
+		PS3_Video_SetDynamicRes(vid_ps3_dynres.value != 0 && cl_numseats < 2);
 	}
 
 	// waits for a free render target and makes it the RSX's surface

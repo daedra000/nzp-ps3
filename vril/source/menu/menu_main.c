@@ -23,7 +23,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 /* MAIN MENU */
 qboolean in_submenu;
 
-void Menu_Solo(void) { menu_is_solo = true; Menu_StockMaps_Set(); }
+void Menu_Solo(void) { menu_is_solo = true; Cvar_SetValue("cl_splitscreen", 0); Menu_StockMaps_Set(); }
+// split screen: two pads, one map; player 2 joins once the map is in (cl_seats.c)
+void Menu_SplitScreen(void) { menu_is_solo = true; Cvar_SetValue("cl_splitscreen", 1); Menu_StockMaps_Set(); }
 void Menu_Quit(void) { key_dest = key_console; Host_Quit_f(); }
 void Menu_EnterSubMenu(void) { Menu_ResetMenuButtons(); in_submenu = true; }
 void Menu_ExitSubMenu(void) { in_submenu = false; Menu_ResetMenuButtons(); }
@@ -70,26 +72,29 @@ void Menu_Main_Draw (void)
 	if (!in_submenu) {
 		Menu_DrawButton(1, 0, "SOLO", "Play Solo.", Menu_Solo);
 #ifdef __PS3__
-		// no co-op on PS3 yet: its row gets custom maps from the internet
-		Menu_DrawButton(2, 1, "DOWNLOAD MAPS", "Download Custom Maps", Menu_MapDownload_Set);
-#define MAIN_IDX(n) ((n) + 1)
+		// no online co-op on PS3: split screen, and custom maps from the internet
+		Menu_DrawButton(2, 1, "SPLIT SCREEN", "Two Players, Two Controllers.", Menu_SplitScreen);
+		Menu_DrawButton(3, 2, "DOWNLOAD MAPS", "Download Custom Maps", Menu_MapDownload_Set);
+#define MAIN_IDX(n) ((n) + 2)
+#define MAIN_ROW(n) ((n) + 1)
 #else
 		Menu_DrawGreyButton(2, "COOPERATIVE");
 #define MAIN_IDX(n) (n)
+#define MAIN_ROW(n) (n)
 #endif
 
-		Menu_DrawDivider(3);
+		Menu_DrawDivider(MAIN_ROW(3));
 
-		Menu_DrawButton(3, MAIN_IDX(1), "CONFIGURATION", "Tweak Game Related Options", Menu_Configuration_Set);
-		Menu_DrawButton(4, MAIN_IDX(2), "CHARACTER BIOS", "View Character Bios", Menu_Bios_Set);
+		Menu_DrawButton(MAIN_ROW(3), MAIN_IDX(1), "CONFIGURATION", "Tweak Game Related Options", Menu_Configuration_Set);
+		Menu_DrawButton(MAIN_ROW(4), MAIN_IDX(2), "CHARACTER BIOS", "View Character Bios", Menu_Bios_Set);
 
-		Menu_DrawDivider(5);
+		Menu_DrawDivider(MAIN_ROW(5));
 
-		Menu_DrawButton(5, MAIN_IDX(3), "CREDITS", "NZ:P Team + Special Thanks", Menu_Credits_Set);
+		Menu_DrawButton(MAIN_ROW(5), MAIN_IDX(3), "CREDITS", "NZ:P Team + Special Thanks", Menu_Credits_Set);
 
-		Menu_DrawDivider(6);
+		Menu_DrawDivider(MAIN_ROW(6));
 
-		Menu_DrawButton(6, MAIN_IDX(4), "QUIT GAME", "Return to Home Screen", Menu_EnterSubMenu);
+		Menu_DrawButton(MAIN_ROW(6), MAIN_IDX(4), "QUIT GAME", "Return to Home Screen", Menu_EnterSubMenu);
 
 		Menu_DrawSocialBadge (1, MENU_SOC_YOUTUBE);
 		Menu_DrawSocialBadge (2, MENU_SOC_BLUESKY);
@@ -98,17 +103,18 @@ void Menu_Main_Draw (void)
 	} else {
 		Menu_DrawGreyButton(1, "SOLO");
 #ifdef __PS3__
-		Menu_DrawGreyButton(2, "DOWNLOAD MAPS");
+		Menu_DrawGreyButton(2, "SPLIT SCREEN");
+		Menu_DrawGreyButton(3, "DOWNLOAD MAPS");
 #else
 		Menu_DrawGreyButton(2, "COOPERATIVE");
 #endif
-		Menu_DrawDivider(3);
-		Menu_DrawGreyButton(3, "CONFIGURATION");
-		Menu_DrawGreyButton(4, "CHARACTER BIOS");
-		Menu_DrawDivider(5);
-		Menu_DrawGreyButton(5, "CREDITS");
-		Menu_DrawDivider(6);
-		Menu_DrawGreyButton(6, "QUIT GAME");
+		Menu_DrawDivider(MAIN_ROW(3));
+		Menu_DrawGreyButton(MAIN_ROW(3), "CONFIGURATION");
+		Menu_DrawGreyButton(MAIN_ROW(4), "CHARACTER BIOS");
+		Menu_DrawDivider(MAIN_ROW(5));
+		Menu_DrawGreyButton(MAIN_ROW(5), "CREDITS");
+		Menu_DrawDivider(MAIN_ROW(6));
+		Menu_DrawGreyButton(MAIN_ROW(6), "QUIT GAME");
 
 		Menu_DrawSocialBadge (1, MENU_SOC_YOUTUBE);
 		Menu_DrawSocialBadge (2, MENU_SOC_BLUESKY);
@@ -118,7 +124,7 @@ void Menu_Main_Draw (void)
 		// Draw Sub Menu
     	Menu_DrawSubMenu("Are you sure you want to quit?", "You will lose any progress that you have made.");
 
-		Menu_DrawButton (7, 0, "GET ME OUTTA HERE!", "", Menu_Quit);
-		Menu_DrawButton (8, 1, "I WILL PERSEVERE", "", Menu_ExitSubMenu);
+		Menu_DrawButton (MAIN_ROW(7), 0, "GET ME OUTTA HERE!", "", Menu_Quit);
+		Menu_DrawButton (MAIN_ROW(8), 1, "I WILL PERSEVERE", "", Menu_ExitSubMenu);
 	}
 }

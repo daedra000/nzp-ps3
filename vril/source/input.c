@@ -78,6 +78,21 @@ void IN_Init(void)
 }
 
 #ifdef PLATFORM_SUPPORTS_RUMBLE
+// split screen: the rumble goes to that seat's pad
+void IN_StartRumbleSeat(int seat, int low_frequency, int high_frequency, int duration)
+{
+	if (!in_rumble.value || duration <= 0)
+		return;
+#ifdef __PS3__
+	extern void PS3_Input_RumbleSeat(int seat, unsigned short low, unsigned short high, unsigned int duration);
+	PS3_Input_RumbleSeat(seat, (unsigned short)IN_Clamp(low_frequency, 0, 65535),
+		(unsigned short)IN_Clamp(high_frequency, 0, 65535), (unsigned int)duration);
+#else
+	if (seat == 0)
+		IN_StartRumble(low_frequency, high_frequency, duration);
+#endif
+}
+
 void IN_StartRumble(int low_frequency, int high_frequency, int duration)
 {
 	if (!in_rumble.value || duration <= 0)

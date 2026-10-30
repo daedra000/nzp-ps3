@@ -199,7 +199,7 @@ void CL_ParseBSPDecal (void)
     pos[1]      = MSG_ReadCoord  ();
     pos[2]      = MSG_ReadCoord  ();
 
-	if(!texname)
+	if(!texname || CL_SeatIsQuiet ())
 		return;
 
 	Con_DPrintf("BSPDECAL[tex: %s size: %i pos: %f %f %f]\n", texname, decal_size,
@@ -438,8 +438,8 @@ void CL_ParseServerInfo (void)
 
    loading_num_step = loading_num_step +nummodels + numsounds;
    loading_step = 1;
-	LoadingScreen_BeginProgressPhase(0.45f, 0.80f, nummodels - 1);
-	CL_UpdateLoadingScreen(true);
+	if (!CL_SeatIsQuiet ()) LoadingScreen_BeginProgressPhase(0.45f, 0.80f, nummodels - 1);
+	if (!CL_SeatIsQuiet ()) CL_UpdateLoadingScreen(true);
 
 	//Con_Printf("Loaded Model: ");
 
@@ -457,14 +457,14 @@ void CL_ParseServerInfo (void)
 		{
 			Con_Printf("Model %s not found\n", model_precache[i]);
 			loading_cur_step++;
-			LoadingScreen_AdvanceProgress();
+			if (!CL_SeatIsQuiet ()) LoadingScreen_AdvanceProgress();
 			return;
 		}
 		CL_KeepaliveMessage ();
 		loading_cur_step++;
-		LoadingScreen_AdvanceProgress();
+		if (!CL_SeatIsQuiet ()) LoadingScreen_AdvanceProgress();
 		//Con_Printf("%i,",i);
-		CL_UpdateLoadingScreen(false);
+		if (!CL_SeatIsQuiet ()) CL_UpdateLoadingScreen(false);
 	}
 
 	//Con_Printf("\n");
@@ -475,8 +475,8 @@ void CL_ParseServerInfo (void)
 	//cl_modelindex[mi_flame0] = nummodels++;
 
 	loading_step = 4;
-	LoadingScreen_BeginProgressPhase(0.80f, 0.98f, numsounds - 1);
-	CL_UpdateLoadingScreen(true);
+	if (!CL_SeatIsQuiet ()) LoadingScreen_BeginProgressPhase(0.80f, 0.98f, numsounds - 1);
+	if (!CL_SeatIsQuiet ()) CL_UpdateLoadingScreen(true);
 
 	S_BeginPrecaching ();
 	//Con_Printf("Loaded Sounds: ");
@@ -485,28 +485,28 @@ void CL_ParseServerInfo (void)
 		cl.sound_precache[i] = S_PrecacheSound (sound_precache[i]);
 		CL_KeepaliveMessage ();
 		loading_cur_step++;
-		LoadingScreen_AdvanceProgress();
+		if (!CL_SeatIsQuiet ()) LoadingScreen_AdvanceProgress();
 		//Con_Printf("%i,",i);
-		CL_UpdateLoadingScreen(false);
+		if (!CL_SeatIsQuiet ()) CL_UpdateLoadingScreen(false);
 	}
 	S_EndPrecaching ();
 
 	//Con_Printf("...\n");
 	//Con_Printf("Total Sounds Loaded: %i\n",numsounds);
-	CL_UpdateLoadingScreen(true);
+	if (!CL_SeatIsQuiet ()) CL_UpdateLoadingScreen(true);
 
-	LoadingScreen_CompleteProgress();
+	if (!CL_SeatIsQuiet ()) LoadingScreen_CompleteProgress();
 
 // local state
 	cl_entities[0].model = cl.worldmodel = cl.model_precache[1];
 
-	if (!vid_headless)
+	if (!vid_headless && !CL_SeatIsQuiet ())
 		R_NewMap ();
 
 	Hunk_Check ();		// make sure nothing is hurt
 	if (!vid_headless)
-		HUD_NewMap ();
-	LoadingScreen_MarkPrecacheComplete();
+		HUD_NewMap ();		// the seat's own HUD counters
+	if (!CL_SeatIsQuiet ()) LoadingScreen_MarkPrecacheComplete();
 
 	noclip_anglehack = false;		// noclip is turned off at start
 }
@@ -925,6 +925,18 @@ void CL_ParseStatic (qboolean extended)
 	entity_t *ent;
 	int		i;
 
+	if (CL_SeatIsQuiet ()) {
+		// split screen: seat 0 has the static entities (shared): read past it
+		entity_t scratch;
+		memset (&scratch, 0, sizeof(scratch));
+		CL_ParseBaseline (&scratch);
+		if (extended) {
+			MSG_ReadByte ();
+			MSG_ReadShort ();
+		}
+		return;
+	}
+
 	i = cl.num_statics;
 	if (i >= MAX_STATIC_ENTITIES)
 		Host_Error ("Too many static entities");
@@ -962,6 +974,8 @@ void CL_ParseStaticSound (void)
 	vol = MSG_ReadByte ();
 	atten = MSG_ReadByte ();
 
+	if (CL_SeatIsQuiet ())
+		return;		// seat 0's
 	S_StaticSound (cl.sound_precache[sound_num], org, vol, atten);
 }
 
@@ -1097,6 +1111,12 @@ void CL_ParseServerMessage (void)
 			break;
 
 		case svc_disconnect:
+			if (CL_SeatIsQuiet ()) {
+				// split screen's player 2: only this seat is out
+				cls.state = ca_disconnected;
+				cls.signon = 0;
+				return;
+			}
 			Host_EndGame ("Server disconnected\n");
 			break;
 
@@ -1124,7 +1144,7 @@ void CL_ParseServerMessage (void)
 			break;
 		case svc_hudconfig:
 			hud_config_index = MSG_ReadByte();
-			if (vid_headless)
+			if (vid_headless || CL_SeatIsQuiet ())
 				MSG_ReadString();
 			else
 				HUD_Configure(hud_config_index, MSG_ReadString());
@@ -1160,7 +1180,7 @@ void CL_ParseServerMessage (void)
 			int low_frequency = MSG_ReadShort();
 			int high_frequency = MSG_ReadShort();
 			int duration = MSG_ReadShort();
-			IN_StartRumble(low_frequency, high_frequency, duration);
+			IN_StartRumbleSeat(cl_curseat, low_frequency, high_frequency, duration);
 #else
 			// We still need to read rumble messages for the protocol.
 			MSG_ReadShort();
@@ -1191,7 +1211,10 @@ void CL_ParseServerMessage (void)
 			break;
 
 		case svc_stufftext:
-			Cbuf_AddText (MSG_ReadString ());
+			if (CL_SeatIsQuiet ())
+				MSG_ReadString ();		// commands for the console: seat 0's
+			else
+				Cbuf_AddText (MSG_ReadString ());
 			break;
 		case svc_serverinfo:
 			CL_ParseServerInfo ();
@@ -1211,17 +1234,25 @@ void CL_ParseServerMessage (void)
 			i = MSG_ReadByte ();
 			if (i >= MAX_LIGHTSTYLES)
 				Sys_Error ("svc_lightstyle > MAX_LIGHTSTYLES");
+			if (CL_SeatIsQuiet ()) {
+				MSG_ReadString ();		// shared: seat 0's
+				break;
+			}
 			Q_strcpy (cl_lightstyle[i].map,  MSG_ReadString());
 			cl_lightstyle[i].length = Q_strlen(cl_lightstyle[i].map);
 			break;
 
 		case svc_sound:
+			// every client hears the same sounds: seat 0 plays them
+			S_SetMute (CL_SeatIsQuiet ());
 			CL_ParseStartSoundPacket();
+			S_SetMute (false);
 			break;
 
 		case svc_stopsound:
 			i = MSG_ReadShort();
-			S_StopSound(i>>3, i&7);
+			if (!CL_SeatIsQuiet ())
+				S_StopSound(i>>3, i&7);
 			break;
 
 		case svc_updatename:
@@ -1257,7 +1288,10 @@ void CL_ParseServerMessage (void)
 
 
 		case svc_particle:
+			// every client gets the same effects: seat 0 makes them
+			R_SetParticlesMute (CL_SeatIsQuiet ());
 			R_ParseParticleEffect ();
+			R_SetParticlesMute (false);
 			break;
 
 		case svc_spawnbaseline:
@@ -1272,14 +1306,21 @@ void CL_ParseServerMessage (void)
 			CL_ParseStatic (true);
 			break;
 		case svc_temp_entity:
+			// a seat's own lights and beams, seat 0's particles and sounds
+			R_SetParticlesMute (CL_SeatIsQuiet ());
+			S_SetMute (CL_SeatIsQuiet ());
 			CL_ParseTEnt ();
+			R_SetParticlesMute (false);
+			S_SetMute (false);
 			break;
 
 		case svc_setpause:
 			{
 				cl.paused = MSG_ReadByte ();
 
-				if (cl.paused)
+				if (CL_SeatIsQuiet ())
+					;
+				else if (cl.paused)
 				{
 					Music_Pause ();
 				}
@@ -1340,10 +1381,13 @@ void CL_ParseServerMessage (void)
 			break;
 
 	    case svc_skybox:
-			Sky_LoadSkyBox(MSG_ReadString());
+			if (CL_SeatIsQuiet ())
+				MSG_ReadString ();
+			else
+				Sky_LoadSkyBox(MSG_ReadString());
 			break;
 		case svc_fog:
-			Fog_ParseServerMessage ();
+			Fog_ParseServerMessage ();		// same values for every seat
 			break;
 
 		case svc_achievement:
@@ -1367,4 +1411,10 @@ void CL_ParseServerMessage (void)
 			break;
 		}
 	}
+}
+
+// split screen: the weapon's recoil timing is the seat's own (cl_seats.c)
+void CL_ParseRegisterSeatVars (void)
+{
+	Seat_Register (&return_time, sizeof(return_time));
 }

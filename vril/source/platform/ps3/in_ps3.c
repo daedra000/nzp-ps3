@@ -71,50 +71,112 @@ static const struct { unsigned bit; int key; } ps3_buttons[] = {
 	{ BTN_RIGHT,    K_DPAD_RIGHT },
 };
 
-static int      pad_port = -1;           // the pad being read, -1 = none
-static unsigned pad_buttons;             // held this frame
-static byte     pad_sticks[4] = { 128, 128, 128, 128 };   // RX RY LX LY
+// Slot 0 is the first connected pad (player 1); in split screen slot 1, the
+// second connected pad, is player 2 (keys.c Key_EventSeat, cl_seats.c).
+#define PAD_SLOTS 2
+static int      pad_ports[PAD_SLOTS] = { -1, -1 };	// the pad each slot reads, -1 = none
+static unsigned pad_held[PAD_SLOTS];					// held this frame
+static byte     pad_stick[PAD_SLOTS][4] = { { 128, 128, 128, 128 }, { 128, 128, 128, 128 } };	// RX RY LX LY
 static qboolean xmb_open;
-static double   rumble_stop_time;
-static qboolean rumble_on;
+static double   rumble_stop_time[PAD_SLOTS];
+static qboolean rumble_on[PAD_SLOTS];
+
+#define pad_port pad_ports[0]
+
+void PS3_Input_RumbleSeat(int seat, unsigned short low_frequency, unsigned short high_frequency, unsigned int duration);
+
+static void PS3_PadKey(int slot, int key, qboolean down)
+{
+	if (slot == 0)
+		Key_Event(key, down);
+	else
+		Key_EventSeat(key, down, slot);
+}
+
+static void PS3_ReleaseSlot(int slot)
+{
+	unsigned i;
+	for (i = 0; i < sizeof(ps3_buttons) / sizeof(ps3_buttons[0]); i++)
+		if (pad_held[slot] & ps3_buttons[i].bit)
+			PS3_PadKey(slot, ps3_buttons[i].key, false);
+	pad_held[slot] = 0;
+	pad_stick[slot][0] = pad_stick[slot][1] = pad_stick[slot][2] = pad_stick[slot][3] = 128;
+}
 
 void PS3_Input_SetXMBOpen(qboolean open)
 {
-	unsigned i;
+	int s;
 
 	xmb_open = open;
-	// Everything is let go while the XMB has the pad.
-	if (open) {
-		for (i = 0; i < sizeof(ps3_buttons) / sizeof(ps3_buttons[0]); i++)
-			if (pad_buttons & ps3_buttons[i].bit)
-				Key_Event(ps3_buttons[i].key, false);
-		pad_buttons = 0;
-		pad_sticks[0] = pad_sticks[1] = pad_sticks[2] = pad_sticks[3] = 128;
-	}
+	// Everything is let go while the XMB has the pads.
+	if (open)
+		for (s = 0; s < PAD_SLOTS; s++)
+			PS3_ReleaseSlot(s);
 }
 
-static void PS3_SetRumble(byte small, byte large)
+static void PS3_SetRumble(int slot, byte small, byte large)
 {
 	padActParam act;
 
-	if (pad_port < 0)
+	if (pad_ports[slot] < 0)
 		return;
 	memset(&act, 0, sizeof(act));
 	act.small_motor = small ? 1 : 0;   // the DS3's small motor is on/off only
 	act.large_motor = large;
-	ioPadSetActDirect(pad_port, &act);
-	rumble_on = small || large;
+	ioPadSetActDirect(pad_ports[slot], &act);
+	rumble_on[slot] = small || large;
+}
+
+static void PS3_PollSlot(int slot, int port)
+{
+	padData data;
+	unsigned now, pressed, released, i;
+
+	if (port != pad_ports[slot]) {
+		if (pad_ports[slot] >= 0 || port >= 0)
+			PS3_Log("in_ps3: player %d on pad %d", slot + 1, port);
+		PS3_ReleaseSlot(slot);
+		pad_ports[slot] = port;
+	}
+	if (port < 0) {
+		// and the sticks centred, or the last deflection keeps moving the player
+		now = 0;
+		pad_stick[slot][0] = pad_stick[slot][1] = pad_stick[slot][2] = pad_stick[slot][3] = 128;
+	} else {
+		memset(&data, 0, sizeof(data));
+		if (ioPadGetData(port, &data) != 0 || data.len <= 0)
+			return;   // no new data: the last state stands
+		now = ((unsigned)data.button[2] << 8) | (data.button[3] & 0xff);
+		pad_stick[slot][0] = (byte)data.button[4];
+		pad_stick[slot][1] = (byte)data.button[5];
+		pad_stick[slot][2] = (byte)data.button[6];
+		pad_stick[slot][3] = (byte)data.button[7];
+	}
+
+	pressed = now & ~pad_held[slot];
+	released = pad_held[slot] & ~now;
+	pad_held[slot] = now;
+	if (pressed) {
+		IN_SetActiveDevice(IN_DEVICE_GAMEPAD);
+		Menu_SetInputDevice(IN_DEVICE_GAMEPAD);
+	}
+	for (i = 0; i < sizeof(ps3_buttons) / sizeof(ps3_buttons[0]); i++) {
+		if (pressed & ps3_buttons[i].bit)
+			PS3_PadKey(slot, ps3_buttons[i].key, true);
+		else if (released & ps3_buttons[i].bit)
+			PS3_PadKey(slot, ps3_buttons[i].key, false);
+	}
 }
 
 void PS3_Input_Poll(void)
 {
 	padInfo info;
-	padData data;
-	unsigned now, pressed, released, i;
-	int port;
+	int ports[PAD_SLOTS] = { -1, -1 }, n = 0, s;
+	unsigned i;
 
-	if (rumble_on && Sys_FloatTime() >= rumble_stop_time)
-		PS3_SetRumble(0, 0);
+	for (s = 0; s < PAD_SLOTS; s++)
+		if (rumble_on[s] && Sys_FloatTime() >= rumble_stop_time[s])
+			PS3_SetRumble(s, 0, 0);
 
 	if (xmb_open)
 		return;
@@ -122,46 +184,15 @@ void PS3_Input_Poll(void)
 	if (ioPadGetInfo(&info) != 0)
 		return;
 
-	// The first connected pad drives the game.
-	port = -1;
-	for (i = 0; i < MAX_PADS; i++) {
-		if (info.status[i]) {
-			port = (int)i;
-			break;
-		}
-	}
-	if (port != pad_port) {
-		pad_port = port;
-		PS3_Log("in_ps3: reading pad %d", port);
-	}
-	if (port < 0) {
-		now = 0;
-		// and the sticks centred, or the last deflection keeps moving the player
-		pad_sticks[0] = pad_sticks[1] = pad_sticks[2] = pad_sticks[3] = 128;
-	} else {
-		memset(&data, 0, sizeof(data));
-		if (ioPadGetData(port, &data) != 0 || data.len <= 0)
-			return;   // no new data: the last state stands
-		now = ((unsigned)data.button[2] << 8) | (data.button[3] & 0xff);
-		pad_sticks[0] = (byte)data.button[4];
-		pad_sticks[1] = (byte)data.button[5];
-		pad_sticks[2] = (byte)data.button[6];
-		pad_sticks[3] = (byte)data.button[7];
-	}
+	// The first connected pad is player 1's; the next, split screen's player 2.
+	for (i = 0; i < MAX_PADS && n < PAD_SLOTS; i++)
+		if (info.status[i])
+			ports[n++] = (int)i;
+	if (cl_numseats < 2)
+		ports[1] = -1;
 
-	pressed = now & ~pad_buttons;
-	released = pad_buttons & ~now;
-	pad_buttons = now;
-	if (pressed) {
-		IN_SetActiveDevice(IN_DEVICE_GAMEPAD);
-		Menu_SetInputDevice(IN_DEVICE_GAMEPAD);
-	}
-	for (i = 0; i < sizeof(ps3_buttons) / sizeof(ps3_buttons[0]); i++) {
-		if (pressed & ps3_buttons[i].bit)
-			Key_Event(ps3_buttons[i].key, true);
-		else if (released & ps3_buttons[i].bit)
-			Key_Event(ps3_buttons[i].key, false);
-	}
+	for (s = 0; s < PAD_SLOTS; s++)
+		PS3_PollSlot(s, ports[s]);
 }
 
 qboolean IN_PlatformHasMouse(void) { return false; }
@@ -178,7 +209,8 @@ void IN_PlatformInit(void)
 
 void IN_PlatformShutdown(void)
 {
-	PS3_SetRumble(0, 0);
+	PS3_SetRumble(0, 0, 0);
+	PS3_SetRumble(1, 0, 0);
 	ioPadEnd();
 }
 
@@ -192,19 +224,31 @@ static float PS3_StickAxis(byte v)
 }
 
 // Both axes in [-1, 1], positive Y up (input.h).
+// The sticks of the seat whose move is being made (split screen: CL_SendCmd per seat).
 void IN_GetAnalogStick(in_analog_stick_id_t stick, in_analog_stick_t *value)
 {
+	int slot = (cl_curseat > 0 && cl_curseat < PAD_SLOTS) ? cl_curseat : 0;
+	byte *st = pad_stick[slot];
+
 	if (stick == IN_STICK_LEFT) {
-		value->x = PS3_StickAxis(pad_sticks[2]);
-		value->y = -PS3_StickAxis(pad_sticks[3]);
+		value->x = PS3_StickAxis(st[2]);
+		value->y = -PS3_StickAxis(st[3]);
 	} else {
-		value->x = PS3_StickAxis(pad_sticks[0]);
-		value->y = -PS3_StickAxis(pad_sticks[1]);
+		value->x = PS3_StickAxis(st[0]);
+		value->y = -PS3_StickAxis(st[1]);
 	}
 }
 
 void IN_PlatformRumble(unsigned short low_frequency, unsigned short high_frequency, unsigned int duration)
 {
-	PS3_SetRumble((byte)(high_frequency / 257), (byte)(low_frequency / 257));
-	rumble_stop_time = Sys_FloatTime() + (double)duration / 1000.0;
+	PS3_Input_RumbleSeat(0, low_frequency, high_frequency, duration);
+}
+
+// split screen: each player's pad shakes for their own hits
+void PS3_Input_RumbleSeat(int seat, unsigned short low_frequency, unsigned short high_frequency, unsigned int duration)
+{
+	if (seat < 0 || seat >= PAD_SLOTS)
+		return;
+	PS3_SetRumble(seat, (byte)(high_frequency / 257), (byte)(low_frequency / 257));
+	rumble_stop_time[seat] = Sys_FloatTime() + (double)duration / 1000.0;
 }

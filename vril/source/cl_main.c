@@ -72,7 +72,9 @@ client_static_t	cls;
 client_state_t	cl;
 // FIXME: put these on hunk?
 efrag_t			cl_efrags[MAX_EFRAGS];
-entity_t		cl_entities[MAX_EDICTS];
+// one array a seat (split screen); cl_entities points at the current seat's
+static entity_t	cl_seat_entities[MAX_SEATS][MAX_EDICTS];
+entity_t		*cl_entities = cl_seat_entities[0];
 entity_t		cl_static_entities[MAX_STATIC_ENTITIES];
 lightstyle_t	cl_lightstyle[MAX_LIGHTSTYLES];
 dlight_t		cl_dlights[MAX_DLIGHTS];
@@ -149,14 +151,17 @@ void CL_ClearState (void)
 	SZ_Clear (&cls.message);
 
 // clear other arrays
-	memset (cl_efrags, 0, sizeof(cl_efrags));
-	memset (cl_entities, 0, sizeof(cl_entities));
+	memset (cl_entities, 0, MAX_EDICTS * sizeof(entity_t));
 	memset (ray_effect_states, 0, sizeof(ray_effect_states));
 	memset (cl_dlights, 0, sizeof(cl_dlights));
-	memset (cl_lightstyle, 0, sizeof(cl_lightstyle));
 	memset (cl_temp_entities, 0, sizeof(cl_temp_entities));
 	memset (cl_beams, 0, sizeof(cl_beams));
 
+	// a split screen's second seat shares the world's static things with seat 0
+	if (CL_SeatIsQuiet ())
+		return;
+	memset (cl_efrags, 0, sizeof(cl_efrags));
+	memset (cl_lightstyle, 0, sizeof(cl_lightstyle));
     memset (cl_static_entities, 0, sizeof(cl_static_entities));
 //
 // allocate the efrags and chain together into a free list
@@ -265,11 +270,14 @@ void CL_SignonReply (void)
 			break;
 
 		case 2:
-			if (LoadingScreen_ShouldWaitForSpawn())
+			if (!CL_SeatIsQuiet () && LoadingScreen_ShouldWaitForSpawn())
 				break;
 
 			MSG_WriteByte (&cls.message, clc_stringcmd);
-			MSG_WriteString (&cls.message, va("name \"%s\"\n", cl_name.string));
+			if (CL_SeatIsQuiet ())
+				MSG_WriteString (&cls.message, va("name \"Player %d\"\n", cl_curseat + 1));
+			else
+				MSG_WriteString (&cls.message, va("name \"%s\"\n", cl_name.string));
 
 			MSG_WriteByte (&cls.message, clc_stringcmd);
 			sprintf (str, "spawn %s", cls.spawnparms);
@@ -284,6 +292,8 @@ void CL_SignonReply (void)
 
 		case 4:
 		{
+			if (CL_SeatIsQuiet ())
+				break;
 			LoadingScreen_Finish();
 			SCR_EndLoadingPlaque ();		// allow normal screen updates
 			break;
@@ -991,6 +1001,12 @@ int CL_ReadFromServer (void)
 	{
 		ret = CL_GetMessage ();
 
+		if (ret == -1 && CL_SeatIsQuiet ())
+		{
+			// split screen's player 2 lost its connection: just that seat
+			cls.state = ca_disconnected;
+			return 0;
+		}
 		if (ret == -1)
 			Host_Error ("CL_ReadFromServer: lost server connection");
 		if (!ret)
@@ -1180,4 +1196,47 @@ void CL_Init (void)
 	Cmd_AddCommand ("stop", CL_Stop_f);
 	Cmd_AddCommand ("playdemo", CL_PlayDemo_f);
 	Cmd_AddCommand ("timedemo", CL_TimeDemo_f);
+
+	// split screen: what each seat has its own copy of (cl_seats.c)
+	CL_Seats_Init ();
+	{
+		static entity_t *seat_entities_ptr;
+		extern int num_temp_entities;
+		Seat_Register (&cl, sizeof(cl));
+		Seat_Register (&cls.state, sizeof(cls.state));
+		Seat_Register (&cls.signon, sizeof(cls.signon));
+		Seat_Register (&cls.netcon, sizeof(cls.netcon));
+		Seat_Register (&cls.message, sizeof(cls.message));
+		Seat_Register (&cl_entities, sizeof(cl_entities));
+		Seat_Register (ray_effect_states, sizeof(ray_effect_states));
+		Seat_Register (cl_dlights, sizeof(cl_dlights));
+		Seat_Register (&cl_numvisedicts, sizeof(cl_numvisedicts));
+		Seat_Register (cl_visedicts, sizeof(cl_visedicts));
+		Seat_Register (cl_temp_entities, sizeof(cl_temp_entities));
+		Seat_Register (&num_temp_entities, sizeof(num_temp_entities));
+		Seat_Register (cl_beams, sizeof(cl_beams));
+		Seat_Register (&cl_numstaticbrushmodels, sizeof(cl_numstaticbrushmodels));
+		Seat_Register (cl_staticbrushmodels, sizeof(cl_staticbrushmodels));
+		(void)seat_entities_ptr;
+	}
+	{
+		extern void HUD_RegisterSeatVars (void);
+		extern void CL_InputRegisterSeatVars (void);
+		extern void V_RegisterSeatVars (void);
+		if (!vid_headless)
+			HUD_RegisterSeatVars ();
+		extern void CL_ParseRegisterSeatVars (void);
+		extern void SCR_RegisterSeatVars (void);
+		if (!vid_headless)
+			SCR_RegisterSeatVars ();
+		CL_InputRegisterSeatVars ();
+		CL_ParseRegisterSeatVars ();
+		V_RegisterSeatVars ();
+	}
+}
+
+// cl_seats.c: seat n's entity array (after Seat_Init, set into its store)
+entity_t *CL_SeatEntities (int seat)
+{
+	return cl_seat_entities[seat];
 }

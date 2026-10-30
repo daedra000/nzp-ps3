@@ -69,6 +69,7 @@ qboolean IN_PlatformGetGyro(float *x, float *y);
 
 #ifdef PLATFORM_SUPPORTS_RUMBLE
 void IN_StartRumble(int low_frequency, int high_frequency, int duration);
+void IN_StartRumbleSeat(int seat, int low_frequency, int high_frequency, int duration);
 void IN_PlatformRumble(unsigned short low_frequency,
 	unsigned short high_frequency, unsigned int duration);
 #endif

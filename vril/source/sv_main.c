@@ -1237,6 +1237,11 @@ void SV_SpawnServer (char *server)
 	Con_DPrintf ("SpawnServer: %s\n",server);
 	svs.changelevel_issued = false;		// now safe to issue another
 
+	// split screen: two players, and player 2 joins once player 1 is in
+	CL_Seats_Drop ();
+	if (cls.state != ca_dedicated)
+		svs.maxclients = cl_splitscreen.value ? 2 : 1;
+
 //
 // tell all connected clients that we are going to a new level
 //

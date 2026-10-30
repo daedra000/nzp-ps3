@@ -22,8 +22,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "nzportable_def.h"
 #include "net_loop.h"
 
+// split screen: pair 0 is "local", pair 1 "local2" (player 2's own client)
+#define LOOP_PAIRS 2
 qboolean	localconnectpending = false;
-qsocket_t	*loop_client = NULL;
+static qboolean	loop_pending[LOOP_PAIRS];
+static qsocket_t	*loop_clients[LOOP_PAIRS];
+static qsocket_t	*loop_servers[LOOP_PAIRS];
+qsocket_t	*loop_client = NULL;	// pair 0's, as before
 qsocket_t	*loop_server = NULL;
 
 int Loop_Init (void)
@@ -64,57 +69,74 @@ void Loop_SearchForHosts (qboolean xmit)
 
 qsocket_t *Loop_Connect (char *host)
 {
-	if (strcmp(host,"local") != 0)
+	int p;
+
+	if (strcmp(host,"local") == 0)
+		p = 0;
+	else if (strcmp(host,"local2") == 0)
+		p = 1;
+	else
 		return NULL;
-	
-	localconnectpending = true;
 
-	if (!loop_client)
+	loop_pending[p] = true;
+	if (p == 0)
+		localconnectpending = true;
+
+	if (!loop_clients[p])
 	{
-		if ((loop_client = NET_NewQSocket ()) == NULL)
+		if ((loop_clients[p] = NET_NewQSocket ()) == NULL)
 		{
 			Con_Printf("Loop_Connect: no qsocket available\n");
 			return NULL;
 		}
-		Q_strcpy (loop_client->address, "localhost");
+		Q_strcpy (loop_clients[p]->address, p ? "localhost2" : "localhost");
 	}
-	loop_client->receiveMessageLength = 0;
-	loop_client->sendMessageLength = 0;
-	loop_client->canSend = true;
+	loop_clients[p]->receiveMessageLength = 0;
+	loop_clients[p]->sendMessageLength = 0;
+	loop_clients[p]->canSend = true;
 
-	if (!loop_server)
+	if (!loop_servers[p])
 	{
-		if ((loop_server = NET_NewQSocket ()) == NULL)
+		if ((loop_servers[p] = NET_NewQSocket ()) == NULL)
 		{
 			Con_Printf("Loop_Connect: no qsocket available\n");
 			return NULL;
 		}
-		Q_strcpy (loop_server->address, "LOCAL");
+		Q_strcpy (loop_servers[p]->address, p ? "LOCAL2" : "LOCAL");
 	}
-	loop_server->receiveMessageLength = 0;
-	loop_server->sendMessageLength = 0;
-	loop_server->canSend = true;
+	loop_servers[p]->receiveMessageLength = 0;
+	loop_servers[p]->sendMessageLength = 0;
+	loop_servers[p]->canSend = true;
 
-	loop_client->driverdata = (void *)loop_server;
-	loop_server->driverdata = (void *)loop_client;
-	
-	return loop_client;	
+	loop_clients[p]->driverdata = (void *)loop_servers[p];
+	loop_servers[p]->driverdata = (void *)loop_clients[p];
+
+	loop_client = loop_clients[0];
+	loop_server = loop_servers[0];
+	return loop_clients[p];
 }
 
 
 qsocket_t *Loop_CheckNewConnections (void)
 {
-	if (!localconnectpending)
-		return NULL;
+	int p;
 
-	localconnectpending = false;
-	loop_server->sendMessageLength = 0;
-	loop_server->receiveMessageLength = 0;
-	loop_server->canSend = true;
-	loop_client->sendMessageLength = 0;
-	loop_client->receiveMessageLength = 0;
-	loop_client->canSend = true;
-	return loop_server;
+	for (p = 0; p < LOOP_PAIRS; p++)
+	{
+		if (!loop_pending[p])
+			continue;
+		loop_pending[p] = false;
+		if (p == 0)
+			localconnectpending = false;
+		loop_servers[p]->sendMessageLength = 0;
+		loop_servers[p]->receiveMessageLength = 0;
+		loop_servers[p]->canSend = true;
+		loop_clients[p]->sendMessageLength = 0;
+		loop_clients[p]->receiveMessageLength = 0;
+		loop_clients[p]->canSend = true;
+		return loop_servers[p];
+	}
+	return NULL;
 }
 
 
@@ -238,8 +260,13 @@ void Loop_Close (qsocket_t *sock)
 	sock->receiveMessageLength = 0;
 	sock->sendMessageLength = 0;
 	sock->canSend = true;
-	if (sock == loop_client)
-		loop_client = NULL;
-	else
-		loop_server = NULL;
+	for (int p = 0; p < LOOP_PAIRS; p++)
+	{
+		if (sock == loop_clients[p])
+			loop_clients[p] = NULL;
+		else if (sock == loop_servers[p])
+			loop_servers[p] = NULL;
+	}
+	loop_client = loop_clients[0];
+	loop_server = loop_servers[0];
 }

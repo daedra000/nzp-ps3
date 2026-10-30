@@ -201,6 +201,8 @@ void Key_WriteHoldBindings (FILE *f);
 void Key_SetBinding (int keynum, char *binding);
 void Key_SetHoldBinding (int keynum, char *binding);
 void Key_UpdateHoldBindings (void);
+void Key_EventSeat (int key, qboolean down, int seat);	// split screen: a second player's pad
+void Key_ReleaseSeat (int seat);
 void Key_ClearStates (void);
 void Key_SendText(char *text);
 int Key_StringToKeynum (char *str);

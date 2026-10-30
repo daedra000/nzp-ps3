@@ -246,6 +246,10 @@ SCR_CalcRefdef(void)
         r_refdef.vrect.y = (h - r_refdef.vrect.height) / 2;
 
     r_refdef.fov_x = scr_render_fov;
+    // split screen: each view is twice as wide as it's tall again; open the
+    // view out a little so it doesn't feel zoomed in
+    if (cl_numseats > 1)
+        r_refdef.fov_x = scr_render_fov + 15.0f > 170.0f ? 170.0f : scr_render_fov + 15.0f;
     r_refdef.fov_y = CalcFov(r_refdef.fov_x, r_refdef.vrect.width, r_refdef.vrect.height);
 
     scr_vrect = r_refdef.vrect;
@@ -800,30 +804,36 @@ GetWeaponZoomAmount(void)
     }
 } /* GetWeaponZoomAmount */
 
-void
-SCR_UpdateScreen(void)
+qboolean r_split_noclear;	// split screen: the screen was cleared, R_RenderView doesn't
+
+/*
+ * SCR_SeatRect: split screen. Seat 0 the top half, seat 1 the bottom; the 3D
+ * view and the HUD are drawn as if that half were the screen. -1 = all of it.
+ */
+static void
+SCR_SeatRect(int seat, int full_w, int full_h, int full_glw, int full_glh)
 {
-    if (block_drawing)
-        return;
-
-    vid.numpages = 2 + gl_triplebuffer.value;
-
-    scr_copytop        = 0;
-    scr_copyeverything = 0;
-
-    if (scr_disabled_for_loading && !LoadingScreen_IsActive()) {
-        if ((float) realtime - scr_disabled_time > 60) {
-            scr_disabled_for_loading = false;
-            Con_Printf("load failed.\n");
-        } else
-            return;
+    if (seat < 0) {
+        vid.width  = full_w;
+        vid.height = full_h;
+        glx = gly  = 0;
+        glwidth    = full_glw;
+        glheight   = full_glh;
+    } else {
+        vid.width  = full_w;
+        vid.height = full_h / 2;
+        glx        = 0;
+        glwidth    = full_glw;
+        glheight   = full_glh / 2;
+        gly        = seat == 0 ? full_glh - glheight : 0;	// GL's y is up
     }
+    vid.recalc_refdef = true;
+}
 
-    if (!scr_initialized || !con_initialized)
-        return;  // not initialized yet
-
-
-    GL_BeginRendering(&glx, &gly, &glwidth, &glheight);
+// one seat's 3D view (the whole screen's when there's one)
+static void
+SCR_RenderSeatView(void)
+{
     //
     // determine size of refresh window
     //
@@ -851,19 +861,109 @@ SCR_UpdateScreen(void)
         SCR_CalcRefdef();
 
     //
-    // do 3D refresh drawing, and then update the screen
+    // do 3D refresh drawing
     //
-    if (!LoadingScreen_IsWaiting()) {
-        SCR_SetUpToDrawConsole();
+    if (!LoadingScreen_IsWaiting())
         V_RenderView();
+}
+
+// split screen: each seat zooms (aims down sights) on its own
+void
+SCR_RegisterSeatVars(void)
+{
+    Seat_Register(&scr_zoom, sizeof(scr_zoom));
+}
+
+void
+SCR_UpdateScreen(void)
+{
+    int full_w, full_h, full_glw, full_glh, seat;
+    int entry_seat = cl_curseat;	// a redraw from inside a seat's parsing puts it back
+    qboolean split;
+
+    if (block_drawing)
+        return;
+
+    vid.numpages = 2 + gl_triplebuffer.value;
+
+    scr_copytop        = 0;
+    scr_copyeverything = 0;
+
+    if (scr_disabled_for_loading && !LoadingScreen_IsActive()) {
+        if ((float) realtime - scr_disabled_time > 60) {
+            scr_disabled_for_loading = false;
+            Con_Printf("load failed.\n");
+        } else
+            return;
+    }
+
+    if (!scr_initialized || !con_initialized)
+        return;  // not initialized yet
+
+
+    GL_BeginRendering(&glx, &gly, &glwidth, &glheight);
+
+    full_w   = vid.width;
+    full_h   = vid.height;
+    full_glw = glwidth;
+    full_glh = glheight;
+    split    = cl_numseats > 1;
+
+    if (split) {
+        // both halves cleared here; each view then skips its own clear
+        glClearColor(0, 0, 0, 1);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    }
+    r_split_noclear = split;
+
+    if (!LoadingScreen_IsWaiting())
+        SCR_SetUpToDrawConsole();
+
+    // the 3D views: seat 0 last, so r_origin (the sound listener) is its own
+    for (seat = cl_numseats - 1; seat >= 0; seat--) {
+        CL_SetSeat(seat);
+        if (split) {
+            SCR_SeatRect(seat, full_w, full_h, full_glw, full_glh);
+            if (cls.signon != SIGNONS)
+                continue;
+        }
+        SCR_RenderSeatView();
+    }
+    if (split) {
+        SCR_SeatRect(-1, full_w, full_h, full_glw, full_glh);
+#ifdef __PS3__
+        {
+            // gamma once, over both views (R_RenderView leaves it in split screen)
+            extern void PS3_Video_GammaView(void);
+            PS3_Video_GammaView();
+        }
+#endif
+    }
+    r_split_noclear = false;
+
+    // each seat's HUD in its half
+    if (split && !LoadingScreen_IsWaiting()) {
+        for (seat = cl_numseats - 1; seat >= 0; seat--) {
+            CL_SetSeat(seat);
+            if (cls.signon != SIGNONS)
+                continue;
+            SCR_SeatRect(seat, full_w, full_h, full_glw, full_glh);
+            Draw_Set2D();
+            HUD_Draw();
+        }
+        SCR_SeatRect(-1, full_w, full_h, full_glw, full_glh);
     }
 
     Draw_Set2D();
 
+    if (split)
+        Draw_FillByColor(0, full_h / 2 - 1, full_w, 2, 0, 0, 0, 255);	// between the views
+
     if (!LoadingScreen_IsWaiting()) {
         // muff - to show FPS on screen
         SCR_DrawFPS();
-        HUD_Draw();
+        if (!split)
+            HUD_Draw();
         SCR_DrawConsole();
         Menu_Draw();
     }
@@ -879,4 +979,5 @@ SCR_UpdateScreen(void)
     V_UpdatePalette();
 
     GL_EndRendering();
+    CL_SetSeat(entry_seat);
 } /* SCR_UpdateScreen */

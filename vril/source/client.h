@@ -158,6 +158,20 @@ typedef struct
 
 extern client_static_t	cls;
 
+// split screen (cl_seats.c): two players, each a client of the local server
+#define MAX_SEATS	2
+extern int		cl_numseats;		// seats in the current game
+extern int		cl_curseat;			// the seat whose state the client globals hold
+extern cvar_t	cl_splitscreen;
+void		Seat_Register (void *ptr, int size);
+void		Seat_Init (void);
+void		CL_SetSeat (int n);
+void		CL_Seats_Init (void);
+void		CL_Seats_Frame (void);
+void		CL_Seats_Drop (void);
+qboolean	CL_SeatIsQuiet (void);
+entity_t	*CL_SeatEntities (int seat);
+
 //
 // the client_state_t structure is wiped completely at every
 // server signon
@@ -307,7 +321,7 @@ extern	client_state_t	cl;
 
 // FIXME, allocate dynamically
 extern	efrag_t			cl_efrags[MAX_EFRAGS];
-extern	entity_t		cl_entities[MAX_EDICTS];
+extern	entity_t		*cl_entities;		// [MAX_EDICTS]: the current seat's
 extern	entity_t		cl_static_entities[MAX_STATIC_ENTITIES];
 extern	lightstyle_t	cl_lightstyle[MAX_LIGHTSTYLES];
 extern	dlight_t		cl_dlights[MAX_DLIGHTS];

@@ -549,6 +549,11 @@ void SND_Spatialize(channel_t *ch)
 // Start a sound effect
 // =======================================================================
 
+// split screen: while a second seat parses the server's messages, the sounds
+// it would start are seat 0's already (every client gets the same ones)
+static qboolean snd_muted;
+void S_SetMute(qboolean mute) { snd_muted = mute; }
+
 void S_StartSound(int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol, float attenuation)
 {
 	S_StartSoundEx(entnum, entchannel, sfx, origin, fvol, attenuation, DEFAULT_SOUND_PACKET_SPEED, 0);
@@ -561,6 +566,8 @@ void S_StartSoundEx(int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float
 #endif
 
 	channel_t *target_chan, *check;
+	if (snd_muted)
+		return;
 	channel_t new_chan;
 	sfxcache_t	*sc;
 	int		vol;

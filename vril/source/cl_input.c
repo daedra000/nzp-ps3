@@ -795,3 +795,21 @@ void CL_InitInput (void)
 #endif
 
 }
+
+// split screen: each seat has its own buttons held (cl_seats.c)
+#define SEAT_VAR(v) Seat_Register(&(v), sizeof(v))
+void CL_InputRegisterSeatVars (void)
+{
+	SEAT_VAR(in_klook);
+	SEAT_VAR(in_left); SEAT_VAR(in_right); SEAT_VAR(in_forward); SEAT_VAR(in_back);
+	SEAT_VAR(in_lookup); SEAT_VAR(in_lookdown); SEAT_VAR(in_moveleft); SEAT_VAR(in_moveright);
+	SEAT_VAR(in_strafe); SEAT_VAR(in_speed); SEAT_VAR(in_use); SEAT_VAR(in_jump);
+	SEAT_VAR(in_attack); SEAT_VAR(in_grenade); SEAT_VAR(in_reload); SEAT_VAR(in_switch);
+	SEAT_VAR(in_knife); SEAT_VAR(in_aim); SEAT_VAR(in_up); SEAT_VAR(in_down);
+	SEAT_VAR(in_impulse);
+	SEAT_VAR(croshhairmoving);
+	SEAT_VAR(in_game);
+	SEAT_VAR(crosshair_opacity);
+	SEAT_VAR(zoom_snap);
+	SEAT_VAR(deltaPitch); SEAT_VAR(deltaYaw);
+}

@@ -42,6 +42,7 @@ typedef enum trail_type_s
 } trail_type_t;
 
 void R_ParseParticleEffect (void);
+void R_SetParticlesMute (qboolean mute);	// split screen: no particles made while set
 void R_RunParticleEffect (vec3_t org, vec3_t dir, int color, int count);
 void R_RocketTrail (vec3_t start, vec3_t end, trail_type_t type);
 void R_EntityParticles (entity_t *ent);

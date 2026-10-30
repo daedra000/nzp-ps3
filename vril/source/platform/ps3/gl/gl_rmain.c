@@ -1558,7 +1558,8 @@ void R_SetupGL (void)
 		extern void PS3_Video_ViewSize(int *w, int *h);
 		int vw, vh;
 		PS3_Video_ViewSize(&vw, &vh);
-		if (vw < glwidth || vh < glheight)
+		// (not in split screen: both views at full resolution)
+		if (cl_numseats < 2 && (vw < glwidth || vh < glheight))
 		{
 			x = x * vw / glwidth;
 			y2 = y2 * vh / glheight;
@@ -1808,7 +1809,12 @@ void R_RenderView (void)
 	if (gl_finish.value)
 		glFinish ();
 
-	R_Clear ();
+	{
+		// split screen: SCR_UpdateScreen cleared both halves before the views
+		extern qboolean r_split_noclear;
+		if (!r_split_noclear)
+			R_Clear ();
+	}
 
 	// render normal view
 
@@ -1840,8 +1846,10 @@ void R_RenderView (void)
 #ifdef __PS3__
 	{
 		// gamma on the 3D view only: the HUD drawn after keeps its colours
+		// (split screen: once, after both views, in SCR_UpdateScreen)
 		extern void PS3_Video_GammaView(void);
-		PS3_Video_GammaView();
+		if (cl_numseats < 2)
+			PS3_Video_GammaView();
 	}
 #endif
 

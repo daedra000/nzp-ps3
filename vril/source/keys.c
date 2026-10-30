@@ -756,10 +756,112 @@ static void Key_RunBinding (char *binding, int key)
 Key_UpdateHoldBindings
 ============
 */
+/*
+===================
+Split screen: a second player's pad. Its buttons run the same bindings as
+player 1's, as that seat ("seat <n> <command>", cl_seats.c), with their own
+held/hold-to-use state. START opens the pause menu like player 1's.
+===================
+*/
+static qboolean seat_keydown[MAX_SEATS][MAX_KEYS];
+static double seat_holdstart[MAX_SEATS][MAX_KEYS];
+static qboolean seat_holdfired[MAX_SEATS][MAX_KEYS];
+static qboolean seat_defernormal[MAX_SEATS][MAX_KEYS];
+
+static void Key_RunSeatBinding (int seat, char *binding, int key, qboolean down)
+{
+	char cmd[1100];
+
+	if (!binding || !*binding)
+		return;
+	if (binding[0] == '+') {
+		snprintf (cmd, sizeof(cmd), "seat %d %c%s %i\n", seat, down ? '+' : '-', binding + 1, key);
+		Cbuf_AddText (cmd);
+	} else if (down) {
+		snprintf (cmd, sizeof(cmd), "seat %d %s\n", seat, binding);
+		Cbuf_AddText (cmd);
+	}
+}
+
+void Key_EventSeat (int key, qboolean down, int seat)
+{
+	if (seat <= 0 || seat >= MAX_SEATS || key_dest != key_game) {
+		Key_Event (key, down);		// player 1, or a menu either pad can work
+		return;
+	}
+	if (key < 0 || key >= MAX_KEYS || seat_keydown[seat][key] == down)
+		return;
+	seat_keydown[seat][key] = down;
+
+	if (key == K_ESCAPE || key == K_START) {
+		if (down)
+			Menu_ToggleMenu_f ();
+		return;
+	}
+
+	if (down) {
+		if (holdbindings[key] && *holdbindings[key]) {
+			// tap/hold pair: the tap runs on release unless the hold fired
+			seat_holdstart[seat][key] = Sys_FloatTime ();
+			seat_holdfired[seat][key] = false;
+			seat_defernormal[seat][key] = keybindings[key] && *keybindings[key];
+			if (seat_defernormal[seat][key])
+				return;
+		}
+		Key_RunSeatBinding (seat, keybindings[key], key, true);
+		return;
+	}
+
+	if (seat_holdstart[seat][key]) {
+		if (!seat_holdfired[seat][key] && Sys_FloatTime () - seat_holdstart[seat][key] >= HOLD_BIND_TIME) {
+			Key_RunSeatBinding (seat, holdbindings[key], key, true);
+			seat_holdfired[seat][key] = true;
+		}
+		if (seat_holdfired[seat][key])
+			Key_RunSeatBinding (seat, holdbindings[key], key, false);
+		if (seat_defernormal[seat][key] && !seat_holdfired[seat][key]) {
+			Key_RunSeatBinding (seat, keybindings[key], key, true);
+			Key_RunSeatBinding (seat, keybindings[key], key, false);
+		}
+		seat_holdstart[seat][key] = 0;
+		seat_holdfired[seat][key] = false;
+		if (seat_defernormal[seat][key]) {
+			seat_defernormal[seat][key] = false;
+			return;
+		}
+	}
+	Key_RunSeatBinding (seat, keybindings[key], key, false);
+}
+
+// a seat's pad let go of everything (it left, or the XMB took the pads)
+void Key_ReleaseSeat (int seat)
+{
+	int key;
+	if (seat <= 0 || seat >= MAX_SEATS)
+		return;
+	for (key = 0; key < MAX_KEYS; key++)
+		if (seat_keydown[seat][key])
+			Key_EventSeat (key, false, seat);
+}
+
+static void Key_UpdateSeatHoldBindings (double now)
+{
+	int seat, key;
+	for (seat = 1; seat < MAX_SEATS; seat++)
+		for (key = 0; key < MAX_KEYS; key++)
+			if (seat_keydown[seat][key] && seat_holdstart[seat][key] && !seat_holdfired[seat][key] &&
+				now - seat_holdstart[seat][key] >= HOLD_BIND_TIME) {
+				Key_RunSeatBinding (seat, holdbindings[key], key, true);
+				seat_holdfired[seat][key] = true;
+			}
+}
+
 void Key_UpdateHoldBindings (void)
 {
 	int key;
 	double now = Sys_FloatTime();
+
+	Key_UpdateSeatHoldBindings (now);
 
 	for (key = 0; key < MAX_KEYS; key++) {
 		if (keydown[key] && holdstart[key] && !holdfired[key] &&

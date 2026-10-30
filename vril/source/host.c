@@ -442,6 +442,7 @@ void Host_ShutdownServer(qboolean crash)
 	if (!sv.active)
 		return;
 
+	CL_Seats_Drop ();	// split screen's player 2 leaves before the server goes
 	sv.active = false;
 
 // stop all client sounds immediately
@@ -604,7 +605,7 @@ void Host_ServerFrame (void)
 
 // move things around and think
 // always pause in single player if in console or menus
-	if (!sv.paused && !LoadingScreen_IsWaiting() && (svs.maxclients > 1 || key_dest == key_game || Test_Pathfind_Active()) )
+	if (!sv.paused && !LoadingScreen_IsWaiting() && ((svs.maxclients > 1 && !cl_splitscreen.value) || key_dest == key_game || Test_Pathfind_Active()) )
 		SV_Physics ();
 
 // send all messages to the clients
@@ -666,9 +667,19 @@ void _Host_Frame (float time)
 #endif
 	NET_Poll();
 
+	// split screen: player 2 joins (or leaves) the local server
+	CL_Seats_Frame ();
+
 // if running the server locally, make intentions now
 	if (sv.active)
-		CL_SendCmd ();
+	{
+		int s;
+		for (s = cl_numseats - 1; s >= 0; s--)
+		{
+			CL_SetSeat (s);
+			CL_SendCmd ();
+		}
+	}
 
 //-------------------
 //
@@ -703,10 +714,15 @@ void _Host_Frame (float time)
 #ifdef __PS3__
 	PS3_Stage("frame: client");
 #endif
-// fetch results from server
-	if (cls.state == ca_connected)
+// fetch results from server (split screen: each seat its own)
 	{
-		CL_ReadFromServer ();
+		int s;
+		for (s = cl_numseats - 1; s >= 0; s--)
+		{
+			CL_SetSeat (s);
+			if (cls.state == ca_connected)
+				CL_ReadFromServer ();
+		}
 	}
 #ifdef __PS3__
 	PS3_Stage("frame: screen");
@@ -723,8 +739,13 @@ void _Host_Frame (float time)
 // update audio
 	if (cls.signon == SIGNONS)
 	{
-		S_Update (r_origin, vpn, vright, vup);
-		CL_DecayLights ();
+		int s;
+		S_Update (r_origin, vpn, vright, vup);		// seat 0's view, drawn last
+		for (s = cl_numseats - 1; s >= 0; s--)
+		{
+			CL_SetSeat (s);
+			CL_DecayLights ();
+		}
 	}
 	else
 		S_Update (vec3_origin, vec3_origin, vec3_origin, vec3_origin);
@@ -944,6 +965,7 @@ void Host_Init (quakeparms_t *parms)
 		}
 		CL_Init ();
 		IN_Init ();
+		Seat_Init ();	// after every Seat_Register
 	}
 	if (cls.state != ca_dedicated && !vid_headless)
 		Preload();

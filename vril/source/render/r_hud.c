@@ -2759,3 +2759,55 @@ HUD_Draw(void)
     if (screenflash_duration > sv.time)
         HUD_Screenflash();
 } /* HUD_Draw */
+
+/*
+ * ===============
+ * HUD_RegisterSeatVars: split screen. What one player's HUD keeps between
+ * frames (points flying off, use prompts, hitmarkers, flashes...) is per
+ * seat (cl_seats.c); the pictures and the round counter are shared.
+ * ===============
+ */
+#define SEAT_VAR(v) Seat_Register(&(v), sizeof(v))
+void
+HUD_RegisterSeatVars(void)
+{
+    SEAT_VAR(HUD_Change_time);
+    SEAT_VAR(bettyprompt_time);
+    SEAT_VAR(nameprint_time);
+    SEAT_VAR(hud_maxammo_starttime);
+    SEAT_VAR(hud_maxammo_endtime);
+    SEAT_VAR(crosshair_spread_time);
+    SEAT_VAR(cur_spread);
+    SEAT_VAR(crosshair_offset_step);
+    SEAT_VAR(player_name);
+    SEAT_VAR(screenflash_color);
+    SEAT_VAR(screenflash_duration);
+    SEAT_VAR(screenflash_type);
+    SEAT_VAR(screenflash_worktime);
+    SEAT_VAR(screenflash_starttime);
+    SEAT_VAR(old_points);
+    SEAT_VAR(current_points);
+    SEAT_VAR(point_change_interval);
+    SEAT_VAR(point_change_interval_neg);
+    SEAT_VAR(alphabling);
+    SEAT_VAR(point_change);
+    SEAT_VAR(hud_last_points);
+    SEAT_VAR(hud_last_points_valid);
+    SEAT_VAR(next_point_change);
+    SEAT_VAR(hud_hitmarker_time);
+    SEAT_VAR(hud_hitmarker_ignore_time);
+    SEAT_VAR(hud_hitmarker_type);
+    SEAT_VAR(hud_centerstring);
+    SEAT_VAR(hud_center_start);
+    SEAT_VAR(hud_center_lines);
+    SEAT_VAR(hud_usestring);
+    SEAT_VAR(hud_usecost);
+    SEAT_VAR(hud_use_until);
+    SEAT_VAR(hud_use_button_x);
+    SEAT_VAR(hud_use_has_button);
+    SEAT_VAR(hud_use_key);
+    SEAT_VAR(hud_use_type);
+    SEAT_VAR(hud_toast_text);
+    SEAT_VAR(crosshair_pulse_grenade);
+    SEAT_VAR(doubletap_has_damage_buff);
+}

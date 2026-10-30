@@ -378,8 +378,9 @@ qsocket_t *NET_Connect (char *host)
 
 	if (host)
 	{
-		if (Q_strcasecmp (host, "local") == 0)
+		if (Q_strcasecmp (host, "local") == 0 || Q_strcasecmp (host, "local2") == 0)
 		{
+			// "local2": split screen's player 2 (net_loop.c)
 			numdrivers = 1;
 			goto JustDoIt;
 		}

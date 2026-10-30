@@ -1766,3 +1766,18 @@ void V_Init (void)
 	BuildGammaTable (1.0);	// no gamma yet
 	Cvar_RegisterVariable (&v_gamma);
 }
+
+// split screen: each seat's view sway, bob and kicks (cl_seats.c)
+#define SEAT_VAR(v) Seat_Register(&(v), sizeof(v))
+void V_RegisterSeatVars (void)
+{
+	SEAT_VAR(v_dmg_time); SEAT_VAR(v_dmg_roll); SEAT_VAR(v_dmg_pitch);
+	SEAT_VAR(lastSound); SEAT_VAR(canStep);
+	SEAT_VAR(v_blend);
+	SEAT_VAR(OldYawTheta); SEAT_VAR(OldPitchTheta);
+	SEAT_VAR(cADSOfs); SEAT_VAR(lock_viewmodel);
+	SEAT_VAR(lastUpVelocity); SEAT_VAR(VerticalOffset); SEAT_VAR(cVerticalOffset);
+	SEAT_VAR(viewWasFalling);
+	SEAT_VAR(CWeaponOffset); SEAT_VAR(CWeaponRot);
+	SEAT_VAR(lastPunchAngle);
+}
