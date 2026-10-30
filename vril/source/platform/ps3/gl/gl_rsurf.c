@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // r_surf.c: surface-related refresh code
 
 #include "../../../nzportable_def.h"
+extern int host_framecount;	// split screen draws two views a host frame
 
 #ifndef GL_RGBA4
 #define	GL_RGBA4	0
@@ -455,7 +456,7 @@ R_UpdateSurfaceLightmap(msurface_t *surface)
         // ~3.5 ms a frame in a fight. A surface already lit by them is redone
         // every other frame (30 a second); a light that just arrived, or just
         // left, still shows at once.
-        if (surface->dlightframe == r_framecount && surface->cached_dlight && (r_framecount & 1))
+        if (surface->dlightframe == r_framecount && surface->cached_dlight && (host_framecount & 1))
             return;
 #endif
     }

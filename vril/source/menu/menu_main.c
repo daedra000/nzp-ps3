@@ -25,7 +25,19 @@ qboolean in_submenu;
 
 void Menu_Solo(void) { menu_is_solo = true; Cvar_SetValue("cl_splitscreen", 0); Menu_StockMaps_Set(); }
 // split screen: two pads, one map; player 2 joins once the map is in (cl_seats.c)
-void Menu_SplitScreen(void) { menu_is_solo = true; Cvar_SetValue("cl_splitscreen", 1); Menu_StockMaps_Set(); }
+#ifdef __PS3__
+extern int PS3_Input_PadCount(void);
+#else
+static int PS3_Input_PadCount(void) { return 2; }
+#endif
+void Menu_SplitScreen(void)
+{
+	if (PS3_Input_PadCount() < 2)
+		return;		// the button says to connect one
+	menu_is_solo = true;
+	Cvar_SetValue("cl_splitscreen", 1);
+	Menu_StockMaps_Set();
+}
 void Menu_Quit(void) { key_dest = key_console; Host_Quit_f(); }
 void Menu_EnterSubMenu(void) { Menu_ResetMenuButtons(); in_submenu = true; }
 void Menu_ExitSubMenu(void) { in_submenu = false; Menu_ResetMenuButtons(); }
@@ -73,7 +85,8 @@ void Menu_Main_Draw (void)
 		Menu_DrawButton(1, 0, "SOLO", "Play Solo.", Menu_Solo);
 #ifdef __PS3__
 		// no online co-op on PS3: split screen, and custom maps from the internet
-		Menu_DrawButton(2, 1, "SPLIT SCREEN", "Two Players, Two Controllers.", Menu_SplitScreen);
+		Menu_DrawButton(2, 1, "SPLIT SCREEN", PS3_Input_PadCount() < 2 ?
+			"Connect a second controller to play Split Screen." : "Two Players, Two Controllers.", Menu_SplitScreen);
 		Menu_DrawButton(3, 2, "DOWNLOAD MAPS", "Download Custom Maps", Menu_MapDownload_Set);
 #define MAIN_IDX(n) ((n) + 2)
 #define MAIN_ROW(n) ((n) + 1)

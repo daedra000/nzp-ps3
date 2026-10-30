@@ -195,6 +195,19 @@ void PS3_Input_Poll(void)
 		PS3_PollSlot(s, ports[s]);
 }
 
+// controllers connected now (the menu won't start split screen with one)
+int PS3_Input_PadCount(void)
+{
+	padInfo info;
+	int i, n = 0;
+	if (ioPadGetInfo(&info) != 0)
+		return 0;
+	for (i = 0; i < MAX_PADS; i++)
+		if (info.status[i])
+			n++;
+	return n;
+}
+
 qboolean IN_PlatformHasMouse(void) { return false; }
 qboolean IN_PlatformHasGamepad(void) { return true; }
 void IN_SetMouseToRelative(bool relative) { (void)relative; }
