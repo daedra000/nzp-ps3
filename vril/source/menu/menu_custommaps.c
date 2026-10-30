@@ -301,6 +301,24 @@ void Menu_CustomMaps_AddMap (char *map_name)
 	num_user_maps++;
 }
 
+// the map manager deleted it: out of the list (its strings freed)
+void Menu_CustomMaps_RemoveMap (int index)
+{
+	if (index < 0 || index >= num_user_maps)
+		return;
+	free(custom_maps[index].map_name);
+	free(custom_maps[index].map_name_pretty);
+	free(custom_maps[index].map_author);
+	free(custom_maps[index].map_thumbnail_path);
+	for (int i = 0; i < MAP_DESC_LINES; i++)
+		free(custom_maps[index].map_desc[i]);
+	memmove(&custom_maps[index], &custom_maps[index + 1], (num_user_maps - index - 1) * sizeof(usermap_t));
+	memmove(&menu_usermap_image[index], &menu_usermap_image[index + 1], (num_user_maps - index - 1) * sizeof(image_t));
+	num_user_maps--;
+	memset(&custom_maps[num_user_maps], 0, sizeof(usermap_t));
+	menu_usermap_image[num_user_maps] = -1;
+}
+
 void Menu_CustomMaps_MapFinder (void)
 {
 	char 	d_name[MAX_QPATH];

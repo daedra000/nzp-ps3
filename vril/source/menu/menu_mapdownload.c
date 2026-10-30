@@ -9,8 +9,11 @@ platform/ps3/ps3_mapdl.c; this draws them and adds new maps to CUSTOM MAPS.
 #include "../platform/ps3/ps3_mapdl.h"
 
 void Menu_CustomMaps_AddMap (char *map_name);	// menu_custommaps.c
+void Menu_CustomMaps_RemoveMap (int index);
+void Menu_DrawPicStretch (int x, int y, int index, int width, int height);	// menu_helper.c
+void Menu_DrawMapBorder (int x_pos, int y_pos, int image_width, int image_height);
 
-#define DL_PER_PAGE		8
+#define DL_PER_PAGE		6		// rows 1-6; 7/8 pages; bottom: manage, refresh, back
 #define DL_NAME_CHARS	17		// what fits left of the panel
 
 static int	dl_page;
@@ -191,6 +194,141 @@ static void Menu_MapDownload_Info (int i)
 		Menu_MapDownload_Line(line++, "Press to download", 255, 255, 255);
 }
 
+/*
+===============
+MANAGE MAPS: the installed custom maps, press one to delete it
+===============
+*/
+static int	mm_page;
+static int	mm_list[MAX_CUSTOMMAPS];
+static int	mm_count;
+static int	mm_confirm = -1;	// custom_maps index waiting for YES/NO
+static char	mm_names[DL_PER_PAGE][DL_NAME_CHARS + 1];
+static char	mm_msg[96];
+
+static void Menu_MapManage_Build (void)
+{
+	mm_count = 0;
+	for (int i = 0; i < num_user_maps; i++)
+		if (custom_maps[i].map_name && !Menu_IsStockMap(custom_maps[i].map_name))
+			mm_list[mm_count++] = i;
+	if (mm_page * DL_PER_PAGE >= mm_count && mm_page > 0)
+		mm_page = (mm_count - 1) / DL_PER_PAGE;
+}
+
+void Menu_MapManage_Set (void)
+{
+	Menu_ResetMenuButtons();
+	mm_page = 0;
+	mm_confirm = -1;
+	mm_msg[0] = 0;
+	Menu_MapManage_Build();
+	key_dest = key_menu;
+	m_previous_state = m_mapdownload;
+	m_state = m_mapmanage;
+}
+
+static void Menu_MapManage_Pressed (void)
+{
+	int i = mm_page * DL_PER_PAGE + current_menu.cursor;
+	if (i < 0 || i >= mm_count)
+		return;
+	mm_confirm = mm_list[i];
+	Menu_ResetMenuButtons();
+}
+
+static void Menu_MapManage_Yes (void)
+{
+	char bsp[64];
+	int n;
+
+	if (mm_confirm < 0 || mm_confirm >= num_user_maps) { mm_confirm = -1; return; }
+	snprintf(bsp, sizeof(bsp), "%s", custom_maps[mm_confirm].map_name);
+	n = PS3_MapDL_Delete(bsp);
+	if (n < 0) {
+		snprintf(mm_msg, sizeof(mm_msg), "Wait for the download to finish");
+	} else {
+		snprintf(mm_msg, sizeof(mm_msg), "Deleted %s (%d files)", custom_maps[mm_confirm].map_name_pretty, n);
+		Menu_CustomMaps_RemoveMap(mm_confirm);
+	}
+	mm_confirm = -1;
+	Menu_MapManage_Build();
+	Menu_ResetMenuButtons();
+}
+
+static void Menu_MapManage_No (void)
+{
+	mm_confirm = -1;
+	Menu_ResetMenuButtons();
+}
+
+static void Menu_MapManage_NextPage (void) { Menu_ResetMenuButtons(); Menu_SetSound(MENU_SND_ENTER); mm_page++; }
+static void Menu_MapManage_PrevPage (void) { Menu_ResetMenuButtons(); Menu_SetSound(MENU_SND_ENTER); mm_page--; }
+
+void Menu_MapManage_Draw (void)
+{
+	int items = 0, start = mm_page * DL_PER_PAGE, on_page, i;
+
+	Menu_DrawCustomBackground(true);
+	Menu_DrawTitle("MANAGE MAPS", MENU_COLOR_WHITE);
+	Menu_DrawMapPanel();
+
+	on_page = mm_count - start;
+	if (on_page > DL_PER_PAGE)
+		on_page = DL_PER_PAGE;
+	for (i = 0; i < on_page; i++) {
+		usermap_t *m = &custom_maps[mm_list[start + i]];
+		snprintf(mm_names[i], sizeof(mm_names[i]), "%s", m->map_name_pretty ? m->map_name_pretty : m->map_name);
+		strtoupper(mm_names[i]);
+	}
+
+	if (mm_confirm >= 0) {
+		char line[128];
+		for (i = 0; i < on_page; i++)
+			Menu_DrawGreyButton(i + 1, mm_names[i]);
+		snprintf(line, sizeof(line), "Delete %s?", custom_maps[mm_confirm].map_name_pretty);
+		Menu_DrawSubMenu(line, "Its files are removed from the PS3.");
+		Menu_DrawButton(7, 0, "DELETE IT", "", Menu_MapManage_Yes);
+		Menu_DrawButton(8, 1, "KEEP IT", "", Menu_MapManage_No);
+		return;
+	}
+
+	if (mm_count == 0)
+		Menu_MapDownload_Line(0, "No custom maps installed", 255, 255, 255);
+	else if (mm_msg[0])
+		Menu_MapDownload_Line(0, mm_msg, 0, 255, 0);
+	else
+		Menu_MapDownload_Line(0, "Press a map to delete it", 200, 200, 200);
+
+	for (i = 0; i < on_page; i++) {
+		usermap_t *m = &custom_maps[mm_list[start + i]];
+		Menu_DrawButton(i + 1, items++, mm_names[i], m->map_author && m->map_author[0] ? m->map_author : "Delete this map.", Menu_MapManage_Pressed);
+	}
+	if (current_menu.cursor >= 0 && current_menu.cursor < on_page) {
+		usermap_t *m = &custom_maps[mm_list[start + current_menu.cursor]];
+		int img = menu_usermap_image[mm_list[start + current_menu.cursor]];
+		int image_width = vid.width / 3, image_height = vid.height / 3;
+		int x = (150 + (((vid.width - 150) / 2) + 2)) - ((image_width / vid.scale) / 2);
+		if (img >= 0) {
+			UI_SetAlignment(UI_ANCHOR_LEFT, UI_ANCHOR_TOP);
+			Menu_DrawPicStretch(x, 66 * vid.scale, img, image_width, image_height);
+			Menu_DrawMapBorder(x / vid.scale, 66, image_width, image_height);
+		}
+		Menu_MapDownload_Line(1, m->map_name, 160, 160, 160);
+	}
+
+	Menu_DrawDivider(7);
+	if (start + on_page < mm_count)
+		Menu_DrawButton(7, items++, "NEXT PAGE", "Show more maps.", Menu_MapManage_NextPage);
+	else
+		Menu_DrawGreyButton(7, "NEXT PAGE");
+	if (mm_page > 0)
+		Menu_DrawButton(8, items++, "PREVIOUS PAGE", "Show the last page.", Menu_MapManage_PrevPage);
+	else
+		Menu_DrawGreyButton(8, "PREVIOUS PAGE");
+	Menu_DrawButton(-1, items, "BACK", "Return to Download Maps.", Menu_MapDownload_Set);
+}
+
 void Menu_MapDownload_Draw (void)
 {
 	int items = 0, count, start, on_page, i;
@@ -236,17 +374,18 @@ void Menu_MapDownload_Draw (void)
 	if (current_menu.cursor >= 0 && current_menu.cursor < on_page)
 		Menu_MapDownload_Info(start + current_menu.cursor);
 
-	Menu_DrawDivider(9);
+	Menu_DrawDivider(7);
 	if (start + on_page < count)
-		Menu_DrawButton(9, items++, "NEXT PAGE", "Show more maps.", Menu_MapDownload_NextPage);
+		Menu_DrawButton(7, items++, "NEXT PAGE", "Show more maps.", Menu_MapDownload_NextPage);
 	else
-		Menu_DrawGreyButton(9, "NEXT PAGE");
+		Menu_DrawGreyButton(7, "NEXT PAGE");
 	if (dl_page > 0)
-		Menu_DrawButton(10, items++, "PREVIOUS PAGE", "Show the last page.", Menu_MapDownload_PrevPage);
+		Menu_DrawButton(8, items++, "PREVIOUS PAGE", "Show the last page.", Menu_MapDownload_PrevPage);
 	else
-		Menu_DrawGreyButton(10, "PREVIOUS PAGE");
+		Menu_DrawGreyButton(8, "PREVIOUS PAGE");
 
-	// always a button, so the indices (and the callbacks they keep) never shift
+	// always buttons, so the indices (and the callbacks they keep) never shift
+	Menu_DrawButton(-3, items++, "MANAGE MAPS", "See and delete installed maps.", Menu_MapManage_Set);
 	Menu_DrawButton(-2, items++, "REFRESH", "Fetch the map list again.", Menu_MapDownload_Refresh);
 	Menu_DrawButton(-1, items, "BACK", "Return to Main Menu. Downloads carry on.", Menu_Main_Set);
 }

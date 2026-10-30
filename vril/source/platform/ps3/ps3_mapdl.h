@@ -37,6 +37,9 @@ int				PS3_MapDL_Active(void);			// index being downloaded, or -1
 void			PS3_MapDL_Progress(unsigned long long *got, unsigned long long *total);
 const char		*PS3_MapDL_Message(void);		// last error / result
 
+// main thread: deletes maps/<bsp> and what its download put down; -1 while busy
+int				PS3_MapDL_Delete(const char *bsp);
+
 // main thread: the .bsp names a finished install added, once (returns count)
 int				PS3_MapDL_TakeInstalled(char names[][64], int max);
 

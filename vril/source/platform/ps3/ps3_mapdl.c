@@ -26,6 +26,7 @@ e.g. "croft/maps/..." or "nzp/maps/...", is stripped), then deleted.
 #include <sys/thread.h>
 #include <lv2/thread.h>
 #include <sys/stat.h>
+#include <sys/dirent.h>
 #include <stdint.h>
 
 #ifndef PS3_MAPS_URL_DEFAULT
@@ -389,6 +390,40 @@ static void NoteBsp(const char *name)
 	num_new_bsps++;
 }
 
+// what the last zip put down, for maps/<bsp>.mapdl (the map manager deletes from it)
+static char		*installed_files;
+static int		installed_len, installed_cap;
+
+static void NoteFile(const char *name)
+{
+	int len = strlen(name) + 1;
+	if (installed_len + len > installed_cap) {
+		int cap = installed_cap ? installed_cap * 2 : 16384;
+		char *p;
+		while (cap < installed_len + len) cap *= 2;
+		if (!(p = realloc(installed_files, cap)))
+			return;
+		installed_files = p;
+		installed_cap = cap;
+	}
+	memcpy(installed_files + installed_len, name, len - 1);
+	installed_files[installed_len + len - 1] = '\n';
+	installed_len += len;
+}
+
+static void WriteManifests(void)
+{
+	char path[MAX_OSPATH * 2];
+	for (int i = 0; i < num_new_bsps; i++) {
+		FILE *f;
+		snprintf(path, sizeof(path), "%s/maps/%s.mapdl", com_gamedir, new_bsps[i]);
+		if ((f = fopen(path, "wb"))) {
+			fwrite(installed_files, 1, installed_len, f);
+			fclose(f);
+		}
+	}
+}
+
 static qboolean Zip_Extract(const char *zip_path)
 {
 	FILE *f, *out = NULL;
@@ -451,6 +486,7 @@ static qboolean Zip_Extract(const char *zip_path)
 	dl_got = 0;
 	dl_total = count;
 	num_new_bsps = 0;
+	installed_len = 0;
 
 	for (e = 0, pos = 0; e < count; e++, dl_got = e) {
 		unsigned flags = LE16(cd + pos + 8), method = LE16(cd + pos + 10);
@@ -514,6 +550,7 @@ static qboolean Zip_Extract(const char *zip_path)
 		fclose(out);
 		out = NULL;
 		NoteBsp(name);
+		NoteFile(name);
 	}
 	ok = true;
 	goto done;
@@ -561,6 +598,7 @@ static void Job_Download(int idx)
 		dl_state = MAPDL_FAILED;
 		return;
 	}
+	WriteManifests();
 	e->installed = BspExists(e->bsp) || num_new_bsps > 0;
 	snprintf(dl_msg, sizeof(dl_msg), "Installed");
 	PS3_Log("mapdl: %s installed (%d maps)", e->name, num_new_bsps);
@@ -667,4 +705,122 @@ int PS3_MapDL_TakeInstalled(char names[][64], int max)
 		snprintf(names[i], 64, "%s", new_bsps[i]);
 	new_taken = 1;
 	return n;
+}
+
+/*
+===================
+PS3_MapDL_Delete (main thread): removes a map's files. Files a downloaded
+zip put down (maps/<bsp>.mapdl) go too, unless another download's list
+also has them; for a map copied by hand, its maps/ files and thumbnail.
+===================
+*/
+static char *ReadText(const char *path)
+{
+	FILE *f = fopen(path, "rb");
+	long len;
+	char *buf;
+
+	if (!f)
+		return NULL;
+	fseek(f, 0, SEEK_END);
+	len = ftell(f);
+	fseek(f, 0, SEEK_SET);
+	buf = malloc(len + 1);
+	if (buf) {
+		len = fread(buf, 1, len, f);
+		buf[len] = 0;
+	}
+	fclose(f);
+	return buf;
+}
+
+static qboolean ListHas(const char *list, const char *line)
+{
+	int len = strlen(line);
+	for (const char *p = list; p && *p; ) {
+		const char *nl = strchr(p, '\n');
+		int l = nl ? (int)(nl - p) : (int)strlen(p);
+		if (l == len && !strncasecmp(p, line, len))
+			return true;
+		p = nl ? nl + 1 : p + l;
+	}
+	return false;
+}
+
+static int RemoveRel(const char *rel)
+{
+	char path[MAX_OSPATH * 2];
+	snprintf(path, sizeof(path), "%s/%s", com_gamedir, rel);
+	return unlink(path) == 0;
+}
+
+int PS3_MapDL_Delete(const char *bsp)
+{
+	static const char *map_exts[] = {"bsp", "txt", "way", "lit", "ent", "mapdl", NULL};
+	static const char *img_exts[] = {"png", "tga", "jpg", NULL};
+	char path[MAX_OSPATH * 2], rel[MAX_OSPATH], line[MAX_OSPATH];
+	char *mine, *others = NULL;
+	int removed = 0, others_len = 0, i;
+	DIR *dir;
+	struct dirent *de;
+
+	if (busy && (dl_state == MAPDL_DOWNLOADING || dl_state == MAPDL_EXTRACTING))
+		return -1;
+
+	snprintf(path, sizeof(path), "%s/maps/%s.mapdl", com_gamedir, bsp);
+	mine = ReadText(path);
+	if (mine) {
+		// every other download's file list: what they share stays
+		snprintf(path, sizeof(path), "%s/maps", com_gamedir);
+		if ((dir = opendir(path))) {
+			while ((de = readdir(dir))) {
+				int nlen = strlen(de->d_name);
+				char *t;
+				if (nlen < 7 || strcasecmp(de->d_name + nlen - 6, ".mapdl"))
+					continue;
+				if (nlen - 6 == (int)strlen(bsp) && !strncasecmp(de->d_name, bsp, nlen - 6))
+					continue;
+				snprintf(path, sizeof(path), "%s/maps/%s", com_gamedir, de->d_name);
+				if (!(t = ReadText(path)))
+					continue;
+				int tl = strlen(t);
+				char *n = realloc(others, others_len + tl + 2);
+				if (n) {
+					others = n;
+					memcpy(others + others_len, t, tl);
+					others_len += tl;
+					others[others_len++] = '\n';
+					others[others_len] = 0;
+				}
+				free(t);
+			}
+			closedir(dir);
+		}
+		for (char *p = mine; *p; ) {
+			char *nl = strchr(p, '\n');
+			int l = nl ? (int)(nl - p) : (int)strlen(p);
+			if (l > 0 && l < (int)sizeof(line)) {
+				memcpy(line, p, l);
+				line[l] = 0;
+				if (!ListHas(others, line))
+					removed += RemoveRel(line);
+			}
+			p = nl ? nl + 1 : p + l;
+		}
+		free(mine);
+		free(others);
+	}
+	for (i = 0; map_exts[i]; i++) {
+		snprintf(rel, sizeof(rel), "maps/%s.%s", bsp, map_exts[i]);
+		removed += RemoveRel(rel);
+	}
+	for (i = 0; img_exts[i]; i++) {
+		snprintf(rel, sizeof(rel), "gfx/menu/custom/%s.%s", bsp, img_exts[i]);
+		removed += RemoveRel(rel);
+	}
+	for (i = 0; i < num_entries; i++)
+		if (!strcasecmp(entries[i].bsp, bsp))
+			entries[i].installed = BspExists(bsp);
+	PS3_Log("mapdl: deleted %s (%d files)", bsp, removed);
+	return removed;
 }

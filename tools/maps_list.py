@@ -17,7 +17,9 @@ REPO_OWNER, REPO_NAME, CATEGORY = "nzp-team", "nzportable", "Map Releases"
 TOKEN = os.environ["GITHUB_TOKEN"]
 MAX_ZIP = 300 * 1024 * 1024
 
-ZIP_RE = re.compile(r'https://github\.com/(?:user-attachments/files/\d+|[\w.-]+/[\w.-]+/(?:files/\d+|releases/download/[^/\s]+))/[^\s)"\'<>\]]+?\.zip', re.I)
+# any direct link to a .zip: GitHub attachments, archive.org, Dropbox (dl=1)...
+ZIP_RE = re.compile(r'https?://[^\s)"\'<>\]]+?\.zip(?:\?dl=[01])?(?=[\s)"\'<>\]]|$)', re.I)
+LINK_RE = re.compile(r'https?://([^/\s)"\'<>\]]+)')
 OTHER_PLATFORMS = re.compile(r'psp|3ds|ctr|vita|psvita|nspire|switch|nx\b|wii', re.I)
 
 
@@ -40,7 +42,8 @@ def discussions():
         d = graphql("""query($o:String!,$n:String!,$c:ID!,$a:String){repository(owner:$o,name:$n){
             discussions(first:50,after:$a,categoryId:$c,orderBy:{field:UPDATED_AT,direction:DESC}){
               pageInfo{hasNextPage endCursor}
-              nodes{number title url body closed author{login}}}}}""",
+              nodes{number title url body closed author{login}
+                comments(last:30){nodes{body author{login}}}}}}}""",
             {"o": REPO_OWNER, "n": REPO_NAME, "c": cat, "a": after})["repository"]["discussions"]
         yield from d["nodes"]
         if not d["pageInfo"]["hasNextPage"]:
@@ -49,17 +52,18 @@ def discussions():
 
 
 def pick_zip(body):
-    urls = list(dict.fromkeys(ZIP_RE.findall(body)))
+    urls = [u.replace("?dl=0", "?dl=1") for u in ZIP_RE.findall(body)]
+    urls = [u for u in dict.fromkeys(urls) if "moddb.com" not in u and "mediafire.com" not in u]
     if not urls:
         return None
     def rank(u):
-        name = u.rsplit("/", 1)[-1]
+        name = u.split("?")[0].rsplit("/", 1)[-1]
         if re.search(r'pc|vril|desktop|windows', name, re.I):
             return 0
         if OTHER_PLATFORMS.search(name):
             return 2
         return 1
-    urls.sort(key=rank)
+    urls.sort(key=rank)		# stable: the post's own order (newest first) breaks ties
     return urls[0] if rank(urls[0]) < 2 else None
 
 
@@ -127,8 +131,14 @@ def main():
             pass
     maps, skipped, seen_bsp = [], [], set()
     for d in discussions():
-        url = pick_zip(d["body"] or "")
+        # the post, then the author's own comments, newest first (updates land there)
+        me = (d["author"] or {}).get("login")
+        text = (d["body"] or "") + "\n" + "\n".join(
+            c["body"] or "" for c in reversed(d["comments"]["nodes"]) if (c["author"] or {}).get("login") == me)
+        url = pick_zip(text)
         if not url:
+            hosts = sorted(set(LINK_RE.findall(text)) - {"github.com", "user-images.githubusercontent.com"})
+            print("  no zip #%d %s  hosts: %s" % (d["number"], d["title"], " ".join(hosts)[:200]))
             continue
         prev = old.get(url)
         if prev and "reason" in prev:

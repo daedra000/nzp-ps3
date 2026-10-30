@@ -49,6 +49,7 @@ extern int				m_previous_state;
 #define m_bios 			23
 #define m_gyro			24
 #define m_mapdownload	25
+#define m_mapmanage		26
 ///////////////////////////
 ///////////////////////////
 ///////////////////////////
@@ -333,6 +334,8 @@ void Menu_Bindings_Set (void);
 void Menu_MapDownload_Set (void);
 void Menu_MapDownload_Draw (void);
 void Menu_MapDownload_Poll (void);
+void Menu_MapManage_Set (void);
+void Menu_MapManage_Draw (void);
 #endif
 void Menu_Accessibility_Set (void);
 

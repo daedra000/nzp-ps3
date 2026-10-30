@@ -369,6 +369,11 @@ void Menu_SetPreviousMenu (void)
 		case m_custommaps:
 			Menu_CustomMaps_Set();
 			break;
+#ifdef __PS3__
+		case m_mapdownload:
+			Menu_MapDownload_Set();
+			break;
+#endif
 		case m_pause:
 			Menu_Pause_Set();
 			break;

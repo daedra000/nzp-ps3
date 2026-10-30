@@ -272,6 +272,10 @@ void Menu_Draw (void)
 	case m_mapdownload:
 		Menu_MapDownload_Draw ();
 		break;
+
+	case m_mapmanage:
+		Menu_MapManage_Draw ();
+		break;
 #endif
 
 	case m_accessibility:
