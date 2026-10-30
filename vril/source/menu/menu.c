@@ -168,6 +168,33 @@ void Menu_Init (void)
 }
 
 
+#ifdef __PS3__
+/*
+Split screen's controllers, as Grid Siege shows them: picking a map asks for
+player 2's controller; a controller that dropped out mid-game is named on the
+pause menu until it's back.
+*/
+extern qboolean PS3_Input_PlayerReady(int slot);
+extern int PS3_Input_Disconnected(void);
+static void Menu_DrawControllerNotice (void)
+{
+	char text[96];
+	int lost = PS3_Input_Disconnected ();
+
+	text[0] = 0;
+	if (lost && (m_state == m_pause || key_dest == key_menu_pause))
+		snprintf (text, sizeof(text), "CONTROLLER %d DISCONNECTED - RECONNECT IT AND PRESS ANY BUTTON", lost);
+	else if (cl_splitscreen.value && !PS3_Input_PlayerReady (1)
+		&& (m_state == m_stockmaps || m_state == m_custommaps || m_state == m_lobby || m_state == m_gamesettings)
+		&& ((int)(realtime * 2) & 1))
+		snprintf (text, sizeof(text), "PLAYER 2: PRESS ANY BUTTON ON THE SECOND CONTROLLER");
+	if (!text[0])
+		return;
+	UI_SetAlignment (UI_ANCHOR_CENTER, UI_ANCHOR_BOTTOM);
+	Menu_DrawStringCentered (0, big_bar_height + 16, text, 255, 150, 60, 255);
+}
+#endif
+
 void Menu_Draw (void)
 {
 	if (loading_init == true) {
@@ -293,6 +320,10 @@ void Menu_Draw (void)
 	default:
 		Con_Printf("Cannot identify menu for case %d\n", m_state);
 	}
+
+#ifdef __PS3__
+	Menu_DrawControllerNotice ();
+#endif
 
 	VID_UnlockBuffer ();
 	S_ExtraUpdate ();

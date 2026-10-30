@@ -132,12 +132,6 @@ static void PS3_PollSlot(int slot, int port)
 	padData data;
 	unsigned now, pressed, released, i;
 
-	if (port != pad_ports[slot]) {
-		if (pad_ports[slot] >= 0 || port >= 0)
-			PS3_Log("in_ps3: player %d on pad %d", slot + 1, port);
-		PS3_ReleaseSlot(slot);
-		pad_ports[slot] = port;
-	}
 	if (port < 0) {
 		// and the sticks centred, or the last deflection keeps moving the player
 		now = 0;
@@ -168,11 +162,25 @@ static void PS3_PollSlot(int slot, int port)
 	}
 }
 
+/*
+Controllers as Grid Siege manages them: a pad keeps its player slot while it's
+connected; a pad with no slot joins the first free one when a button is
+pressed on it (the console's port order isn't always who's player 1). Outside
+split screen, player 1 is simply the first connected pad. A pad dropping out
+mid-game pauses it until it's back.
+*/
+static int disconnected_player;		// 1/2: whose pad dropped out mid-game, 0 none
+
+static qboolean PS3_InGame(void)
+{
+	return cls.state == ca_connected && cls.signon == SIGNONS;
+}
+
 void PS3_Input_Poll(void)
 {
 	padInfo info;
-	int ports[PAD_SLOTS] = { -1, -1 }, n = 0, s;
-	unsigned i;
+	padData data;
+	int s, port;
 
 	for (s = 0; s < PAD_SLOTS; s++)
 		if (rumble_on[s] && Sys_FloatTime() >= rumble_stop_time[s])
@@ -184,18 +192,68 @@ void PS3_Input_Poll(void)
 	if (ioPadGetInfo(&info) != 0)
 		return;
 
-	// The first connected pad is player 1's; the next, split screen's player 2.
-	for (i = 0; i < MAX_PADS && n < PAD_SLOTS; i++)
-		if (info.status[i])
-			ports[n++] = (int)i;
-	if (cl_numseats < 2)
-		ports[1] = -1;
+	// slots whose pad went away
+	for (s = 0; s < PAD_SLOTS; s++) {
+		if (pad_ports[s] < 0 || info.status[pad_ports[s]])
+			continue;
+		PS3_Log("in_ps3: player %d's controller (pad %d) disconnected", s + 1, pad_ports[s]);
+		PS3_ReleaseSlot(s);
+		pad_ports[s] = -1;
+		if (PS3_InGame() && (s == 0 || cl_numseats > 1)) {
+			disconnected_player = s + 1;
+			if (key_dest == key_game)
+				Menu_ToggleMenu_f ();		// paused till it's back
+		}
+	}
+
+	// player 1 outside split screen: the first connected pad
+	if (pad_ports[0] < 0 && cl_numseats < 2) {
+		for (port = 0; port < MAX_PADS; port++)
+			if (info.status[port] && port != pad_ports[1]) {
+				pad_ports[0] = port;
+				PS3_Log("in_ps3: player 1 on pad %d", port);
+				break;
+			}
+	}
+
+	// a pad with no player joins the first free slot when a button is pressed
+	for (port = 0; port < MAX_PADS; port++) {
+		if (!info.status[port] || port == pad_ports[0] || port == pad_ports[1])
+			continue;
+		memset(&data, 0, sizeof(data));
+		if (ioPadGetData(port, &data) != 0 || data.len <= 0)
+			continue;
+		if (!((data.button[2] | data.button[3]) & 0xff))
+			continue;
+		for (s = 0; s < PAD_SLOTS; s++)
+			if (pad_ports[s] < 0) {
+				pad_ports[s] = port;
+				pad_held[s] = ((unsigned)data.button[2] << 8) | (data.button[3] & 0xff);	// the join press does nothing
+				PS3_Log("in_ps3: player %d joined on pad %d", s + 1, port);
+				break;
+			}
+	}
+
+	if (disconnected_player && pad_ports[disconnected_player - 1] >= 0)
+		disconnected_player = 0;
 
 	for (s = 0; s < PAD_SLOTS; s++)
-		PS3_PollSlot(s, ports[s]);
+		PS3_PollSlot(s, pad_ports[s]);
 }
 
-// controllers connected now (the menu won't start split screen with one)
+// split screen: is there a controller for player n (0/1)?
+qboolean PS3_Input_PlayerReady(int slot)
+{
+	return slot >= 0 && slot < PAD_SLOTS && pad_ports[slot] >= 0;
+}
+
+// 1/2: the player whose controller dropped out mid-game (the pause menu says so)
+int PS3_Input_Disconnected(void)
+{
+	return disconnected_player;
+}
+
+// controllers connected now
 int PS3_Input_PadCount(void)
 {
 	padInfo info;

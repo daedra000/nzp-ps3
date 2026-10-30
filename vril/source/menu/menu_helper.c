@@ -131,6 +131,15 @@ void Menu_LoadMap (char *selected_map)
 			break;
 	}
 
+#ifdef __PS3__
+	{
+		// split screen needs player 2's controller (menu.c says to press a button on it)
+		extern qboolean PS3_Input_PlayerReady(int slot);
+		if (cl_splitscreen.value && !PS3_Input_PlayerReady(1))
+			return;
+	}
+#endif
+
 	map_loadname = current_selected_bsp;
     map_loadname_pretty = custom_maps[i].map_name_pretty;
 
