@@ -21,6 +21,7 @@ typedef struct {
 	char		url[512];
 	char		date[24];			// ISO date it was posted or last changed ("" unknown)
 	unsigned	size;				// bytes, from the list (0 = unknown)
+	char		sha256[65];			// the zip's, hex, from the list ("" = not checked)
 	char		desc[MAPDL_DESC_LINES][64];
 	int			installed;
 	int			update;				// installed from another zip than the list's now

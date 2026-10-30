@@ -828,11 +828,19 @@ ps3glWorldPagesFree(void)
 	{
 		return;
 	}
-	PS3_Video_Finish();   /* the RSX may still read them */
-	for (i = 0; i < world_npages; i++)
-		for (j = 0; j < 2; j++)
-			if (world_pages[i].mem[j])
-				rsxFree(world_pages[i].mem[j]);
+	/* the RSX may still read them: if it doesn't finish, they're leaked,
+	   never freed under it */
+	if (PS3_Video_Finish())
+	{
+		for (i = 0; i < world_npages; i++)
+			for (j = 0; j < 2; j++)
+				if (world_pages[i].mem[j])
+					rsxFree(world_pages[i].mem[j]);
+	}
+	else
+	{
+		PS3_Log("[gl] world pages left allocated: the RSX didn't finish");
+	}
 	free(world_pages);
 	world_pages = NULL;
 	world_npages = 0;
@@ -965,12 +973,18 @@ ps3glAliasFlush(void)
 	{
 		return;
 	}
-	PS3_Video_Finish();   /* the RSX may still read the blocks */
-	for (b = alias_blocks; b; b = bn)
+	/* the RSX may still read the blocks: leaked, not freed, if it doesn't finish */
 	{
-		bn = b->next;
-		rsxFree(b->mem);
-		free(b);
+		int done = PS3_Video_Finish();
+		if (!done)
+			PS3_Log("[gl] model blocks left allocated: the RSX didn't finish");
+		for (b = alias_blocks; b; b = bn)
+		{
+			bn = b->next;
+			if (done)
+				rsxFree(b->mem);
+			free(b);
+		}
 	}
 	alias_blocks = NULL;
 	alias_total = 0;

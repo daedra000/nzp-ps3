@@ -19,6 +19,7 @@ e.g. "croft/maps/..." or "nzp/maps/...", is stripped), then deleted.
 #include "qcvm/cJSON.h"
 
 #include "ps3_https.h"
+#include "mbedtls/sha256.h"
 #include <sys/thread.h>
 #include <lv2/thread.h>
 #include <sys/stat.h>
@@ -86,11 +87,14 @@ typedef struct {
 	FILE	*fp;
 	char	*mem;
 	u32		cap, len;
+	mbedtls_sha256_context *sha;	// the bytes hashed as they come (zips)
 } sink_ctx_t;
 
 static int Sink(void *ctx, const void *data, int len)
 {
 	sink_ctx_t *s = ctx;
+	if (s->sha)
+		mbedtls_sha256_update_ret(s->sha, data, len);
 	if (s->fp) {
 		if (fwrite(data, 1, len, s->fp) != (size_t)len) {
 			snprintf(dl_msg, sizeof(dl_msg), "Disk full?");
@@ -112,9 +116,11 @@ static int Sink(void *ctx, const void *data, int len)
 Http_Get: url into fp (a file) or mem (up to memcap-1 bytes, 0-terminated).
 Returns true with the whole body; dl_msg says why not.
 */
+static mbedtls_sha256_context *http_sha;	// set around a zip's download
+
 static qboolean Http_Get(const char *url, FILE *fp, char *mem, u32 memcap, u32 *memlen)
 {
-	sink_ctx_t s = {fp, mem, memcap, 0};
+	sink_ctx_t s = {fp, mem, memcap, 0, http_sha};
 	char err[128];
 	int ok;
 
@@ -272,6 +278,7 @@ static void Job_List(void)
 			CopyStr(e->desc[0], sizeof(e->desc[0]), desc);
 		}
 		CopyStr(e->date, sizeof(e->date), cJSON_GetObjectItem(m, "date"));
+		CopyStr(e->sha256, sizeof(e->sha256), cJSON_GetObjectItem(m, "sha256"));
 		e->installed = BspExists(e->bsp);
 		if (e->installed) {
 			// installed by DOWNLOAD MAPS from another zip than the list has now: an update
@@ -320,6 +327,33 @@ static qboolean KnownTopDir(const char *name, int len)
 		"tracks", "music", "particles", "scripts", "env", "videos", NULL};
 	for (int i = 0; dirs[i]; i++)
 		if ((int)strlen(dirs[i]) == len && !strncasecmp(name, dirs[i], len))
+			return true;
+	return false;
+}
+
+/*
+What a map may put in nzp/: its own folders' content only. Never the game's
+code or settings (progs.dat, *.cfg...), packs or programs, and nothing loose
+at the top. (The list's zips come from wherever their authors posted them.)
+*/
+static qboolean AllowedPath(const char *name)
+{
+	static const char *dirs[] = {"maps", "gfx", "sounds", "sound", "models", "textures",
+		"tracks", "music", "particles", "env", NULL};
+	static const char *bad_ext[] = {".dat", ".cfg", ".rc", ".pak", ".pk3", ".self", ".elf",
+		".sprx", ".prx", ".bin", ".lno", NULL};
+	const char *slash = strchr(name, '/');
+	int len = strlen(name), i;
+
+	if (!slash)
+		return false;
+	for (i = 0; bad_ext[i]; i++) {
+		int el = strlen(bad_ext[i]);
+		if (len >= el && !strcasecmp(name + len - el, bad_ext[i]))
+			return false;
+	}
+	for (i = 0; dirs[i]; i++)
+		if ((int)strlen(dirs[i]) == slash - name && !strncasecmp(name, dirs[i], slash - name))
 			return true;
 	return false;
 }
@@ -463,6 +497,16 @@ static qboolean Zip_Extract(const char *zip_path)
 	 || fread(cd, 1, cd_size, f) != cd_size)
 		goto bad;
 
+	// every entry's header, name and extras inside the central directory
+	// before anything reads them (a damaged zip mustn't read past it)
+	for (e = 0, pos = 0; e < count; e++) {
+		if ((unsigned long)pos + 46 > cd_size || LE32(cd + pos) != 0x02014b50)
+			goto bad;
+		pos += 46 + LE16(cd + pos + 28) + LE16(cd + pos + 30) + LE16(cd + pos + 32);
+		if (pos > cd_size)
+			goto bad;
+	}
+
 	// one top folder over everything that isn't a game folder: strip it
 	{
 		const byte *first = NULL;
@@ -551,6 +595,11 @@ static qboolean Zip_Extract(const char *zip_path)
 			}
 		}
 		ThumbnailPath(name, sizeof(name) - 6);
+		len = strlen(name);
+		if (name[len - 1] != '/' && !AllowedPath(name)) {
+			PS3_Log("mapdl: not installing %.100s (outside the map folders)", name);
+			continue;
+		}
 		snprintf(path, sizeof(path), "%s/%s", com_gamedir, name);
 		MakeDirs(path);
 		if (name[len - 1] == '/')
@@ -664,7 +713,26 @@ static void Job_Download(int idx)
 		return;
 	}
 	PS3_Log("mapdl: downloading %s", e->url);
-	ok = Http_Get(e->url, fp, NULL, 0, NULL);
+	{
+		// the zip has to be the one the list was made from (its SHA-256)
+		mbedtls_sha256_context sha;
+		unsigned char digest[32];
+		char hex[65];
+		mbedtls_sha256_init(&sha);
+		mbedtls_sha256_starts_ret(&sha, 0);
+		http_sha = &sha;
+		ok = Http_Get(e->url, fp, NULL, 0, NULL);
+		http_sha = NULL;
+		mbedtls_sha256_finish_ret(&sha, digest);
+		mbedtls_sha256_free(&sha);
+		for (int k = 0; k < 32; k++)
+			snprintf(hex + k * 2, 3, "%02x", digest[k]);
+		if (ok && e->sha256[0] && strcasecmp(hex, e->sha256)) {
+			PS3_Log("mapdl: %s: SHA-256 %s, the list says %s", e->name, hex, e->sha256);
+			snprintf(dl_msg, sizeof(dl_msg), "Download doesn't match the list");
+			ok = false;
+		}
+	}
 	fclose(fp);
 	if (ok) {
 		PS3_Log("mapdl: %llu bytes, extracting", dl_got);

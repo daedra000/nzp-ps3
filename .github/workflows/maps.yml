@@ -29,7 +29,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          pip install -q pillow
+          pip install -q pillow==10.4.0
           python3 tools/maps_list.py "$RUNNER_TEMP/old.json" "$RUNNER_TEMP/pub"
       - name: Publish to maps-list
         run: |

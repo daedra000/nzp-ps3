@@ -27,7 +27,7 @@ int  PS3_Video_Ready(void);
 
 /* Waits until the RSX has executed everything queued (before freeing
    memory it may use). */
-void PS3_Video_Finish(void);
+int PS3_Video_Finish(void);	/* 0: timed out, the RSX may still be reading */
 void PS3_Video_DumpFifo(void);
 /* room for the next batch of commands (see ps3_video.c) */
 void PS3_Cmd_Reserve(void);

@@ -785,6 +785,18 @@ static void Key_RunSeatBinding (int seat, char *binding, int key, qboolean down)
 
 void Key_EventSeat (int key, qboolean down, int seat)
 {
+	if (seat > 0 && seat < MAX_SEATS && key_dest != key_game && !down
+		&& key >= 0 && key < MAX_KEYS && seat_keydown[seat][key]) {
+		// a button held into a menu (pause) is let go as this seat's, so its
+		// +command ends and the next press after the menu counts
+		{
+			keydest_t old = key_dest;
+			key_dest = key_game;
+			Key_EventSeat (key, false, seat);
+			key_dest = old;
+		}
+		return;
+	}
 	if (seat <= 0 || seat >= MAX_SEATS || key_dest != key_game) {
 		Key_Event (key, down);		// player 1, or a menu either pad can work
 		return;

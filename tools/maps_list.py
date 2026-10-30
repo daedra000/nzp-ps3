@@ -95,7 +95,7 @@ def check_zip(url):
         return "zip64"
     if not bsps:
         return "no .bsp"
-    return len(data), bsps
+    return len(data), bsps, hashlib.sha256(data).hexdigest()
 
 
 def clean_title(t):
@@ -185,8 +185,8 @@ def main():
         if prev and "reason" in prev:
             skipped.append(prev)
             continue
-        if prev:
-            size, bsps = prev["size"], prev.get("bsps", [prev["bsp"]])
+        if prev and prev.get("sha256"):
+            size, bsps, sha = prev["size"], prev.get("bsps", [prev["bsp"]]), prev["sha256"]
         else:
             try:
                 r = check_zip(url)
@@ -197,7 +197,7 @@ def main():
                 print("  skip #%d %s: %s" % (d["number"], d["title"], r))
                 skipped.append({"file": url, "reason": r, "thread": d["url"]})
                 continue
-            size, bsps = r
+            size, bsps, sha = r
         bsp = bsps[0]
         if bsp.lower() in seen_bsp:
             continue
@@ -215,6 +215,7 @@ def main():
             "version": version_of(d["title"], d["body"]),
             "file": url,
             "size": size,
+            "sha256": sha,
             "bsp": bsp,
             "bsps": bsps,
             "desc": desc_of(d["body"] or ""),

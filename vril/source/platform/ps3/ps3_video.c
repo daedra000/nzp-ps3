@@ -267,14 +267,16 @@ PS3_Video_DumpFifo(void)
 	}
 }
 
-void
+/* 1 when the RSX is done with everything sent so far; 0 if it didn't finish
+   in ~3 s (then it may still read memory: callers mustn't free it) */
+int
 PS3_Video_Finish(void)
 {
 	static u32 ref = 0x1000;
 
 	if (!ctx)
 	{
-		return;
+		return 1;
 	}
 
 	gcmControlRegister volatile *ctrl;
@@ -301,9 +303,10 @@ PS3_Video_Finish(void)
 		if (++waited > 100000)   /* ~3 s */
 		{
 			PS3_Log("[video] WARNING: the RSX didn't finish in time (ref %u)", (unsigned)ref);
-			break;
+			return 0;
 		}
 	}
+	return 1;
 }
 
 int

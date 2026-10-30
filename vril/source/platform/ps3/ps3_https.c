@@ -125,7 +125,13 @@ static int Tls_Up(void)
 		PS3_Log("https: config -0x%04x", -ret);
 		return 0;
 	}
-	mbedtls_ssl_conf_authmode(&conf, num_roots ? MBEDTLS_SSL_VERIFY_REQUIRED : MBEDTLS_SSL_VERIFY_NONE);
+	// fail closed: no roots (a build without CI's ca_bundle.h, or one that
+	// didn't parse) means no HTTPS at all, not HTTPS that trusts anyone
+	if (!num_roots) {
+		PS3_Log("https: no root certificates: HTTPS is off");
+		return 0;
+	}
+	mbedtls_ssl_conf_authmode(&conf, MBEDTLS_SSL_VERIFY_REQUIRED);
 	mbedtls_ssl_conf_ca_chain(&conf, &cacert, NULL);
 	mbedtls_ssl_conf_rng(&conf, mbedtls_ctr_drbg_random, &drbg);
 	tls_state = 1;
@@ -404,6 +410,13 @@ again:
 
 	if (status >= 300 && status < 400 && location[0]) {
 		Conn_Close(&c);
+		// never from HTTPS down to plain HTTP (a redirect could otherwise
+		// hand the download to anyone on the way)
+		if (u.tls && strncasecmp(location, "https://", 8)) {
+			SetErr(err, errsize, "Insecure redirect refused");
+			PS3_Log("https: %s redirected to %.100s: refused", u.host, location);
+			return 0;
+		}
 		if (++redirects > MAX_REDIRECTS) {
 			SetErr(err, errsize, "Too many redirects");
 			return 0;

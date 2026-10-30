@@ -9,7 +9,7 @@ maps load (Nacht der Untoten played into the late rounds; the others only briefl
 far), sound effects, menu and round music, DualShock 3 controls with PlayStation
 button prompts and rumble, the PS3 account name on the main menu ("Welcome, <name>"),
 settings that are saved and survive updates, and custom maps downloaded straight
-from the main menu. Single player only.
+from the main menu. Solo, or two-player split screen on one console (no online play).
 Reports are welcome: send `nzp_log.txt` (see below) with what happened.
 
 **Video**
@@ -34,21 +34,34 @@ Reports are welcome: send `nzp_log.txt` (see below) with what happened.
 **Custom maps**
 - Main menu > DOWNLOAD MAPS lists the community maps from the
   [NZ:P map releases](https://github.com/nzp-team/nzportable/discussions/categories/map-releases)
-  (89 so far). Press one to download and install it; it shows up in
+  (about 90). Press one to download and install it; it shows up in
   SOLO > CUSTOM MAPS straight away, no restart.
 - DOWNLOAD MAPS > MANAGE MAPS lists the installed custom maps; press one to delete it.
 - The list is rebuilt daily from those release posts by
   [`tools/maps_list.py`](tools/maps_list.py) (the `Map list` workflow) and published
   to the `maps-list` branch. Maps are downloaded from where their authors posted them.
 - Downloads use HTTPS through mbedTLS: the PS3's own HTTPS is too old for GitHub and
-  archive.org. If the PS3's date is wrong, certificates are rejected.
+  archive.org. Certificates are checked (Mozilla's roots); if the PS3's date is
+  wrong they're rejected. HTTPS is never downgraded to HTTP on a redirect.
+- Each zip is checked against the SHA-256 in the list before it's unpacked, and a
+  map can only install into the map folders (`maps/`, `gfx/`, `sounds/`, `models/`,
+  `textures/`...), never the game's code or settings.
+- The pictures in the list are cut down from each release post's first image; they
+  belong to the map authors.
+
+**Split screen**
+- Main menu > SPLIT SCREEN: two players, two controllers, top and bottom halves.
+  Player 2 joins by pressing a button on the second controller.
+- A controller that drops out pauses the game until it's back.
 
 **Known issues**
 - Late rounds with big crowds and explosions can dip to around 45-50 fps for a
   moment. Explosions, fire and sprites right in front of the camera are now kept
   smaller to help; this is the main thing being worked on.
 - Maps other than Nacht der Untoten have had little testing.
-- Very big map downloads are unpacked in memory and haven't been tested much yet.
+- Very big map downloads (50 MB+) haven't been tested much yet.
+- Split screen: other players' guns sit at a fixed place in their hands (the
+  player model has no hand to attach them to), and sound is heard from player 1.
 - The crash handler can't install on retail/HEN firmware (liblv2dbg refuses), so a
   crash only ends the log; freezes are caught by the watchdog instead.
 
@@ -146,7 +159,10 @@ PS3 toolchain once (cached), compiles progs.dat from
 [nzp-team/assets](https://github.com/nzp-team/assets) (both at pinned revisions),
 adds the compiled maps (`.bsp`, which the assets repo doesn't have) from the official
 PC nightly build, and makes `nzp-ps3.pkg` on every push. The artifact is the PKG
-only.
+only. It also builds mbedTLS 2.28 (TLS for the map downloader) and zlib's inflate
+from their release tags, and makes `ca_bundle.h` from the runner's
+ca-certificates; a local build needs `MBEDTLS_DIR`/`ZLIB_DIR` pointing at the same
+and, without `ca_bundle.h`, has no HTTPS at all (it won't fall back to unchecked).
 
 Crash addresses from a log can be named by running the workflow by hand with them as
 its `addrs` input (`ppu-addr2line` against the same commit's ELF).
@@ -167,6 +183,9 @@ NZ:P game assets (maps, models, textures, sounds) belong to the NZ:P Team and ar
 covered by their own terms: https://github.com/nzp-team/assets
 
 Based on NZ:P by the NZ:P Team: https://github.com/nzp-team/nzportable
+
+Also uses [Mbed TLS](https://github.com/Mbed-TLS/mbedtls) 2.28 (Apache-2.0 or
+GPL-2.0-or-later) and [zlib](https://github.com/madler/zlib) (zlib licence), built in CI.
 
 ---
 

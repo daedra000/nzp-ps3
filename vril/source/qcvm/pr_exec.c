@@ -21,15 +21,17 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "../nzportable_def.h"
 #include "pr_vm.h"
 
-// a QC write to the world entity's fields, skipped (see OP_STOREF_*)
-static void PR_WorldStoreSkipped (void)
+// A QC write to the world entity's fields. Only the known co-op case is let
+// through (LastStand_UnlinkRevivee: client.firer.firer = world with no firer,
+// which FTE's VM doesn't stop the game for); anything else stays an error.
+extern dfunction_t *pr_xfunction;
+static qboolean PR_WorldStoreAllowed (void)
 {
-	static qboolean said;
-	if (!said) {
-		said = true;
-		Con_Printf ("QC wrote to the world entity (in %s): skipped\n",
-			pr_xfunction ? PR_GetString (pr_xfunction->s_name) : "?");
-	}
+	const char *fn = pr_xfunction ? PR_GetString (pr_xfunction->s_name) : "";
+	if (strcmp (fn, "LastStand_UnlinkRevivee"))
+		return false;
+	Con_DPrintf ("QC wrote to the world entity in %s: skipped\n", fn);
+	return true;
 }
 
 /*
@@ -450,7 +452,8 @@ while (1)
 			// FTE lets the QC's co-op code do this (LastStand_UnlinkRevivee:
 			// client.firer.firer = world, with no firer): skip the write and
 			// say so once, instead of ending the game
-			PR_WorldStoreSkipped ();
+			if (!PR_WorldStoreAllowed ())
+				PR_RunError ("assignment to world entity");
 			break;
 		}
 		ptr = (eval_t *)((int *)&ed->v + b->_int);
@@ -459,7 +462,8 @@ while (1)
 	case OP_STOREF_V:
 		ed = PROG_TO_EDICT(a->edict);
 		if (ed == (edict_t *)sv.edicts && sv.state == ss_active) {
-			PR_WorldStoreSkipped ();
+			if (!PR_WorldStoreAllowed ())
+				PR_RunError ("assignment to world entity");
 			break;
 		}
 		ptr = (eval_t *)((int *)&ed->v + b->_int);
