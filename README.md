@@ -16,7 +16,6 @@ Reports are welcome: send `nzp_log.txt` (see below) with what happened.
 - 1280x720 at 60 fps in normal play with dips in busy moments.
 - Video Options > RESOLUTION: the 3D view at 1280x720 (default), 960x540 or 848x480,
   scaled to the TV. The HUD and menus are always drawn at full resolution.
-- No ULTRAWIDE MODE: a TV is 16:9.
 - Video Options > GAMMA brightens or darkens the game world only; the HUD and menus
   keep their colours.
 - Video Options > DYNAMIC RES (on by default): when the graphics chip can't keep up
