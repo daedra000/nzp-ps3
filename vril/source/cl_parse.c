@@ -1211,8 +1211,12 @@ void CL_ParseServerMessage (void)
 			break;
 
 		case svc_stufftext:
-			if (CL_SeatIsQuiet ())
-				MSG_ReadString ();		// commands for the console: seat 0's
+			if (CL_SeatIsQuiet ()) {
+				// commands for the console: seat 0's, but a level change's
+				// "reconnect" is this seat's too
+				if (strstr (MSG_ReadString (), "reconnect"))
+					cls.signon = 0;
+			}
 			else
 				Cbuf_AddText (MSG_ReadString ());
 			break;
@@ -1333,7 +1337,9 @@ void CL_ParseServerMessage (void)
 
 		case svc_signonnum:
 			i = MSG_ReadByte ();
-			if (i <= cls.signon)
+			if (i <= cls.signon && CL_SeatIsQuiet ())
+				cls.signon = i - 1;		// split screen's player 2 missed a level change: start over
+			else if (i <= cls.signon)
 				Host_Error ("Received signon %i when at %i", i, cls.signon);
 			cls.signon = i;
 			Con_DPrintf("Signon: %i \n",i);

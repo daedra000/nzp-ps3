@@ -585,6 +585,12 @@ void CL_AddPlayerWeapons (void)
 		ed = EDICT_NUM(num);
 		if (ed->free || !ed->v.weaponmodel || ed->v.health <= 0)
 			continue;
+		{
+			// put away while sprinting (the QC's field)
+			eval_t *v = GETEDICTFIELDVALUE(ed, eval_sprinting);
+			if (v && v->_float)
+				continue;
+		}
 		if (!(m = CL_WorldWeaponModel (PR_GetString (ed->v.weaponmodel))))
 			continue;
 		if (!(gun = CL_NewTempEntity ()))

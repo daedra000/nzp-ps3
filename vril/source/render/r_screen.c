@@ -875,8 +875,19 @@ SCR_RenderSeatView(void)
     //
     // do 3D refresh drawing
     //
-    if (!LoadingScreen_IsWaiting())
+    if (!LoadingScreen_IsWaiting()) {
+        extern vec3_t scr_seat_origin[MAX_SEATS], scr_seat_forward[MAX_SEATS], scr_seat_right[MAX_SEATS],
+          scr_seat_up[MAX_SEATS];
+        extern float scr_seat_fov_x[MAX_SEATS], scr_seat_fov_y[MAX_SEATS];
         V_RenderView();
+        // the HUD's revive icons project with the view this seat was drawn from
+        VectorCopy(r_origin, scr_seat_origin[cl_curseat]);
+        VectorCopy(vpn, scr_seat_forward[cl_curseat]);
+        VectorCopy(vright, scr_seat_right[cl_curseat]);
+        VectorCopy(vup, scr_seat_up[cl_curseat]);
+        scr_seat_fov_x[cl_curseat] = r_refdef.fov_x;
+        scr_seat_fov_y[cl_curseat] = r_refdef.fov_y;
+    }
 }
 
 // split screen: each seat zooms (aims down sights) on its own

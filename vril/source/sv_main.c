@@ -1428,6 +1428,9 @@ void SV_RestartServer (void)
 		return;
 
 	Con_DPrintf ("RestartServer: %s\n", sv.name);
+	// split screen: player 2 leaves and rejoins after player 1 (it doesn't run
+	// the "reconnect" stuffed below: it would get the new server's signons at 4)
+	CL_Seats_Drop ();
 	SV_SendReconnect ();
 	S_StopAllSounds (true);
 

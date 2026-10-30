@@ -84,6 +84,8 @@ int	eval_gravity;
 int eval_idealpitch, eval_pitch_speed;
 int eval_path_direct_retry_time;
 int eval_is_using_mouse;
+// split screen: the other player's state, read from the local server (QC fields)
+int eval_sprinting, eval_downed, eval_beingrevived, eval_progress_bar_percent;
 
 // Half_life modes. Crow_bar
 int	eval_renderamt, eval_rendermode, eval_rendercolor;
@@ -105,6 +107,10 @@ void FindEdictFieldOffsets (void)
 	eval_gravity = FindFieldOffset ("gravity");
 	eval_path_direct_retry_time = FindFieldOffset ("path_direct_retry_time");
 	eval_is_using_mouse = FindFieldOffset ("is_using_mouse");
+	eval_sprinting = FindFieldOffset ("sprinting");
+	eval_downed = FindFieldOffset ("downed");
+	eval_beingrevived = FindFieldOffset ("beingrevived");
+	eval_progress_bar_percent = FindFieldOffset ("progress_bar_percent");
 
     eval_idealpitch = FindFieldOffset ("idealpitch");
 	eval_pitch_speed = FindFieldOffset ("pitch_speed");

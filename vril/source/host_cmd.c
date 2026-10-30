@@ -946,6 +946,54 @@ void Host_PreSpawn_f (void)
 Host_Spawn_f
 ==================
 */
+/*
+==================
+SV_UnstickSpawnedPlayer
+
+Split screen: a custom map with one spawn point gets the others made up by
+the QC (Spawns_FillMissing), and one can land inside the walls; the player
+starts outside the map and the game ends. A player who spawns stuck is moved
+to another player, or to player 1's spawn point.
+==================
+*/
+void SV_UnstickSpawnedPlayer (edict_t *ent)
+{
+	int i;
+	vec3_t old;
+
+	if (svs.maxclients < 2 || !ent || !SV_TestEntityPosition (ent))
+		return;
+	VectorCopy (ent->v.origin, old);
+
+	for (i = 1; i <= svs.maxclients; i++) {
+		edict_t *other = EDICT_NUM(i);
+		if (other == ent || other->free || !svs.clients[i - 1].active || other->v.health <= 0)
+			continue;
+		VectorCopy (other->v.origin, ent->v.origin);
+		ent->v.origin[2] += 2;
+		if (!SV_TestEntityPosition (ent))
+			goto moved;
+	}
+	for (i = svs.maxclients + 1; i < sv.num_edicts; i++) {
+		edict_t *e = EDICT_NUM(i);
+		if (e->free || strcmp (PR_GetString (e->v.classname), "info_player_1_spawn"))
+			continue;
+		VectorCopy (e->v.origin, ent->v.origin);
+		if (!SV_TestEntityPosition (ent))
+			goto moved;
+	}
+	VectorCopy (old, ent->v.origin);
+	Con_Printf ("spawn: %s is stuck at %.0f %.0f %.0f, nowhere free to move them\n",
+		PR_GetString (ent->v.netname), old[0], old[1], old[2]);
+	return;
+
+moved:
+	SV_LinkEdict (ent, false);
+	Con_Printf ("spawn: %s was stuck at %.0f %.0f %.0f, moved to %.0f %.0f %.0f\n",
+		PR_GetString (ent->v.netname), old[0], old[1], old[2],
+		ent->v.origin[0], ent->v.origin[1], ent->v.origin[2]);
+}
+
 void Host_Spawn_f (void)
 {
 	int		i;
@@ -1002,6 +1050,7 @@ void Host_Spawn_f (void)
 			Sys_Printf ("%s entered the game\n", host_client->name);
 
 		PR_ExecuteProgram (pr_global_struct->PutClientInServer);
+		SV_UnstickSpawnedPlayer (sv_player);
 	}
 
 // send all current names, colors, and frag counts

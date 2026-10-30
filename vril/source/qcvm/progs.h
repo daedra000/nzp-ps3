@@ -48,6 +48,7 @@ typedef struct edict_s
 } edict_t;
 #define	EDICT_FROM_AREA(l) STRUCT_FROM_LINK(l,edict_t,area)
 extern	int	eval_gravity;
+extern	int	eval_sprinting, eval_downed, eval_beingrevived, eval_progress_bar_percent;
 extern  int eval_idealpitch, eval_pitch_speed;
 extern int eval_path_direct_retry_time;
 extern int eval_is_using_mouse;

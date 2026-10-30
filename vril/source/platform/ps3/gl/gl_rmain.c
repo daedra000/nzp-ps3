@@ -959,6 +959,18 @@ void R_DrawAliasModel (entity_t *e)
 
 	ambientlight = shadelight = R_LightPoint (currententity->origin);
 
+	// The clamp above runs before R_LightPoint sets lightcolor (upstream), so
+	// it only ever clamped the last model's: under bright lights a model's
+	// light went past 125 and, with r_model_brightness's +60, came out washed
+	// out (players most, standing in the lit areas). Clamped here too.
+	for (int g = 0; g < 3; g++)
+	{
+		if (lightcolor[g] < 8)
+			lightcolor[g] = 8;
+		if (lightcolor[g] > 125)
+			lightcolor[g] = 125;
+	}
+
 	// allways give the gun some light
 	if (e == &cl.viewent && ambientlight < 24)
 		ambientlight = shadelight = 24;

@@ -1968,16 +1968,94 @@ HUD_Powerups(void)
 void
 HUD_ProgressBar(void)
 {
-    float progressbar;
+    // The QC keeps the reviver's progress in progress_bar_percent (0..1), as
+    // FTE's HUD reads it; the engine only sends progress_bar, an end time,
+    // squeezed into a byte (so this bar never moved). Read on the local
+    // server, from this seat's player.
+    eval_t * v;
+    float percent;
+    int w, h, x, y;
 
-    if (cl.progress_bar) {
-        progressbar = 100 - ((cl.progress_bar - sv.time) * 10);
-        if (progressbar >= 100)
-            progressbar = 100;
-        Draw_FillByColor((vid.width) / 2 - 51, vid.height * 0.75 - 1, 102, 5, 0, 0, 0, 100);
-        Draw_FillByColor((vid.width) / 2 - 50, vid.height * 0.75, progressbar, 3, 255, 255, 255, 100);
+    if (!sv.active || !sv_player)
+        return;
+    v = GETEDICTFIELDVALUE(sv_player, eval_progress_bar_percent);
+    if (!v || v->_float <= 0)
+        return;
+    percent = v->_float > 1 ? 1 : v->_float;
 
-        Draw_String((vid.width - (88)) / 2, vid.height * 0.75 + 10, "Reviving...");
+    w = 100 * vid.scale;
+    h = 4 * vid.scale;
+    x = (vid.width - w) / 2;
+    y = vid.height * 0.75f;
+    Draw_FillByColor(x - 1, y - 1, w + 2, h + 2, 0, 0, 0, 100);
+    Draw_FillByColor(x, y, (int) (w * percent), h, 255, 255, 255, 140);
+    HUD_DrawTextBackdrop((vid.width - getTextWidth("Reviving...", vid.scale)) / 2, y - 12 * vid.scale,
+      "Reviving...", 255, 255, 255, 255, vid.scale);
+}
+
+/*
+ * ===============
+ * HUD_ReviveIcons: split screen. Over each other downed player's head, the
+ * revive icon: white while someone's reviving them, else yellow going red
+ * over 30 s (as FTE's HUD draws it).
+ * ===============
+ */
+vec3_t scr_seat_origin[MAX_SEATS], scr_seat_forward[MAX_SEATS], scr_seat_right[MAX_SEATS],
+  scr_seat_up[MAX_SEATS];
+float scr_seat_fov_x[MAX_SEATS], scr_seat_fov_y[MAX_SEATS];
+static image_t hud_revive_icon = -1;
+static double hud_downed_since[MAX_SCOREBOARD];
+
+static void
+HUD_ReviveIcons(void)
+{
+    int i, s = cl_curseat;
+    float tx, ty;
+
+    if (!sv.active || svs.maxclients < 2)
+        return;
+    if (hud_revive_icon < 0)
+        hud_revive_icon = HUD_LoadConfigImage("gfx/hud/revive_icon");
+    tx = tanf(scr_seat_fov_x[s] * (M_PI / 360.0f));
+    ty = tanf(scr_seat_fov_y[s] * (M_PI / 360.0f));
+    if (tx <= 0 || ty <= 0)
+        return;
+
+    for (i = 1; i <= svs.maxclients && i < MAX_SCOREBOARD; i++) {
+        edict_t * ed = EDICT_NUM(i);
+        eval_t * d = GETEDICTFIELDVALUE(ed, eval_downed);
+        eval_t * r = GETEDICTFIELDVALUE(ed, eval_beingrevived);
+        vec3_t head, rel;
+        float z, sx, sy, red;
+        int size = 16 * vid.scale;
+
+        if (ed->free || !d || !d->_float) {
+            hud_downed_since[i] = 0;
+            continue;
+        }
+        if (!hud_downed_since[i])
+            hud_downed_since[i] = sv.time;
+        if (i == cl.viewentity || hud_revive_icon < 0)
+            continue;
+
+        VectorCopy(ed->v.origin, head);
+        head[2] += 32;
+        VectorSubtract(head, scr_seat_origin[s], rel);
+        z = DotProduct(rel, scr_seat_forward[s]);
+        if (z < 4)
+            continue;		// behind the view
+        sx = vid.width * 0.5f + DotProduct(rel, scr_seat_right[s]) / (z * tx) * vid.width * 0.5f;
+        sy = vid.height * 0.5f - DotProduct(rel, scr_seat_up[s]) / (z * ty) * vid.height * 0.5f;
+        if (sx < -size || sx > vid.width + size || sy < -size || sy > vid.height + size)
+            continue;
+
+        red = (sv.time - hud_downed_since[i]) / 30.0f;
+        red = red > 1 ? 1 : red;
+        if (r && r->_float)
+            Draw_ColoredStretchPic(sx - size / 2, sy - size / 2, hud_revive_icon, size, size, 255, 255, 255, 255);
+        else
+            Draw_ColoredStretchPic(sx - size / 2, sy - size / 2, hud_revive_icon, size, size, 255,
+              (int) (255 * (1 - red)), 0, 255);
     }
 }
 
@@ -2735,6 +2813,7 @@ HUD_Draw(void)
     HUD_Rounds();
     HUD_Perks();
     HUD_Powerups();
+    HUD_ReviveIcons();
     HUD_ProgressBar();
     HUD_DrawUsePrint();
     if (sys_testmode.value <= 0 &&
