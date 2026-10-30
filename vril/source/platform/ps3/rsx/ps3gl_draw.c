@@ -1185,8 +1185,10 @@ ps3glAliasDraw(const void *key, int nverts, const float *uvs, const unsigned sho
 
 	if (blend < 0.0f) blend = 0.0f;
 	if (blend > 1.0f) blend = 1.0f;
-	morph[0] = (p2 == p1) ? 0.0f : blend;
-	morph[1] = morph[2] = morph[3] = 0.0f;
+	/* the blend in every component: the program's c[10].x may come out of
+	   cgcomp as all of c[10] (then y and z didn't move between poses: the
+	   animation jumped from pose to pose) */
+	morph[0] = morph[1] = morph[2] = morph[3] = (p2 == p1) ? 0.0f : blend;
 	color = ps3gl.color;
 	cs[0] = (float)((color >> 24) & 255) / 255.0f;
 	cs[1] = (float)((color >> 16) & 255) / 255.0f;
