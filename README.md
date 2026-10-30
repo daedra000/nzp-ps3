@@ -8,12 +8,11 @@ Vril engine in [`vril/`](vril) with a PS3 platform in
 maps load (Nacht der Untoten played into the late rounds; the others only briefly so
 far), sound effects, menu and round music, DualShock 3 controls with PlayStation
 button prompts and rumble, the PS3 account name on the main menu ("Welcome, <name>"),
-and settings that are saved and survive updates. Single player only (no LAN yet).
+and settings that are saved and survive updates. Single player only.
 Reports are welcome: send `nzp_log.txt` (see below) with what happened.
 
 **Video**
-- 1280x720 at 60 fps in normal play (Nacht der Untoten, including the stairs and the
-  perk machines that used to drop it to 30).
+- 1280x720 at 60 fps in normal play with dips in busy moments.
 - Video Options > RESOLUTION: 1280x720 (default), 960x540 or 848x480, scaled to the
   TV. The HUD and menus are the same size at every resolution.
 - Video Options > GAMMA brightens or darkens the game world only; the HUD and menus
