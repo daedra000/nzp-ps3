@@ -307,6 +307,9 @@ PS3GL_EndFrame(void)
 	rsxSetWriteBackendLabel(ps3gl.ctx, PS3GL_LABEL_FRAME, ps3gl.frame);
 }
 
+extern uint32_t ps3glWorldBytes(void);
+extern uint32_t ps3glAliasBytes(void);
+
 void
 PS3GL_LogStats(int frames)
 {
@@ -314,12 +317,13 @@ PS3GL_LogStats(int frames)
 	if (frames > 0)
 	{
 		PS3_Log("[gl]   %u draws, %u verts, %u KB uploaded, %u copies per frame; "
-				"RSX fence wait %.1f ms per frame; ring peak %u KB; textures %u MB%s",
+				"RSX fence wait %.1f ms per frame; ring peak %u KB; textures %u MB, world %u MB, models %u MB%s",
 				(unsigned)(ps3gl.st_draws / frames), (unsigned)(ps3gl.st_verts / frames),
 				(unsigned)(ps3gl.st_upload / frames / 1024),
 				(unsigned)(ps3gl.st_copies / frames), st_fence_wait_us / 1000.0 / frames,
 				(unsigned)(ps3gl.ring_peak / 1024),
 				(unsigned)(ps3gl.st_tex_bytes >> 20),
+				(unsigned)(ps3glWorldBytes() >> 20), (unsigned)(ps3glAliasBytes() >> 20),
 				ps3gl.st_dropped ? " -- DRAWS DROPPED (ring full)" : "");
 	}
 

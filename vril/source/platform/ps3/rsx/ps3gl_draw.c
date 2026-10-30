@@ -921,7 +921,8 @@ ps3glWorldPage(int page, const void *v, int stride, int uv_off, int lm_off, int 
  * indices go in the command buffer. Everything is dropped at a map change
  * (ps3glAliasFlush); a full arena, and the draws go the old way.
  */
-#define ALIAS_ARENA   (40u * 1024 * 1024)
+#define ALIAS_BLOCK   (4u * 1024 * 1024)    /* taken from RSX memory as needed */
+#define ALIAS_MAX     (40u * 1024 * 1024)   /* at most */
 #define POSE_SLOTS    16384   /* a power of two */
 
 typedef struct alias_topo_s
@@ -938,9 +939,17 @@ typedef struct
 	uint32_t off;
 } pose_slot_t;
 
-static uint8_t *alias_arena;
-static uint32_t alias_arena_off, alias_used;
+typedef struct alias_block_s
+{
+	uint8_t *mem;
+	uint32_t off, used;
+	struct alias_block_s *next;
+} alias_block_t;
+
+static alias_block_t *alias_blocks;   /* the newest first */
+static uint32_t alias_total;          /* RSX memory taken, all blocks */
 static int alias_full_warned, alias_logged;
+static int alias_off;                 /* given up for this map (textures needed the room) */
 static alias_topo_t *alias_topos;
 static pose_slot_t *pose_slots;
 static int pose_count;
@@ -949,12 +958,22 @@ void
 ps3glAliasFlush(void)
 {
 	alias_topo_t *t, *next;
+	alias_block_t *b, *bn;
 
-	if (!alias_arena)
+	alias_off = 0;   /* a new map: try again */
+	if (!alias_blocks)
 	{
 		return;
 	}
-	PS3_Video_Finish();   /* the RSX may still read the arena */
+	PS3_Video_Finish();   /* the RSX may still read the blocks */
+	for (b = alias_blocks; b; b = bn)
+	{
+		bn = b->next;
+		rsxFree(b->mem);
+		free(b);
+	}
+	alias_blocks = NULL;
+	alias_total = 0;
 	for (t = alias_topos; t; t = next)
 	{
 		next = t->next;
@@ -966,7 +985,6 @@ ps3glAliasFlush(void)
 		memset(pose_slots, 0, POSE_SLOTS * sizeof(*pose_slots));
 	}
 	pose_count = 0;
-	alias_used = 0;
 	alias_full_warned = 0;
 }
 
@@ -974,32 +992,63 @@ ps3glAliasFlush(void)
 static uint8_t *
 AliasAlloc(uint32_t bytes, uint32_t *off)
 {
+	alias_block_t *b = alias_blocks;
 	uint8_t *p;
 
-	if (!alias_arena)
-	{
-		alias_arena = (uint8_t *)rsxMemalign(128, ALIAS_ARENA);
-		if (!alias_arena)
-		{
-			return NULL;
-		}
-		rsxAddressToOffset(alias_arena, &alias_arena_off);
-	}
 	bytes = (bytes + 15u) & ~15u;
-	if (alias_used + bytes > ALIAS_ARENA)
+	if (alias_off || bytes > ALIAS_BLOCK)
 	{
-		if (!alias_full_warned)
-		{
-			PS3_Log("[gl] alias models: RSX arena full (%u KB), the rest drawn the old way",
-					(unsigned)(ALIAS_ARENA >> 10));
-			alias_full_warned = 1;
-		}
 		return NULL;
 	}
-	p = alias_arena + alias_used;
-	*off = alias_arena_off + alias_used;
-	alias_used += bytes;
+	if (!b || b->used + bytes > ALIAS_BLOCK)
+	{
+		/* another block, while the total allows and RSX memory has it
+		   (textures come first: a failed block isn't retried this map) */
+		if (alias_total + ALIAS_BLOCK > ALIAS_MAX ||
+			!(b = (alias_block_t *)malloc(sizeof(*b))) ||
+			!(b->mem = (uint8_t *)rsxMemalign(128, ALIAS_BLOCK)))
+		{
+			if (b && b != alias_blocks)
+			{
+				free(b);
+			}
+			alias_off = 1;   /* no more tries this map: the rest the old way */
+			if (!alias_full_warned)
+			{
+				PS3_Log("[gl] alias models: %u MB of RSX memory in use, the rest drawn the old way",
+						(unsigned)(alias_total >> 20));
+				alias_full_warned = 1;
+			}
+			return NULL;
+		}
+		rsxAddressToOffset(b->mem, &b->off);
+		b->used = 0;
+		b->next = alias_blocks;
+		alias_blocks = b;
+		alias_total += ALIAS_BLOCK;
+	}
+	p = b->mem + b->used;
+	*off = b->off + b->used;
+	b->used += bytes;
 	return p;
+}
+
+/* RSX memory short (a texture didn't fit): the alias models' copies go,
+   they draw the old way until the next map. Gives the bytes freed. */
+uint32_t
+ps3glAliasRelease(void)
+{
+	uint32_t freed = alias_total;
+
+	ps3glAliasFlush();
+	alias_off = 1;
+	return freed;
+}
+
+uint32_t
+ps3glAliasBytes(void)
+{
+	return alias_total;
 }
 
 /* A pose's positions (trivertx_t: x, y, z bytes and a normal index) */
@@ -1155,6 +1204,12 @@ ps3glAliasDraw(const void *key, int nverts, const float *uvs, const unsigned sho
 	DrawIndexedInline(GCM_TYPE_TRIANGLES, indices, nidx);
 	ps3gl.st_draws++;
 	return 1;
+}
+
+uint32_t
+ps3glWorldBytes(void)
+{
+	return world_bytes;
 }
 
 /* The next draws are of this page's vertices (-1: not the world) */

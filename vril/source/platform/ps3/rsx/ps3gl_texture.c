@@ -509,6 +509,21 @@ glTexImage2D(GLenum target, GLint level, GLint internalFormat, GLsizei width,
 
 			t->data = (uint8_t *)rsxMemalign(128, size);
 
+			/* Textures come first: the zombies' pose copies go (they draw the
+			   old way), and the texture tries again. */
+			if (!t->data)
+			{
+				extern uint32_t ps3glAliasRelease(void);
+				uint32_t freed = ps3glAliasRelease();
+
+				if (freed)
+				{
+					PS3_Log("[gl] RSX memory short for a %dx%d texture: model copies dropped (%u MB)",
+							width, height, (unsigned)(freed >> 20));
+					t->data = (uint8_t *)rsxMemalign(128, size);
+				}
+			}
+
 			if (!t->data)
 			{
 				static int warned;
