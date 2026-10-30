@@ -178,20 +178,25 @@ extern qboolean PS3_Input_PlayerReady(int slot);
 extern int PS3_Input_Disconnected(void);
 static void Menu_DrawControllerNotice (void)
 {
-	char text[96];
+	char line1[64], line2[64];
 	int lost = PS3_Input_Disconnected ();
 
-	text[0] = 0;
-	if (lost && (m_state == m_pause || key_dest == key_menu_pause))
-		snprintf (text, sizeof(text), "CONTROLLER %d DISCONNECTED - RECONNECT IT AND PRESS ANY BUTTON", lost);
-	else if (cl_splitscreen.value && !PS3_Input_PlayerReady (1)
+	// two short lines: one long one ran off the screen at 720p
+	line1[0] = line2[0] = 0;
+	if (lost && (m_state == m_pause || key_dest == key_menu_pause)) {
+		snprintf (line1, sizeof(line1), "CONTROLLER %d DISCONNECTED", lost);
+		snprintf (line2, sizeof(line2), "RECONNECT IT AND PRESS ANY BUTTON");
+	} else if (cl_splitscreen.value && !PS3_Input_PlayerReady (1)
 		&& (m_state == m_stockmaps || m_state == m_custommaps || m_state == m_lobby || m_state == m_gamesettings)
-		&& ((int)(realtime * 2) & 1))
-		snprintf (text, sizeof(text), "PLAYER 2: PRESS ANY BUTTON ON THE SECOND CONTROLLER");
-	if (!text[0])
+		&& ((int)(realtime * 2) & 1)) {
+		snprintf (line1, sizeof(line1), "PLAYER 2: PRESS ANY BUTTON");
+		snprintf (line2, sizeof(line2), "ON THE SECOND CONTROLLER");
+	}
+	if (!line1[0])
 		return;
 	UI_SetAlignment (UI_ANCHOR_CENTER, UI_ANCHOR_BOTTOM);
-	Menu_DrawStringCentered (0, big_bar_height + 16, text, 255, 150, 60, 255);
+	Menu_DrawStringCentered (0, big_bar_height + 28, line1, 255, 150, 60, 255);
+	Menu_DrawStringCentered (0, big_bar_height + 16, line2, 255, 150, 60, 255);
 }
 #endif
 
