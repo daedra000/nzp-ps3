@@ -508,12 +508,9 @@ HUD_ExpandUsePrint(const char * source, const char * button, const char * touch)
         if (source[0] == '%' && source[1] == 'b') {
             replacement = button;
             if (!hud_use_has_button) {
-                char prefix[HUD_USEPRINT_LENGTH];
-                size_t prefix_length = out - hud_usestring;
-
-                memcpy(prefix, hud_usestring, prefix_length);
-                prefix[prefix_length] = 0;
-                hud_use_button_x      = getTextWidth(prefix, vid.scale);
+                // where the button goes, in characters: measured when drawn,
+                // at the scale it's drawn (split screen's HUD is smaller)
+                hud_use_button_x      = out - hud_usestring;
                 hud_use_has_button    = true;
             }
         } else if (source[0] == '%' && source[1] == 's') {
@@ -564,7 +561,7 @@ HUD_UsePrint(int index, int cost)
 static void
 HUD_DrawUsePrint(void)
 {
-    int y, x;
+    int y, x, button_x = 0;
 
     if (Sys_FloatTime() >= hud_use_until || key_dest != key_game || cl.stats[STAT_HEALTH] <= 0) {
         scr_usetime_off = 0;
@@ -573,13 +570,20 @@ HUD_DrawUsePrint(void)
     scr_usetime_off = (float) (hud_use_until - Sys_FloatTime());
     y = vid.height - 74 * vid.scale;
     x = (vid.width - getTextWidth(hud_usestring, vid.scale)) / 2;
+    if (hud_use_has_button) {
+        char prefix[HUD_USEPRINT_LENGTH];
+        int n = hud_use_button_x < HUD_USEPRINT_LENGTH ? hud_use_button_x : HUD_USEPRINT_LENGTH - 1;
+        memcpy(prefix, hud_usestring, n);
+        prefix[n] = 0;
+        button_x = getTextWidth(prefix, vid.scale);
+    }
     HUD_DrawTextBackdrop(x, y, hud_usestring, hud_useprint_colors[hud_use_type][0],
       hud_useprint_colors[hud_use_type][1], hud_useprint_colors[hud_use_type][2], 255, vid.scale);
     if (hud_use_has_button && HUD_KeyHasIcon(hud_use_key))
-        HUD_DrawKeyIcon(x + hud_use_button_x - 3 * vid.scale, y - 4 * vid.scale,
+        HUD_DrawKeyIcon(x + button_x - 3 * vid.scale, y - 4 * vid.scale,
           hud_use_key, 16 * vid.scale, 255);
     else if (hud_use_has_button)
-        Draw_ColoredString(x + hud_use_button_x, y, (char *) HUD_UseKeyLabel(hud_use_key),
+        Draw_ColoredString(x + button_x, y, (char *) HUD_UseKeyLabel(hud_use_key),
           255, 255, 0, 255, vid.scale);
     if (hud_usecost[0])
         HUD_DrawTextBackdrop((vid.width - getTextWidth(hud_usecost, vid.scale)) / 2,
