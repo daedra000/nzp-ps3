@@ -214,6 +214,10 @@ R_DrawAliasBatch(const alias_batch_t * batch)
 void
 R_ClearAliasTopologyCache(void)
 {
+#ifdef __PS3__
+    extern void ps3glAliasFlush(void);
+    ps3glAliasFlush();   // the poses and topologies' RSX copies go with them
+#endif
     alias_topology_t * topology, * next;
 
     R_ClearAliasArrays();
@@ -390,6 +394,17 @@ R_DrawAliasCommands(const int * commands, const trivertx_t * pose1, const triver
     batch.blend         = blend;
     batch.packed_static = packed_static;
     batch.command_words = command_words;
+#ifdef __PS3__
+    // animated by the RSX from RSX memory: no lerp or copy on the PPU
+    if (!command_words) {
+        extern int ps3glAliasDraw(const void * key, int nverts, const float * uvs,
+          const unsigned short * indices, int nidx, const void * pose1, const void * pose2, float blend);
+        alias_topology_t * topology = R_AliasTopology(commands);
+        if (topology->num_vertices && ps3glAliasDraw(topology, topology->num_vertices, topology->uvs,
+              topology->indices, topology->num_indices, pose1, pose2, blend))
+            return;
+    }
+#endif
     if (!command_words)
         R_BuildAliasBatch(commands, pose1, pose2, blend, &batch);
     R_DrawAliasBatch(&batch);

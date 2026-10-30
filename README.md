@@ -13,8 +13,9 @@ Reports are welcome: send `nzp_log.txt` (see below) with what happened.
 
 **Video**
 - 1280x720 at 60 fps in normal play with dips in busy moments.
-- Video Options > RESOLUTION: 1280x720 (default), 960x540 or 848x480, scaled to the
-  TV. The HUD and menus are the same size at every resolution.
+- Video Options > RESOLUTION: the 3D view at 1280x720 (default), 960x540 or 848x480,
+  scaled to the TV. The HUD and menus are always drawn at full resolution.
+- No ULTRAWIDE MODE: a TV is 16:9.
 - Video Options > GAMMA brightens or darkens the game world only; the HUD and menus
   keep their colours.
 - Video Options > DYNAMIC RES (on by default): when the graphics chip can't keep up
@@ -37,8 +38,6 @@ Reports are welcome: send `nzp_log.txt` (see below) with what happened.
 - Maps other than Nacht der Untoten have had little testing.
 - The crash handler can't install on retail/HEN firmware (liblv2dbg refuses), so a
   crash only ends the log; freezes are caught by the watchdog instead.
-- At 960x540 and 848x480 the HUD's small text can look slightly uneven (it's drawn
-  smaller into the lower-resolution image).
 
 ## Install
 1. A PS3 that runs homebrew (HEN or CFW).

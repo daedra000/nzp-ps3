@@ -7,23 +7,31 @@
 #   texcoord2 = (fog colour rgb, fog factor)    linear GL_FOG from clip-space w (= eye depth
 #                                               for a perspective projection); factor 1 = no fog
 # c[5] fogparams = (end, 1 / (end - start), enable 0/1, 0), c[6] fogcolor = (r, g, b, a).
+# Alias models from RSX memory (ps3glAliasDraw): v1 is the second animation pose, the
+# position v0 + c[10].x * (v1 - v0); the colour v3 * c[11]. Other draws: v1 = v0 (the
+# same array), c[10] = 0, c[11] = 1.
 #var float4x4 mvp :  : c[0], 4 : -1 : 1
 #var float4 clip_plane :  : c[4] : -1 : 1
 #var float4 fogparams :  : c[5] : -1 : 1
 #var float4 fogcolor :  : c[6] : -1 : 1
 #var float4 texmat_s :  : c[7] : -1 : 1
 #var float4 texmat_t :  : c[8] : -1 : 1
+#var float4 morph :  : c[10] : -1 : 1
+#var float4 colorscale :  : c[11] : -1 : 1
 #var float4 position : $vin.ATTR0 : ATTR0 : -1 : 1
+#var float4 position2 : $vin.ATTR1 : ATTR1 : -1 : 1
 #var float4 color : $vin.ATTR3 : ATTR3 : -1 : 1
 #var float2 tc0 : $vin.ATTR8 : ATTR8 : -1 : 1
 #var float2 tc1 : $vin.ATTR9 : ATTR9 : -1 : 1
 #const c[9] = 0 1 0 0
-DP4 R0.x, c[0], v[0];
-DP4 R0.y, c[1], v[0];
-DP4 R0.z, c[2], v[0];
-DP4 R0.w, c[3], v[0];
+ADD R3, v[1], -v[0];
+MAD R3, R3, c[10].x, v[0];
+DP4 R0.x, c[0], R3;
+DP4 R0.y, c[1], R3;
+DP4 R0.z, c[2], R3;
+DP4 R0.w, c[3], R3;
 MOV result.position, R0;
-MOV result.color, v[3];
+MUL result.color, v[3], c[11];
 MOV R1, c[9].xxxy;
 MOV R1.xy, v[8];
 DP4 result.texcoord[0].x, c[7], R1;

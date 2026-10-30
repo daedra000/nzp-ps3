@@ -44,6 +44,8 @@ static void *vp_ucode;
 static u32 vp_ucode_size;
 static rsxProgramConst *vp_mvp;
 static rsxProgramConst *vp_fogparams, *vp_fogcolor, *vp_texmat_s, *vp_texmat_t;
+static rsxProgramConst *vp_morph, *vp_colorscale;
+static int morph_active;   /* the alias path's morph/colour constants are set */
 
 static struct {
 	rsxFragmentProgram *fp;
@@ -89,6 +91,10 @@ ps3gl_shaders_init(void)
 	vp_fogcolor = rsxVertexProgramGetConst(vp, "fogcolor");
 	vp_texmat_s = rsxVertexProgramGetConst(vp, "texmat_s");
 	vp_texmat_t = rsxVertexProgramGetConst(vp, "texmat_t");
+	vp_morph = rsxVertexProgramGetConst(vp, "morph");
+	vp_colorscale = rsxVertexProgramGetConst(vp, "colorscale");
+	if (!vp_morph || !vp_colorscale)
+		PS3_Log("[gl] WARNING: nzp_vp is missing its morph/colour constants");
 	if (!vp_fogparams || !vp_fogcolor || !vp_texmat_s || !vp_texmat_t)
 		PS3_Log("[gl] WARNING: nzp_vp is missing its fog/texture matrix constants");
 
@@ -113,6 +119,16 @@ ps3gl_apply_shader(int fp)
 		ps3gl.mvp_uploaded = 0;
 		ps3gl.fog_uploaded = 0;
 		ps3gl.texmat_uploaded = 0;
+		morph_active = 1;   /* the defaults below */
+	}
+
+	/* no morph, colour as is (the alias path sets these for its draw) */
+	if (morph_active && vp_morph && vp_colorscale)
+	{
+		static const float zero[4] = { 0, 0, 0, 0 }, one[4] = { 1, 1, 1, 1 };
+		rsxSetVertexProgramParameter(ctx, vp, vp_morph, zero);
+		rsxSetVertexProgramParameter(ctx, vp, vp_colorscale, one);
+		morph_active = 0;
 	}
 
 	if (fp != ps3gl.active_fp && fps[fp].ucode)
@@ -673,6 +689,9 @@ BindRing(uint32_t off)
 
 	rsxBindVertexArrayAttrib(ctx, GCM_VERTEX_ATTRIB_POS, 0, off + PS3GL_VATTR_POS_OFF,
 			PS3GL_VERTEX_SIZE, 4, GCM_VERTEX_DATA_TYPE_F32, GCM_LOCATION_RSX);
+	/* the vertex program's second pose: the same positions (no morph) */
+	rsxBindVertexArrayAttrib(ctx, GCM_VERTEX_ATTRIB_WEIGHT, 0, off + PS3GL_VATTR_POS_OFF,
+			PS3GL_VERTEX_SIZE, 4, GCM_VERTEX_DATA_TYPE_F32, GCM_LOCATION_RSX);
 	rsxBindVertexArrayAttrib(ctx, GCM_VERTEX_ATTRIB_TEX0, 0, off + PS3GL_VATTR_TC0_OFF,
 			PS3GL_VERTEX_SIZE, 2, GCM_VERTEX_DATA_TYPE_F32, GCM_LOCATION_RSX);
 	rsxBindVertexArrayAttrib(ctx, GCM_VERTEX_ATTRIB_TEX1, 0, off + PS3GL_VATTR_TC1_OFF,
@@ -887,6 +906,255 @@ ps3glWorldPage(int page, const void *v, int stride, int uv_off, int lm_off, int 
 	rsxInvalidateVertexCache(ps3gl.ctx);
 	if (page == 0)
 		PS3_Log("[gl] world in RSX memory: the vertices are converted at the map's load");
+}
+
+/* ================================================================ */
+/* Alias models (the zombies) animated by the RSX                     */
+/* ================================================================ */
+
+/*
+ * Late rounds' crowds: each zombie's vertices were lerped between two poses
+ * by the PPU and copied into the ring every frame (64 zombies: ~8 ms a frame).
+ * Each pose a model uses is converted once into RSX memory (float x, y, z, 1)
+ * and each model's texture coordinates once; the vertex program lerps between
+ * the two poses (v0, v1, c[10].x) and scales the colour (c[11]). Only the
+ * indices go in the command buffer. Everything is dropped at a map change
+ * (ps3glAliasFlush); a full arena, and the draws go the old way.
+ */
+#define ALIAS_ARENA   (40u * 1024 * 1024)
+#define POSE_SLOTS    16384   /* a power of two */
+
+typedef struct alias_topo_s
+{
+	const void *key;
+	uint32_t off;
+	int nverts;
+	struct alias_topo_s *next;
+} alias_topo_t;
+
+typedef struct
+{
+	const void *key;
+	uint32_t off;
+} pose_slot_t;
+
+static uint8_t *alias_arena;
+static uint32_t alias_arena_off, alias_used;
+static int alias_full_warned, alias_logged;
+static alias_topo_t *alias_topos;
+static pose_slot_t *pose_slots;
+static int pose_count;
+
+void
+ps3glAliasFlush(void)
+{
+	alias_topo_t *t, *next;
+
+	if (!alias_arena)
+	{
+		return;
+	}
+	PS3_Video_Finish();   /* the RSX may still read the arena */
+	for (t = alias_topos; t; t = next)
+	{
+		next = t->next;
+		free(t);
+	}
+	alias_topos = NULL;
+	if (pose_slots)
+	{
+		memset(pose_slots, 0, POSE_SLOTS * sizeof(*pose_slots));
+	}
+	pose_count = 0;
+	alias_used = 0;
+	alias_full_warned = 0;
+}
+
+/* 'bytes' of the arena, 16-byte aligned; NULL when full */
+static uint8_t *
+AliasAlloc(uint32_t bytes, uint32_t *off)
+{
+	uint8_t *p;
+
+	if (!alias_arena)
+	{
+		alias_arena = (uint8_t *)rsxMemalign(128, ALIAS_ARENA);
+		if (!alias_arena)
+		{
+			return NULL;
+		}
+		rsxAddressToOffset(alias_arena, &alias_arena_off);
+	}
+	bytes = (bytes + 15u) & ~15u;
+	if (alias_used + bytes > ALIAS_ARENA)
+	{
+		if (!alias_full_warned)
+		{
+			PS3_Log("[gl] alias models: RSX arena full (%u KB), the rest drawn the old way",
+					(unsigned)(ALIAS_ARENA >> 10));
+			alias_full_warned = 1;
+		}
+		return NULL;
+	}
+	p = alias_arena + alias_used;
+	*off = alias_arena_off + alias_used;
+	alias_used += bytes;
+	return p;
+}
+
+/* A pose's positions (trivertx_t: x, y, z bytes and a normal index) */
+static int
+AliasPose(const uint8_t *pose, int nverts, uint32_t *off, int *made)
+{
+	uint32_t h = (uint32_t)(((uintptr_t)pose >> 2) * 2654435761u) & (POSE_SLOTS - 1);
+	float *out;
+	int i;
+
+	if (!pose_slots)
+	{
+		pose_slots = (pose_slot_t *)calloc(POSE_SLOTS, sizeof(*pose_slots));
+		if (!pose_slots)
+		{
+			return 0;
+		}
+	}
+	for (;;)
+	{
+		if (pose_slots[h].key == pose)
+		{
+			*off = pose_slots[h].off;
+			return 1;
+		}
+		if (!pose_slots[h].key)
+		{
+			break;
+		}
+		h = (h + 1) & (POSE_SLOTS - 1);
+	}
+	if (pose_count >= POSE_SLOTS * 3 / 4)
+	{
+		return 0;
+	}
+	out = (float *)AliasAlloc((uint32_t)nverts * 16, off);
+	if (!out)
+	{
+		return 0;
+	}
+	for (i = 0; i < nverts; i++, out += 4, pose += 4)
+	{
+		out[0] = (float)pose[0];
+		out[1] = (float)pose[1];
+		out[2] = (float)pose[2];
+		out[3] = 1.0f;
+	}
+	pose_slots[h].key = pose - (size_t)nverts * 4;
+	pose_slots[h].off = *off;
+	pose_count++;
+	*made = 1;
+	return 1;
+}
+
+/* Draws an alias model's triangles with the current state: 'key' its
+   topology (stable until ps3glAliasFlush), 'uvs' 2 floats a vertex,
+   'indices' its triangles; pose1 lerped toward pose2 by 'blend'. 0: not
+   drawn (draw it the old way). */
+int
+ps3glAliasDraw(const void *key, int nverts, const float *uvs, const unsigned short *indices,
+		int nidx, const void *pose1, const void *pose2, float blend)
+{
+	gcmContextData *ctx = ps3gl.ctx;
+	alias_topo_t *t;
+	uint32_t p1, p2, color;
+	unsigned units;
+	int made = 0, i;
+	float morph[4], cs[4];
+
+	if (!ctx || !vp_morph || !vp_colorscale || nverts <= 0 || nverts > 65536 || nidx <= 0 || !pose1)
+	{
+		return 0;
+	}
+
+	for (t = alias_topos; t; t = t->next)
+	{
+		if (t->key == key && t->nverts == nverts)
+		{
+			break;
+		}
+	}
+	if (!t)
+	{
+		struct { float u, v; uint32_t color, pad; } *out;
+		uint32_t off;
+
+		out = (void *)AliasAlloc((uint32_t)nverts * 16, &off);
+		if (!out || !(t = (alias_topo_t *)malloc(sizeof(*t))))
+		{
+			return 0;
+		}
+		for (i = 0; i < nverts; i++)
+		{
+			out[i].u = uvs[i * 2];
+			out[i].v = uvs[i * 2 + 1];
+			out[i].color = 0xffffffffu;
+			out[i].pad = 0;
+		}
+		t->key = key;
+		t->off = off;
+		t->nverts = nverts;
+		t->next = alias_topos;
+		alias_topos = t;
+		made = 1;
+	}
+
+	if (!AliasPose((const uint8_t *)pose1, nverts, &p1, &made))
+	{
+		return 0;
+	}
+	p2 = p1;
+	if (pose2 && pose2 != pose1 && !AliasPose((const uint8_t *)pose2, nverts, &p2, &made))
+	{
+		return 0;
+	}
+
+	PrepareState(&units);
+	if (units & 2)
+	{
+		return 0;   /* a second texture's coordinates: not kept here */
+	}
+
+	if (made)
+	{
+		/* new data in memory the RSX's vertex cache may have seen before */
+		__asm__ volatile("sync" ::: "memory");
+		rsxInvalidateVertexCache(ctx);
+		if (!alias_logged)
+		{
+			PS3_Log("[gl] alias models: animated by the RSX from RSX memory");
+			alias_logged = 1;
+		}
+	}
+
+	if (blend < 0.0f) blend = 0.0f;
+	if (blend > 1.0f) blend = 1.0f;
+	morph[0] = (p2 == p1) ? 0.0f : blend;
+	morph[1] = morph[2] = morph[3] = 0.0f;
+	color = ps3gl.color;
+	cs[0] = (float)((color >> 24) & 255) / 255.0f;
+	cs[1] = (float)((color >> 16) & 255) / 255.0f;
+	cs[2] = (float)((color >> 8) & 255) / 255.0f;
+	cs[3] = (float)(color & 255) / 255.0f;
+	rsxSetVertexProgramParameter(ctx, vp, vp_morph, morph);
+	rsxSetVertexProgramParameter(ctx, vp, vp_colorscale, cs);
+	morph_active = 1;
+
+	rsxBindVertexArrayAttrib(ctx, GCM_VERTEX_ATTRIB_POS, 0, p1, 16, 4, GCM_VERTEX_DATA_TYPE_F32, GCM_LOCATION_RSX);
+	rsxBindVertexArrayAttrib(ctx, GCM_VERTEX_ATTRIB_WEIGHT, 0, p2, 16, 4, GCM_VERTEX_DATA_TYPE_F32, GCM_LOCATION_RSX);
+	rsxBindVertexArrayAttrib(ctx, GCM_VERTEX_ATTRIB_TEX0, 0, t->off, 16, 2, GCM_VERTEX_DATA_TYPE_F32, GCM_LOCATION_RSX);
+	rsxBindVertexArrayAttrib(ctx, GCM_VERTEX_ATTRIB_TEX1, 0, t->off, 16, 2, GCM_VERTEX_DATA_TYPE_F32, GCM_LOCATION_RSX);
+	rsxBindVertexArrayAttrib(ctx, GCM_VERTEX_ATTRIB_COLOR0, 0, t->off + 8, 16, 4, GCM_VERTEX_DATA_TYPE_U8, GCM_LOCATION_RSX);
+	DrawIndexedInline(GCM_TYPE_TRIANGLES, indices, nidx);
+	ps3gl.st_draws++;
+	return 1;
 }
 
 /* The next draws are of this page's vertices (-1: not the world) */

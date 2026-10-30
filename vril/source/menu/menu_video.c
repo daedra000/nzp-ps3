@@ -230,6 +230,25 @@ void Menu_Video_Draw (void)
     Menu_DrawButton (4, video_items++, "GAMMA", "Adjust game Black Level.", NULL);
     Menu_DrawOptionSlider (4, video_items-1, 0, 1, v_gamma, "gamma", false, false, 0.1f);
 
+#ifdef __PS3__
+    // (no ULTRAWIDE MODE: a TV is 16:9)
+
+    // Particles
+    Menu_DrawButton (5, video_items++, "PARTICLES", "Trade Particle Effects for Performance.", Menu_Video_ApplyParticles);
+    Menu_DrawOptionButton (5, particles_string);
+
+    // Retro (texture filtering)
+    Menu_DrawButton (6, video_items++, "TEXTURE FILTERING", "Choose 3D Environment Filtering Mode.", Menu_Video_ApplyTextureFiltering);
+    Menu_DrawOptionButton (6, retro_string);
+
+    // The 3D view's resolution, scaled to the TV (the HUD stays at full resolution)
+    Menu_DrawButton (7, video_items++, "RESOLUTION", "Lower draws the 3D view faster; the HUD stays sharp. Takes effect on APPLY.", PS3_VID_NextResolution);
+    Menu_DrawOptionButton (7, (char *)PS3_VID_ResolutionString());
+
+    // Dynamic resolution: a smaller 3D view while the RSX can't keep up
+    Menu_DrawButton (8, video_items++, "DYNAMIC RES", "Draws the 3D view smaller in heavy scenes; the HUD stays sharp. On APPLY.", PS3_VID_ToggleDynamicRes);
+    Menu_DrawOptionButton (8, (char *)PS3_VID_DynamicResString());
+#else
     // Ultrawide Mode
     Menu_DrawButton (5, video_items++, "ULTRAWIDE MODE", "Condenses HUD closer to center of Display.", Menu_Video_ApplyUltrawide);
     Menu_DrawOptionButton (5, ultrawide_string);
@@ -248,14 +267,7 @@ void Menu_Video_Draw (void)
         Menu_DrawOptionButton (8, dithering_string);
     }
 
-#ifdef __PS3__
-    // Render resolution, scaled to the TV
-    Menu_DrawButton (8, video_items++, "RESOLUTION", "Lower draws faster; scaled to your TV. Takes effect on APPLY.", PS3_VID_NextResolution);
-    Menu_DrawOptionButton (8, (char *)PS3_VID_ResolutionString());
 
-    // Dynamic resolution: a smaller 3D view while the RSX can't keep up
-    Menu_DrawButton (9, video_items++, "DYNAMIC RES", "Draws the 3D view smaller in heavy scenes; the HUD stays sharp. On APPLY.", PS3_VID_ToggleDynamicRes);
-    Menu_DrawOptionButton (9, (char *)PS3_VID_DynamicResString());
 #endif
 
 #ifdef PLATFORM_SUPPORTS_VIDEO_OPTIONS

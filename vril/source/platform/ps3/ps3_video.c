@@ -744,7 +744,26 @@ SetMainSurface(void)
  * of headroom, and longer before the next try if going up was too soon.
  */
 static int dyn_enabled = 1;
-static int dyn_k = 8, dyn_frame_k = 8;   /* eighths of the render target */
+static int dyn_k = 8, dyn_frame_k = 8;   /* eighths of the base view */
+/* The 3D view's size: RESOLUTION's (the render target stays the screen's,
+   so the HUD is always drawn at full resolution), then dynamic resolution's
+   eighths of that. 0: the render target's. */
+static int view_base_w, view_base_h, view_w, view_h;
+
+void
+PS3_Video_SetViewBase(int w, int h)
+{
+	view_base_w = w;
+	view_base_h = h;
+}
+
+/* This frame's 3D view size, in the render target's bottom left */
+void
+PS3_Video_ViewSize(int *w, int *h)
+{
+	*w = view_w ? view_w : src_w;
+	*h = view_h ? view_h : src_h;
+}
 static u64 dyn_last_start, dyn_total_us;
 static int dyn_frames, dyn_late, dyn_hold, dyn_good, dyn_up_wait = 180, dyn_since_up = -1;
 
@@ -758,12 +777,6 @@ PS3_Video_SetDynamicRes(int on)
 	}
 }
 
-/* The 3D view's size this frame, in eighths of the render target */
-int
-PS3_Video_ViewEighths(void)
-{
-	return dyn_frame_k;
-}
 
 /* From PS3GL_EndFrame: was the RSX still on the frame before this one? */
 void
@@ -855,6 +868,12 @@ PS3_Video_BindRenderTarget(void)
 		}
 		dyn_last_start = now;
 		dyn_frame_k = dyn_enabled ? dyn_k : 8;
+		{
+			int bw = view_base_w > 0 && view_base_w <= src_w ? view_base_w : src_w;
+			int bh = view_base_h > 0 && view_base_h <= src_h ? view_base_h : src_h;
+			view_w = bw * dyn_frame_k / 8;
+			view_h = bh * dyn_frame_k / 8;
+		}
 	}
 
 	SetMainSurface();
@@ -1229,7 +1248,7 @@ PS3_Video_GammaView(void)
 	pass_t p;
 
 	if (!ready || !gl_mode || !src[cur] ||
-		(color_exponent == 1.0f && color_brightness == 1.0f && dyn_frame_k >= 8))
+		(color_exponent == 1.0f && color_brightness == 1.0f && view_w >= src_w && view_h >= src_h))
 	{
 		return;
 	}
@@ -1262,9 +1281,9 @@ PS3_Video_GammaView(void)
 	/* Dynamic resolution: the view is in the render target's bottom left
 	   (GL's origin: R_SetupGL's viewport), dyn_frame_k eighths of it each
 	   way; it's scaled up over the whole scratch image, filtered. */
-	if (dyn_frame_k < 8)
+	if (view_w < src_w || view_h < src_h)
 	{
-		int sw = src_w * dyn_frame_k / 8, sh = src_h * dyn_frame_k / 8;
+		int sw = view_w, sh = view_h;
 
 		p.region = 1;
 		p.linear = 1;

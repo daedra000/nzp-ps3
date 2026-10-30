@@ -1552,16 +1552,18 @@ void R_SetupGL (void)
 #ifdef __PS3__
 	else
 	{
-		// dynamic resolution: the view drawn smaller, in the bottom left;
-		// PS3_Video_GammaView scales it back up before the HUD
-		extern int PS3_Video_ViewEighths(void);
-		int k = PS3_Video_ViewEighths();
-		if (k < 8)
+		// RESOLUTION and dynamic resolution: the view drawn smaller, in the
+		// bottom left; PS3_Video_GammaView scales it up before the HUD,
+		// which is drawn at the screen's resolution
+		extern void PS3_Video_ViewSize(int *w, int *h);
+		int vw, vh;
+		PS3_Video_ViewSize(&vw, &vh);
+		if (vw < glwidth || vh < glheight)
 		{
-			x = x * k / 8;
-			y2 = y2 * k / 8;
-			w = w * k / 8;
-			h = h * k / 8;
+			x = x * vw / glwidth;
+			y2 = y2 * vh / glheight;
+			w = w * vw / glwidth;
+			h = h * vh / glheight;
 		}
 	}
 #endif

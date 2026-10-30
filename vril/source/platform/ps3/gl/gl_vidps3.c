@@ -190,29 +190,37 @@ static int ps3_rt_w, ps3_rt_h;
 /* Between frames: a new size from the cvar (the config, or the menu). */
 static void PS3_VID_CheckResolution(void)
 {
+	/* The render target stays the screen's size: only the 3D view is drawn
+	   at RESOLUTION's size and scaled up, so the HUD and menus are always
+	   drawn at full resolution (at a lower render target they came out
+	   uneven). */
+	static int last_w, last_h;
+	extern void PS3_Video_SetViewBase(int w, int h);
 	int i = PS3_ResIndex(vid_ps3_res.string);
 	int w = ps3_res[i].w, h = ps3_res[i].h;
 
-	if (w == ps3_rt_w && h == ps3_rt_h)
+	if (w > ps3_rt_w) w = ps3_rt_w;
+	if (h > ps3_rt_h) h = ps3_rt_h;
+	if (w == last_w && h == last_h)
 		return;
-	if (PS3_Video_SetRenderTarget(w, h) != 0) {
-		PS3_Log("VID: no %dx%d render target, staying at %dx%d", w, h, ps3_rt_w, ps3_rt_h);
-		Cvar_Set("vid_ps3_resolution", va("%dx%d", ps3_rt_w, ps3_rt_h));
-		PS3_Video_SetRenderTarget(ps3_rt_w, ps3_rt_h);
-		return;
-	}
-	PS3GL_Init(w, h);   /* only the size changes: the GL state stays */
-	ps3_rt_w = w;
-	ps3_rt_h = h;
-	vid.recalc_refdef = 1;
-	PS3_Log("VID: rendering at %dx%d, scaled to %dx%d (2D laid out at %dx%d)", w, h,
-		PS3_Video_Width(), PS3_Video_Height(), vid.width, vid.height);
+	last_w = w;
+	last_h = h;
+	PS3_Video_SetViewBase(w, h);
+	PS3_Log("VID: 3D view at %dx%d, HUD at %dx%d, scaled to %dx%d", w, h, ps3_rt_w, ps3_rt_h,
+		PS3_Video_Width(), PS3_Video_Height());
 }
 
 void GL_BeginRendering(int *x, int *y, int *width, int *height)
 {
 	PS3_VID_CheckResolution();
 	PS3_VID_CheckGamma();
+	{
+		// no ULTRAWIDE MODE on a TV (the menu doesn't offer it): off, even
+		// if a config from before says on
+		extern cvar_t vid_ultrawide_limiter;
+		if (vid_ultrawide_limiter.value)
+			Cvar_SetValue("vid_ultrawide_limiter", 0);
+	}
 	{
 		extern void PS3_Video_SetDynamicRes(int on);
 		PS3_Video_SetDynamicRes(vid_ps3_dynres.value != 0);
