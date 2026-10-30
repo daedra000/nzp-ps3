@@ -742,11 +742,17 @@ float goal_roll = 0;
 
 static vec3_t cADSOfs;
 int lock_viewmodel; 
+// split screen: file scope so each seat keeps its own (V_RegisterSeatVars)
+static float oldyaw = 0;
+static float oldpitch = 0;
+static float oldz = 0;
+static float lastorgz = 0;
+static float stairvelocity = 0;
+static qboolean stairsmoothing = false;
+
 void CalcGunAngle (void)
 {
 	float	yaw, pitch, move;
-	static float oldyaw = 0;
-	static float oldpitch = 0;
 
 
 	yaw = r_refdef.viewangles[YAW];
@@ -1014,10 +1020,6 @@ void V_CalcRefdef (void)
 	float		stairz = 0;
 	qboolean	stairstep = false;
 
-	static float oldz = 0;
-	static float lastorgz = 0;
-	static float stairvelocity = 0;
-	static qboolean stairsmoothing = false;
 
 	V_DriftPitch ();
 	DropRecoilKick();
@@ -1780,4 +1782,8 @@ void V_RegisterSeatVars (void)
 	SEAT_VAR(viewWasFalling);
 	SEAT_VAR(CWeaponOffset); SEAT_VAR(CWeaponRot);
 	SEAT_VAR(lastPunchAngle);
+	// the stair/jump smoothing and gun sway followed one height for both
+	// views (jumping felt off in split screen)
+	SEAT_VAR(oldyaw); SEAT_VAR(oldpitch);
+	SEAT_VAR(oldz); SEAT_VAR(lastorgz); SEAT_VAR(stairvelocity); SEAT_VAR(stairsmoothing);
 }
