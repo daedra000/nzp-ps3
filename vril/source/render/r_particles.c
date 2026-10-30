@@ -51,6 +51,15 @@ R_RotateParticleAxes(const vec3_t * axes, vec3_t * rotated)
 
 #define ABSOLUTE_MIN_PARTICLES          64
 #define ABSOLUTE_MAX_PARTICLES          6144
+
+// PS3: the particle textures with mipmaps. The flamethrower's flames are
+// 256x256 textures drawn small, over and over: without smaller copies the
+// RSX reads the whole texture for each one and its texture cache thrashes.
+#ifdef __PS3__
+#define PARTICLE_MIPS true
+#else
+#define PARTICLE_MIPS false
+#endif
 #define RAY_RING_START_SIZE             1.25f
 #define RAY_RING_PARTICLE_START_SIZE    0.75f
 #define RAY_RING_PARTICLE_GROWTH        6.0f
@@ -468,7 +477,7 @@ R_InitParticles(void)
     loading_num_step = loading_num_step + 24;
 
     // FIXME: Replace these temp functions when loadtextureimage is unified.
-    particleimage = Image_LoadImage("textures/particles/particlefont", IMAGE_TGA, 1, true, false);
+    particleimage = Image_LoadImage("textures/particles/particlefont", IMAGE_TGA, 1, true, PARTICLE_MIPS);
 
     if (particleimage < 0) {
         Sys_Error("Failed to load textures/particles/particlefont");
@@ -497,7 +506,7 @@ R_InitParticles(void)
     max_s = max_t = 256.0;
 
     // FIXME: Replace these temp functions when loadtextureimage is unified.
-    particleimage = Image_LoadImage("textures/particles/flame", IMAGE_TGA, 1, true, false);
+    particleimage = Image_LoadImage("textures/particles/flame", IMAGE_TGA, 1, true, PARTICLE_MIPS);
 
     if (particleimage < 0) {
         Sys_Error("Failed to load textures/particles/flame");
@@ -510,7 +519,7 @@ R_InitParticles(void)
 
 
     // FIXME: Replace these temp functions when loadtextureimage is unified.
-    particleimage = Image_LoadImage("textures/particles/inferno", IMAGE_TGA, 1, true, false);
+    particleimage = Image_LoadImage("textures/particles/inferno", IMAGE_TGA, 1, true, PARTICLE_MIPS);
 
     if (particleimage < 0) {
         Sys_Error("Failed to load textures/particles/inferno");
@@ -524,7 +533,7 @@ R_InitParticles(void)
     SCR_UpdateScreen();
 
     // FIXME: Replace these temp functions when loadtextureimage is unified.
-    particleimage = Image_LoadImage("textures/particles/zing1", IMAGE_TGA, 1, true, false);
+    particleimage = Image_LoadImage("textures/particles/zing1", IMAGE_TGA, 1, true, PARTICLE_MIPS);
 
     if (particleimage < 0) {
         Sys_Error("Failed to load textures/particles/zing1");
@@ -540,7 +549,7 @@ R_InitParticles(void)
     max_s = max_t = 128.0;
 
     // FIXME: Replace these temp functions when loadtextureimage is unified.
-    particleimage = Image_LoadImage("textures/mzfl/mzfl0", IMAGE_TGA, 1, true, false);
+    particleimage = Image_LoadImage("textures/mzfl/mzfl0", IMAGE_TGA, 1, true, PARTICLE_MIPS);
 
     if (particleimage < 0) {
         Sys_Error("Failed to load textures/mzfl/mzfl0");
@@ -554,7 +563,7 @@ R_InitParticles(void)
     SCR_UpdateScreen();
 
     // FIXME: Replace these temp functions when loadtextureimage is unified.
-    particleimage = Image_LoadImage("textures/mzfl/mzfl1", IMAGE_TGA, 1, true, false);
+    particleimage = Image_LoadImage("textures/mzfl/mzfl1", IMAGE_TGA, 1, true, PARTICLE_MIPS);
 
     if (particleimage < 0) {
         Sys_Error("Failed to load textures/mzfl/mzfl1");
@@ -568,7 +577,7 @@ R_InitParticles(void)
     SCR_UpdateScreen();
 
     // FIXME: Replace these temp functions when loadtextureimage is unified.
-    particleimage = Image_LoadImage("textures/mzfl/mzfl2", IMAGE_TGA, 1, true, false);
+    particleimage = Image_LoadImage("textures/mzfl/mzfl2", IMAGE_TGA, 1, true, PARTICLE_MIPS);
 
     if (particleimage < 0) {
         Sys_Error("Failed to load textures/mzfl/mzfl2");
@@ -584,7 +593,7 @@ R_InitParticles(void)
     max_s = max_t = 64.0;
 
     // FIXME: Replace these temp functions when loadtextureimage is unified.
-    particleimage = Image_LoadImage("textures/particles/bloodcloud", IMAGE_TGA, 1, true, false);
+    particleimage = Image_LoadImage("textures/particles/bloodcloud", IMAGE_TGA, 1, true, PARTICLE_MIPS);
 
     if (particleimage < 0) {
         Sys_Error("Failed to load textures/particles/bloodcloud");
@@ -1486,17 +1495,18 @@ DRAW_PARTICLE_BILLBOARD(particle_texture_t * ptex, particle_t * p, vec3_t * coor
 #ifdef __PS3__
     // Late rounds: explosions and fire right in front of the camera stacked
     // dozens of screen-sized blended quads, more than the RSX fills at 60 fps.
-    // A particle is kept to 35% of the view's height (as the lamp glows), and
-    // one at or behind the eye isn't drawn.
+    // A particle is kept to 25% of the view's height, and one within a few
+    // units of the eye isn't drawn (the flamethrower's stream starts right
+    // in front of the camera: dozens of those filled the screen each frame).
     {
         vec3_t delta;
         float  depth, limit;
 
         VectorSubtract(p->org, r_origin, delta);
         depth = DotProduct(delta, vpn);
-        if (depth < 1.0f)
+        if (depth < 6.0f)
             return;
-        limit = 0.35f * depth * tanf(r_refdef.fov_y * (float) M_PI / 360.0f);
+        limit = 0.25f * depth * tanf(r_refdef.fov_y * (float) M_PI / 360.0f);
         if (scale > limit)
             scale = limit;
     }
