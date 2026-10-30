@@ -450,6 +450,13 @@ R_UpdateSurfaceLightmap(msurface_t *surface)
         if (surface->dlightframe == r_framecount && surface->cached_dlight &&
             surface->cached_dlight_sig == R_SurfaceDlightSig(surface))
             return;
+        // Moving lights (explosions, muzzle flashes, the flamethrower) rebuilt
+        // and re-uploaded every lightmap they touch every frame: on a big map
+        // ~3.5 ms a frame in a fight. A surface already lit by them is redone
+        // every other frame (30 a second); a light that just arrived, or just
+        // left, still shows at once.
+        if (surface->dlightframe == r_framecount && surface->cached_dlight && (r_framecount & 1))
+            return;
 #endif
     }
     if (!r_dynamic.value)
