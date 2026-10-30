@@ -525,3 +525,90 @@ void CL_UpdateTEnts (void)
 	}
 
 }
+
+/*
+=================
+Other players' guns (split screen; the QC never gives players a world weapon).
+
+Each player another seat can see gets the world model of the gun they hold
+(g_<name>.mdl next to their v_<name>.mdl, as on wall buys and in the box) in
+front of them, at their aim. player.mdl has no hand to attach it to, so it's a
+fixed place: forward, to the right, below the eyes.
+=================
+*/
+static struct model_s *CL_WorldWeaponModel (const char *vmodel)
+{
+	char want[MAX_QPATH], dir[MAX_QPATH];
+	const char *slash;
+	int i, dlen;
+
+	if (!vmodel || !*vmodel)
+		return NULL;
+	slash = strrchr (vmodel, '/');
+	if (!slash || strncmp (slash + 1, "v_", 2))
+		return NULL;
+	dlen = slash + 1 - vmodel;
+	if (dlen >= MAX_QPATH - 4)
+		return NULL;
+	memcpy (dir, vmodel, dlen);
+	dir[dlen] = 0;
+	snprintf (want, sizeof(want), "%sg_%s", dir, slash + 3);
+
+	// g_<same name>, or else the only kind of g_ model in that folder (v_karscope -> g_kar...)
+	for (i = 1; i < MAX_MODELS && cl.model_precache[i]; i++)
+		if (!strcmp (cl.model_precache[i]->name, want))
+			return cl.model_precache[i];
+	for (i = 1; i < MAX_MODELS && cl.model_precache[i]; i++)
+		if (!strncmp (cl.model_precache[i]->name, dir, dlen) && !strncmp (cl.model_precache[i]->name + dlen, "g_", 2))
+			return cl.model_precache[i];
+	return NULL;
+}
+
+void CL_AddPlayerWeapons (void)
+{
+	int i, n = cl_numvisedicts;
+
+	if (!sv.active || cl.maxclients < 2)
+		return;		// the guns are read from the local server's players
+
+	for (i = 0; i < n; i++)
+	{
+		entity_t	*pl = cl_visedicts[i], *gun;
+		int			num = pl - cl_entities;
+		edict_t		*ed;
+		struct model_s *m;
+		vec3_t		aim, fwd, right, up;
+		float		height;
+
+		if (num < 1 || num > cl.maxclients || num == cl.viewentity || !pl->model)
+			continue;
+		ed = EDICT_NUM(num);
+		if (ed->free || !ed->v.weaponmodel || ed->v.health <= 0)
+			continue;
+		if (!(m = CL_WorldWeaponModel (PR_GetString (ed->v.weaponmodel))))
+			continue;
+		if (!(gun = CL_NewTempEntity ()))
+			return;
+
+		aim[0] = ed->v.v_angle[0];
+		if (aim[0] > 60) aim[0] = 60;
+		if (aim[0] < -60) aim[0] = -60;
+		aim[1] = pl->angles[1];
+		aim[2] = 0;
+		AngleVectors (aim, fwd, right, up);
+
+		// a hand's height: below the eyes, which drop when crouched or prone
+		height = ed->v.view_ofs[2] - 16;
+		VectorMA (pl->origin, 12, fwd, gun->origin);
+		VectorMA (gun->origin, 7, right, gun->origin);
+		gun->origin[2] += height;
+
+		gun->angles[0] = -aim[0];	// models pitch the other way to views
+		gun->angles[1] = aim[1];
+		gun->angles[2] = 0;
+		gun->model = m;
+		gun->frame = 0;
+		gun->skinnum = 0;
+		gun->scale = ENTSCALE_DEFAULT;
+	}
+}

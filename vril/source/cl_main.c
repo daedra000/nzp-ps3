@@ -1031,6 +1031,10 @@ int CL_ReadFromServer (void)
 
 	CL_RelinkEntities ();
 	CL_UpdateTEnts ();
+	{
+		extern void CL_AddPlayerWeapons (void);
+		CL_AddPlayerWeapons ();		// split screen: the other player's gun in their hands
+	}
 
 //
 // bring the links up to date
