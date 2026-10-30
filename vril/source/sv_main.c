@@ -1370,6 +1370,12 @@ void SV_SpawnServer (char *server)
 #endif
 	ED_LoadFromFile (sv.worldmodel->entities);
 
+	// split screen: the QC only precaches the reviver's morphine arms for FTE's
+	// co-op; precached later, the clients (which have the list already) never
+	// get it, and the animation is missing
+	if (svs.maxclients > 1)
+		SV_ModelIndex ("models/weapons/morphine/v_morphine.mdl");
+
 	sv.active = true;
 
 // all setup is completed, any further precache statements are errors
