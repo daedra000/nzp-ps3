@@ -296,6 +296,12 @@ PS3GL_EndFrame(void)
 		return;
 	}
 
+	/* dynamic resolution: is the RSX still drawing the frame before this one? */
+	{
+		extern void PS3_Video_DynSample(int gpu_late);
+		PS3_Video_DynSample((int)(ps3gl_completed_frame() - (ps3gl.frame - 1)) < 0);
+	}
+
 	PS3_Cmd_Reserve();
 	/* Written by the RSX once everything before it is drawn. */
 	rsxSetWriteBackendLabel(ps3gl.ctx, PS3GL_LABEL_FRAME, ps3gl.frame);

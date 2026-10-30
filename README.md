@@ -18,7 +18,10 @@ Reports are welcome: send `nzp_log.txt` (see below) with what happened.
   TV. The HUD and menus are the same size at every resolution.
 - Video Options > GAMMA brightens or darkens the game world only; the HUD and menus
   keep their colours.
-- Both take effect on APPLY; BACK drops the change.
+- Video Options > DYNAMIC RES (on by default): when the graphics chip can't keep up
+  (late rounds full of explosions and fire), the 3D view is drawn smaller, down to
+  5/8, and scaled back up; the HUD stays sharp. It goes back up when there's room.
+- These take effect on APPLY; BACK drops the change.
 
 **System**
 - The PS button pauses a match (the pause menu is up when you come back).

@@ -67,6 +67,24 @@ void GL_Init(void)
  * by an older build, with the old 960x540 default in it, doesn't keep it.)
  */
 cvar_t vid_ps3_res = {"vid_ps3_resolution", "1280x720", true};
+/* Dynamic resolution (ps3_video.c): the 3D view drawn smaller while the RSX
+   can't keep up, the HUD stays sharp. Video Options > DYNAMIC RES. */
+cvar_t vid_ps3_dynres = {"vid_ps3_dynres", "1", true};
+static int ps3_dynres_pending = -1;
+
+void PS3_VID_ToggleDynamicRes(void)
+{
+	if (ps3_dynres_pending < 0)
+		ps3_dynres_pending = vid_ps3_dynres.value != 0;
+	ps3_dynres_pending = !ps3_dynres_pending;
+}
+
+const char *PS3_VID_DynamicResString(void)
+{
+	int on = vid_ps3_dynres.value != 0;
+	int want = ps3_dynres_pending >= 0 ? ps3_dynres_pending : on;
+	return want ? (want != on ? "ON (APPLY)" : "ON") : (want != on ? "OFF (APPLY)" : "OFF");
+}
 
 static const struct { int w, h; } ps3_res[] = {
 	{1280, 720}, {960, 540}, {848, 480},
@@ -105,6 +123,7 @@ void PS3_VID_ResetPendingResolution(void)
 	extern cvar_t v_gamma;
 
 	ps3_res_pending = PS3_ResIndex(vid_ps3_res.string);
+	ps3_dynres_pending = -1;
 	if (ps3_gamma_live < 0.0f)
 		ps3_gamma_live = v_gamma.value;
 	if (v_gamma.value != ps3_gamma_live)
@@ -120,6 +139,8 @@ void PS3_VID_ApplyGamma(void)
 
 void PS3_VID_ApplyResolution(void)
 {
+	if (ps3_dynres_pending >= 0)
+		Cvar_SetValue("vid_ps3_dynres", ps3_dynres_pending);
 	if (ps3_res_pending >= 0)
 		Cvar_Set("vid_ps3_resolution", va("%dx%d", ps3_res[ps3_res_pending].w, ps3_res[ps3_res_pending].h));
 }
@@ -192,6 +213,10 @@ void GL_BeginRendering(int *x, int *y, int *width, int *height)
 {
 	PS3_VID_CheckResolution();
 	PS3_VID_CheckGamma();
+	{
+		extern void PS3_Video_SetDynamicRes(int on);
+		PS3_Video_SetDynamicRes(vid_ps3_dynres.value != 0);
+	}
 
 	// waits for a free render target and makes it the RSX's surface
 	PS3GL_BeginFrame();
@@ -263,6 +288,7 @@ void VID_Init(unsigned char *palette)
 
 	Cvar_RegisterVariable(&gl_ztrick);
 	Cvar_RegisterVariable(&vid_ps3_res);
+	Cvar_RegisterVariable(&vid_ps3_dynres);
 	{
 		// sys_ps3.c: the PS3 user's name last used (registered before config.cfg runs)
 		extern cvar_t ps3_autoname;

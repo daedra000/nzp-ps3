@@ -733,6 +733,101 @@ SetMainSurface(void)
 	rsxSetSurface(ctx, &sf);
 }
 
+/*
+ * Dynamic resolution (Video Options > DYNAMIC RES), as Halo CE PS3's: when the
+ * RSX can't keep up with 60 fps (late rounds' explosions and fire), the 3D view
+ * is drawn smaller (7/8, 6/8, then 5/8 of the render target) and scaled back up
+ * before the HUD, which stays sharp. The RSX counts as the limit when it's
+ * still on the frame before when the next one is handed over; frames slow
+ * because of the CPU (a big map) change nothing, a smaller view wouldn't help.
+ * One step every half second at most; back up an eighth after a few seconds
+ * of headroom, and longer before the next try if going up was too soon.
+ */
+static int dyn_enabled = 1;
+static int dyn_k = 8, dyn_frame_k = 8;   /* eighths of the render target */
+static u64 dyn_last_start, dyn_total_us;
+static int dyn_frames, dyn_late, dyn_hold, dyn_good, dyn_up_wait = 180, dyn_since_up = -1;
+
+void
+PS3_Video_SetDynamicRes(int on)
+{
+	dyn_enabled = on;
+	if (!on)
+	{
+		dyn_k = 8;
+	}
+}
+
+/* The 3D view's size this frame, in eighths of the render target */
+int
+PS3_Video_ViewEighths(void)
+{
+	return dyn_frame_k;
+}
+
+/* From PS3GL_EndFrame: was the RSX still on the frame before this one? */
+void
+PS3_Video_DynSample(int gpu_late)
+{
+	u64 avg;
+	int late;
+
+	dyn_frames++;
+	dyn_late += gpu_late ? 1 : 0;
+	if (dyn_hold > 0)
+	{
+		dyn_hold--;
+	}
+	if (dyn_since_up >= 0 && ++dyn_since_up > 600)
+	{
+		dyn_since_up = -1;
+		dyn_up_wait = 180;   /* held up there for 10 s: tries come quickly again */
+	}
+	if (dyn_frames < 30)
+	{
+		return;
+	}
+	avg = dyn_total_us / (u64)dyn_frames;
+	late = dyn_late * 100 / dyn_frames;
+	dyn_frames = dyn_late = 0;
+	dyn_total_us = 0;
+
+	if (!dyn_enabled)
+	{
+		dyn_k = 8;
+		return;
+	}
+	if (avg > 17600 && late >= 50 && dyn_k > 5 && !dyn_hold)
+	{
+		if (dyn_since_up >= 0 && dyn_since_up < 120)
+		{
+			dyn_up_wait = dyn_up_wait * 2 > 1800 ? 1800 : dyn_up_wait * 2;
+		}
+		dyn_k--;
+		dyn_hold = 30;
+		dyn_good = 0;
+		dyn_since_up = -1;
+		PS3_Log("[video] dynamic resolution: 3D view at %d/8 (%.1f ms a frame, the RSX behind %d%%)",
+				dyn_k, avg / 1000.0, late);
+	}
+	else if (avg < 17200 && late < 10 && dyn_k < 8 && !dyn_hold)
+	{
+		dyn_good += 30;
+		if (dyn_good >= dyn_up_wait)
+		{
+			dyn_k++;
+			dyn_hold = 30;
+			dyn_good = 0;
+			dyn_since_up = 0;
+			PS3_Log("[video] dynamic resolution: 3D view at %d/8", dyn_k);
+		}
+	}
+	else
+	{
+		dyn_good = 0;
+	}
+}
+
 void
 PS3_Video_BindRenderTarget(void)
 {
@@ -749,6 +844,17 @@ PS3_Video_BindRenderTarget(void)
 		WaitFlips();
 		t0 = sysGetSystemTime() - t0;
 		prof_wait_us += t0;
+	}
+
+	/* frame to frame time, and this frame's view size (fixed for the frame) */
+	{
+		u64 now = sysGetSystemTime();
+		if (dyn_last_start)
+		{
+			dyn_total_us += now - dyn_last_start;
+		}
+		dyn_last_start = now;
+		dyn_frame_k = dyn_enabled ? dyn_k : 8;
 	}
 
 	SetMainSurface();
@@ -905,6 +1011,8 @@ typedef struct
 	int off_x, off_y, out_w, out_h;
 	float brightness, exponent;
 	int slot;
+	int region;                  /* set: sample only tu0,tv0 .. tu1,tv1 of the texture */
+	float tu0, tv0, tu1, tv1;
 } pass_t;
 
 static void
@@ -1047,8 +1155,8 @@ Pass(const pass_t *p)
 		v[i].y = corner[i][1];
 		v[i].z = 0.0f;
 		v[i].w = 1.0f;
-		v[i].u0 = corner[i][2];
-		v[i].v0 = corner[i][3];
+		v[i].u0 = p->region ? p->tu0 + corner[i][2] * (p->tu1 - p->tu0) : corner[i][2];
+		v[i].v0 = p->region ? p->tv0 + corner[i][3] * (p->tv1 - p->tv0) : corner[i][3];
 		v[i].u1 = p->brightness;
 		v[i].v1 = p->exponent;
 		v[i].color = 0xffffffffu;
@@ -1120,7 +1228,8 @@ PS3_Video_GammaView(void)
 	extern void PS3GL_InvalidateState(void);
 	pass_t p;
 
-	if (!ready || !gl_mode || !src[cur] || (color_exponent == 1.0f && color_brightness == 1.0f))
+	if (!ready || !gl_mode || !src[cur] ||
+		(color_exponent == 1.0f && color_brightness == 1.0f && dyn_frame_k >= 8))
 	{
 		return;
 	}
@@ -1150,7 +1259,22 @@ PS3_Video_GammaView(void)
 	p.out_w = src_w;
 	p.out_h = src_h;
 
-	/* the view, graded, into the scratch image */
+	/* Dynamic resolution: the view is in the render target's bottom left
+	   (GL's origin: R_SetupGL's viewport), dyn_frame_k eighths of it each
+	   way; it's scaled up over the whole scratch image, filtered. */
+	if (dyn_frame_k < 8)
+	{
+		int sw = src_w * dyn_frame_k / 8, sh = src_h * dyn_frame_k / 8;
+
+		p.region = 1;
+		p.linear = 1;
+		p.tu0 = 0.5f / src_w;
+		p.tu1 = (sw - 0.5f) / src_w;
+		p.tv0 = (src_h - sh + 0.5f) / src_h;
+		p.tv1 = (src_h - 0.5f) / src_h;
+	}
+
+	/* the view, graded (and scaled up), into the scratch image */
 	PS3_Cmd_Reserve();
 	p.dst_off = gm_offset;
 	p.tex_off = src_offset[cur];
@@ -1161,6 +1285,8 @@ PS3_Video_GammaView(void)
 
 	/* and back, as it is */
 	PS3_Cmd_Reserve();
+	p.region = 0;
+	p.linear = 0;
 	p.dst_off = src_offset[cur];
 	p.tex_off = gm_offset;
 	p.brightness = 1.0f;

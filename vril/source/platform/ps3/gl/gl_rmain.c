@@ -1549,6 +1549,22 @@ void R_SetupGL (void)
 		x = y2 = 0;
 		w = h = 256;
 	}
+#ifdef __PS3__
+	else
+	{
+		// dynamic resolution: the view drawn smaller, in the bottom left;
+		// PS3_Video_GammaView scales it back up before the HUD
+		extern int PS3_Video_ViewEighths(void);
+		int k = PS3_Video_ViewEighths();
+		if (k < 8)
+		{
+			x = x * k / 8;
+			y2 = y2 * k / 8;
+			w = w * k / 8;
+			h = h * k / 8;
+		}
+	}
+#endif
 
 	glViewport (glx + x, gly + y2, w, h);
     screenaspect = (float)r_refdef.vrect.width/r_refdef.vrect.height;

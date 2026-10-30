@@ -33,6 +33,8 @@ extern void PS3_VID_ResetPendingResolution(void);
 extern void PS3_VID_ApplyResolution(void);
 extern void PS3_VID_ApplyGamma(void);
 extern const char *PS3_VID_ResolutionString(void);
+extern void PS3_VID_ToggleDynamicRes(void);
+extern const char *PS3_VID_DynamicResString(void);
 #endif
 #ifdef PLATFORM_SUPPORTS_VIDEO_OPTIONS
 char* fullscreen_string;
@@ -250,6 +252,10 @@ void Menu_Video_Draw (void)
     // Render resolution, scaled to the TV
     Menu_DrawButton (8, video_items++, "RESOLUTION", "Lower draws faster; scaled to your TV. Takes effect on APPLY.", PS3_VID_NextResolution);
     Menu_DrawOptionButton (8, (char *)PS3_VID_ResolutionString());
+
+    // Dynamic resolution: a smaller 3D view while the RSX can't keep up
+    Menu_DrawButton (9, video_items++, "DYNAMIC RES", "Draws the 3D view smaller in heavy scenes; the HUD stays sharp. On APPLY.", PS3_VID_ToggleDynamicRes);
+    Menu_DrawOptionButton (9, (char *)PS3_VID_DynamicResString());
 #endif
 
 #ifdef PLATFORM_SUPPORTS_VIDEO_OPTIONS
