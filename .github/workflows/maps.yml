@@ -1,0 +1,35 @@
+name: Map list
+
+# maps.json for DOWNLOAD MAPS, on the maps-list branch (the PS3 reads
+# raw.githubusercontent.com/<repo>/maps-list/maps.json). Built from the
+# Map Releases discussions on nzp-team/nzportable; refreshed daily.
+on:
+  schedule:
+    - cron: "17 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  discussions: read
+
+jobs:
+  list:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Previous list
+        run: |
+          git fetch origin maps-list 2>/dev/null && git show origin/maps-list:maps.json > "$RUNNER_TEMP/old.json" || echo '{}' > "$RUNNER_TEMP/old.json"
+      - name: Build maps.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 tools/maps_list.py "$RUNNER_TEMP/old.json" "$RUNNER_TEMP/maps.json"
+      - name: Publish to maps-list
+        run: |
+          cd "$RUNNER_TEMP" && rm -rf pub && mkdir pub && cd pub
+          git init -q -b maps-list
+          cp ../maps.json .
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add maps.json && git commit -qm "maps.json: $(python3 -c 'import json;print(len(json.load(open("maps.json"))["maps"]))') maps"
+          git push -qf "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" maps-list

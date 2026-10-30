@@ -2,6 +2,7 @@ name: PS3 build
 
 on:
   push:
+    branches-ignore: [maps-list]
   pull_request:
   workflow_dispatch:
     inputs:

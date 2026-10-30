@@ -29,7 +29,8 @@ e.g. "croft/maps/..." or "nzp/maps/...", is stripped), then deleted.
 #include <stdint.h>
 
 #ifndef PS3_MAPS_URL_DEFAULT
-#define PS3_MAPS_URL_DEFAULT ""
+// tools/maps_list.py builds it daily (.github/workflows/maps.yml)
+#define PS3_MAPS_URL_DEFAULT "https://raw.githubusercontent.com/daedra000/nzp-ps3/maps-list/maps.json"
 #endif
 
 cvar_t ps3_maps_url = {"ps3_maps_url", PS3_MAPS_URL_DEFAULT, false};
