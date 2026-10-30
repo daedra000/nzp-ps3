@@ -134,6 +134,37 @@ R_PushDlights(void)
                                            //  advanced yet for this frame
     l = cl_dlights;
 
+#ifdef __PS3__
+    // Each light walks the map's BSP to find the surfaces it reaches, and
+    // the flamethrower makes one for every flame: on a big map (Croft Manor)
+    // that was most of a fight's frame. Only the 8 nearest the camera light
+    // the world (all of them still light the models).
+    {
+        int   order[MAX_DLIGHTS], n = 0, j;
+        float dist[MAX_DLIGHTS];
+
+        for (i = 0; i < MAX_DLIGHTS; i++, l++) {
+            vec3_t d;
+            float  dd;
+            if (l->die < (float) cl.time || !l->radius)
+                continue;
+            VectorSubtract(l->origin, r_refdef.vieworg, d);
+            dd = DotProduct(d, d);
+            for (j = n; j > 0 && dist[j - 1] > dd; j--) {   // insertion, nearest first
+                dist[j]  = dist[j - 1];
+                order[j] = order[j - 1];
+            }
+            dist[j]  = dd;
+            order[j] = i;
+            n++;
+        }
+        if (n > 8)
+            n = 8;
+        for (j = 0; j < n; j++)
+            R_MarkLights(&cl_dlights[order[j]], 1 << order[j], cl.worldmodel->nodes);
+        return;
+    }
+#endif
     for (i = 0 ; i < MAX_DLIGHTS ; i++, l++) {
         if (l->die < (float) cl.time || !l->radius)
             continue;
