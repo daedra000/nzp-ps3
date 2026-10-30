@@ -174,6 +174,8 @@ CalcFov(float fov_x, float width, float height)
  * Internal use only
  * =================
  */
+qboolean scr_split_view;	// this frame draws two views (SCR_UpdateScreen)
+
 static void
 SCR_CalcRefdef(void)
 {
@@ -248,7 +250,7 @@ SCR_CalcRefdef(void)
     r_refdef.fov_x = scr_render_fov;
     // split screen: each view is twice as wide as it's tall again; open the
     // view out a little so it doesn't feel zoomed in
-    if (cl_numseats > 1)
+    if (scr_split_view)
         r_refdef.fov_x = scr_render_fov + 15.0f > 170.0f ? 170.0f : scr_render_fov + 15.0f;
     r_refdef.fov_y = CalcFov(r_refdef.fov_x, r_refdef.vrect.width, r_refdef.vrect.height);
 
@@ -812,18 +814,26 @@ qboolean r_split_noclear;	// split screen: the screen was cleared, R_RenderView 
  * SCR_SeatRect: split screen. Seat 0 the top half, seat 1 the bottom; the 3D
  * view and the HUD are drawn as if that half were the screen. -1 = all of it.
  */
+static int scr_full_scale;	// vid.scale for the whole screen
+
 static void
 SCR_SeatRect(int seat, int full_w, int full_h, int full_glw, int full_glh)
 {
+    if (!scr_full_scale)
+        scr_full_scale = vid.scale;
     if (seat < 0) {
         vid.width  = full_w;
         vid.height = full_h;
+        vid.scale  = scr_full_scale;
+        scr_full_scale = 0;
         glx = gly  = 0;
         glwidth    = full_glw;
         glheight   = full_glh;
     } else {
         vid.width  = full_w;
         vid.height = full_h / 2;
+        // a smaller HUD in each half (3 at 720p -> 2)
+        vid.scale  = scr_full_scale * 2 / 3 < 1 ? 1 : scr_full_scale * 2 / 3;
         glx        = 0;
         glwidth    = full_glw;
         glheight   = full_glh / 2;
@@ -910,6 +920,13 @@ SCR_UpdateScreen(void)
     full_glw = glwidth;
     full_glh = glheight;
     split    = cl_numseats > 1;
+    // the game's over: one view (player 1's) and one leaderboard, full screen
+    if (split) {
+        CL_SetSeat(0);
+        if (cl.intermission)
+            split = false;
+    }
+    scr_split_view = split;
 
     if (split) {
         // both halves cleared once here (R_Clear also sets the depth range and
@@ -925,7 +942,7 @@ SCR_UpdateScreen(void)
         SCR_SetUpToDrawConsole();
 
     // the 3D views: seat 0 last, so r_origin (the sound listener) is its own
-    for (seat = cl_numseats - 1; seat >= 0; seat--) {
+    for (seat = split ? cl_numseats - 1 : 0; seat >= 0; seat--) {
         CL_SetSeat(seat);
         if (split) {
             SCR_SeatRect(seat, full_w, full_h, full_glw, full_glh);

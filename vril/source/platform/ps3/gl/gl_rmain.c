@@ -1848,7 +1848,8 @@ void R_RenderView (void)
 		// gamma on the 3D view only: the HUD drawn after keeps its colours
 		// (split screen: once, after both views, in SCR_UpdateScreen)
 		extern void PS3_Video_GammaView(void);
-		if (cl_numseats < 2)
+		extern qboolean scr_split_view;
+		if (!scr_split_view)
 			PS3_Video_GammaView();
 	}
 #endif
