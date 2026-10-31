@@ -606,10 +606,12 @@ void CL_AddPlayerWeapons (void)
 		// a hand's height: below the eyes, which drop when crouched or prone
 		// (first look on the console: low, near the belly; the hand is higher and
 		// further out to the right)
-		// (second look: at the shoulder, so lower and a little in, where the hands are)
-		height = ed->v.view_ofs[2] - 18;
-		VectorMA (pl->origin, 12, fwd, gun->origin);
-		VectorMA (gun->origin, 8, right, gun->origin);
+		// (second look: at the shoulder; third: in the belly, under the arms.
+		// player.mdl's hands reach ~27 forward, ~6 right of its middle, so the gun
+		// goes out at the hands, between those two heights)
+		height = ed->v.view_ofs[2] - 12;
+		VectorMA (pl->origin, 24, fwd, gun->origin);
+		VectorMA (gun->origin, 5, right, gun->origin);
 		gun->origin[2] += height;
 
 		gun->angles[0] = -aim[0];	// models pitch the other way to views
