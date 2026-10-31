@@ -80,7 +80,7 @@ def check_zip(url):
         z = zipfile.ZipFile(io.BytesIO(data))
     except zipfile.BadZipFile:
         return "not a zip"
-    bsps = []
+    bsps, bsp_sha = [], {}
     for info in z.infolist():
         if info.compress_type not in (0, 8):
             return "compression %d" % info.compress_type
@@ -91,11 +91,13 @@ def check_zip(url):
         name = info.filename.replace("\\", "/")
         if name.lower().endswith(".bsp") and "__macosx" not in name.lower():
             bsps.append(name.rsplit("/", 1)[-1][:-4])
+            # the map file's own hash: the leaderboard takes scores only from this copy
+            bsp_sha[bsps[-1]] = hashlib.sha256(z.read(info)).hexdigest()
     if len(z.infolist()) > 0xFFFF:
         return "zip64"
     if not bsps:
         return "no .bsp"
-    return len(data), bsps, hashlib.sha256(data).hexdigest()
+    return len(data), bsps, hashlib.sha256(data).hexdigest(), bsp_sha
 
 
 def clean_title(t):
@@ -185,8 +187,8 @@ def main():
         if prev and "reason" in prev:
             skipped.append(prev)
             continue
-        if prev and prev.get("sha256"):
-            size, bsps, sha = prev["size"], prev.get("bsps", [prev["bsp"]]), prev["sha256"]
+        if prev and prev.get("sha256") and prev.get("bsp_sha256"):
+            size, bsps, sha, bsp_sha = prev["size"], prev.get("bsps", [prev["bsp"]]), prev["sha256"], prev["bsp_sha256"]
         else:
             try:
                 r = check_zip(url)
@@ -197,7 +199,7 @@ def main():
                 print("  skip #%d %s: %s" % (d["number"], d["title"], r))
                 skipped.append({"file": url, "reason": r, "thread": d["url"]})
                 continue
-            size, bsps, sha = r
+            size, bsps, sha, bsp_sha = r
         bsp = bsps[0]
         if bsp.lower() in seen_bsp:
             continue
@@ -216,6 +218,7 @@ def main():
             "file": url,
             "size": size,
             "sha256": sha,
+            "bsp_sha256": bsp_sha,
             "bsp": bsp,
             "bsps": bsps,
             "desc": desc_of(d["body"] or ""),
