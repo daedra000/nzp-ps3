@@ -23,7 +23,7 @@ there is for it (PS3_Board_Get); it never waits on the network.
 
 typedef struct {
 	char	key[96];		// map|duo|week
-	double	when;			// Sys_DoubleTime of the answer
+	double	when;			// Sys_FloatTime of the answer
 	board_t	board;
 } cached_t;
 
@@ -221,7 +221,7 @@ static void FetchBoard(const char *key, char *buf, int cap)
 		if (cache[i].when < cache[slot].when) slot = i;
 	}
 	snprintf(cache[slot].key, sizeof(cache[slot].key), "%s", key);
-	cache[slot].when = Sys_DoubleTime();
+	cache[slot].when = Sys_FloatTime();
 	cache[slot].board = b;
 	if (!strcmp(fail_key, key))
 		fail_key[0] = 0;
@@ -254,7 +254,7 @@ static void Worker(void *arg)
 		Lock();
 		snprintf(key, sizeof(key), "%s", want_key);
 		c = key[0] ? Cached(key) : NULL;
-		if (key[0] && (!c || Sys_DoubleTime() - c->when > BOARD_FRESH) && strcmp(fail_key, key))
+		if (key[0] && (!c || Sys_FloatTime() - c->when > BOARD_FRESH) && strcmp(fail_key, key))
 			snprintf(loading_key, sizeof(loading_key), "%s", key);
 		else
 			key[0] = 0;
@@ -312,7 +312,7 @@ void PS3_Board_Want(const char *map, int duo, int week)
 		fail_key[0] = 0;		// a new choice: try again even if it failed before
 	}
 	c = Cached(key);
-	fetch = (!c || Sys_DoubleTime() - c->when > BOARD_FRESH) && strcmp(fail_key, key)
+	fetch = (!c || Sys_FloatTime() - c->when > BOARD_FRESH) && strcmp(fail_key, key)
 		&& strcmp(loading_key, key);
 	Unlock();
 	if (fetch)
