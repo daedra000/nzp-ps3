@@ -1033,7 +1033,9 @@ int CL_ReadFromServer (void)
 	CL_UpdateTEnts ();
 	{
 		extern void CL_AddPlayerWeapons (void);
-		CL_AddPlayerWeapons ();		// split screen: the other player's gun in their hands
+		// split screen: the other player's gun in their hands. Off: player.mdl's
+		// hands move with each animation and a fixed spot never sat right.
+		if (0) CL_AddPlayerWeapons ();
 	}
 
 //

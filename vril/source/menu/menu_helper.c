@@ -550,6 +550,41 @@ void Menu_DrawCustomBackground (qboolean draw_images)
 Menu_DrawButton
 ======================
 */
+/*
+Long button names (custom maps: "INSIDE PEACH'S CASTLE 1F") ran off the left
+of the screen. What fits the column: cut with ".." when not highlighted;
+highlighted, it scrolls (a second at the start, along, a second at the end).
+*/
+static char *Menu_FitButtonName (char *name, qboolean hovered)
+{
+	static char out[128];
+	int room = UI_X(140) - UI_X(4), len = strlen(name), first = 0, n;
+
+	if (getTextWidth(name, vid.scale) <= room || len >= (int)sizeof(out))
+		return name;
+	if (hovered) {
+		// how many characters scroll off before the end shows
+		int extra = 0;
+		while (extra < len && getTextWidth(name + extra, vid.scale) > room)
+			extra++;
+		{
+			double cps = 5.0, hold = 1.0;		// characters a second; seconds held at each end
+			double cycle = hold + extra / cps + hold;
+			double t = fmod(realtime, cycle) - hold;
+			first = t <= 0 ? 0 : (t * cps >= extra ? extra : (int)(t * cps));
+		}
+		snprintf(out, sizeof(out), "%s", name + first);
+		for (n = strlen(out); n > 1 && getTextWidth(out, vid.scale) > room; )
+			out[--n] = 0;
+		return out;
+	}
+	snprintf(out, sizeof(out), "%s", name);
+	for (n = strlen(out); n > 2 && getTextWidth(out, vid.scale) + getTextWidth("..", vid.scale) > room; )
+		out[--n] = 0;
+	strcat(out, "..");
+	return out;
+}
+
 void Menu_DrawButton (int order, int button_index, char* button_name, char* button_summary, void *on_activate)
 {
 	int y_factor = 15;
@@ -586,7 +621,7 @@ void Menu_DrawButton (int order, int button_index, char* button_name, char* butt
 		Menu_DrawSelectionBox (x_pos, y_pos);
 
 		// Draw button string
-		Menu_DrawString (x_pos, y_pos, button_name, 255, 0, 0, 255, vid.scale, UI_FLIPTEXTPOS);
+		Menu_DrawString (x_pos, y_pos, Menu_FitButtonName(button_name, true), 255, 0, 0, 255, vid.scale, UI_FLIPTEXTPOS);
 
 		// Draw the bottom screen text for selected button 
 		UI_SetAlignment (UI_ANCHOR_CENTER, UI_ANCHOR_BOTTOM);
@@ -598,7 +633,7 @@ void Menu_DrawButton (int order, int button_index, char* button_name, char* butt
 		} else {
 			UI_SetAlignment (UI_ANCHOR_LEFT, UI_ANCHOR_TOP);
 		}
-		Menu_DrawString (x_pos, y_pos, button_name, 255, 255, 255, 255, vid.scale, UI_FLIPTEXTPOS);
+		Menu_DrawString (x_pos, y_pos, Menu_FitButtonName(button_name, false), 255, 255, 255, 255, vid.scale, UI_FLIPTEXTPOS);
 	}
 }
 
@@ -621,7 +656,7 @@ void Menu_DrawGreyButton (int order, char* button_name)
 		UI_SetAlignment (UI_ANCHOR_LEFT, UI_ANCHOR_TOP);
 	}
 
-	Menu_DrawString (x_pos, y_pos, button_name, 128, 128, 128, 255, vid.scale, UI_FLIPTEXTPOS);
+	Menu_DrawString (x_pos, y_pos, Menu_FitButtonName(button_name, false), 128, 128, 128, 255, vid.scale, UI_FLIPTEXTPOS);
 }
 
 /*

@@ -14,7 +14,7 @@ void Menu_DrawPicStretch (int x, int y, int index, int width, int height);	// me
 void Menu_DrawMapBorder (int x_pos, int y_pos, int image_width, int image_height);
 
 #define DL_PER_PAGE		6		// rows 1-6; 7/8 pages; bottom: manage, sort, back
-#define DL_NAME_CHARS	17		// what fits left of the panel
+#define DL_NAME_CHARS	63		// long names scroll (Menu_DrawButton)
 
 static int	dl_page;
 static int	dl_shown = -1;	// list size the buttons were built for

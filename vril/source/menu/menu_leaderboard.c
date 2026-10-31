@@ -13,7 +13,7 @@ sending your own scores (ps3_leaderboard).
 extern cvar_t ps3_leaderboard;	// ps3_scores.c
 
 #define LB_PER_PAGE		5		// rows 1-5; 6/7 pages; bottom: sending, mode, time, back
-#define LB_NAME_CHARS	17
+#define LB_NAME_CHARS	63
 
 static int		lb_page;
 static int		lb_sel = -1;		// the map shown on the right (stays when the cursor leaves the maps)
