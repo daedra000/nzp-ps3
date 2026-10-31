@@ -1,6 +1,6 @@
 # Nazi Zombies: Portable — PS3
 
-This fork ports NZ:P to the **PlayStation 3** as native homebrew (PSL1GHT), from the
+This standalone version of NZ:P ports it to the **PlayStation 3** as native homebrew (PSL1GHT), from the
 Vril engine in [`vril/`](vril) with a PS3 platform in
 [`vril/source/platform/ps3`](vril/source/platform/ps3).
 
