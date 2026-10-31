@@ -774,7 +774,9 @@ void _Host_Frame (float time)
 	{
 		// scores that couldn't be sent last time (once, soon after start)
 		extern void PS3_Scores_Retry (void);
+		extern void PS3_Scores_Frame (void);
 		PS3_Scores_Retry ();
+		PS3_Scores_Frame ();	// notices the game ending (everyone dead)
 	}
 #endif
 }

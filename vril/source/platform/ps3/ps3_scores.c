@@ -302,11 +302,39 @@ void PS3_Scores_Retry(void)
 
 // Only classic games from round 1 count. Noted as each game starts
 // (SV_SpawnServer, SV_RestartServer), so changing a setting mid-game doesn't count.
-static int game_ranked;
+static int game_ranked, game_reported;
+void PS3_Scores_GameOver(void);
 void PS3_Scores_GameStart(void)
 {
 	extern cvar_t sv_gamemode, sv_startround;
 	game_ranked = (int)sv_gamemode.value == GAMEMODE_CLASSIC && (int)sv_startround.value <= 1;
+	game_reported = 0;
+	result_text[0] = 0;
+}
+
+// host.c, each frame. NZ:P's game over isn't an intermission: the players'
+// health goes to 0 (the GAME OVER screen, r_hud.c) and the map restarts after.
+// So: the game is over when every player in it is at 0 health.
+void PS3_Scores_Frame(void)
+{
+	int i, players = 0, dead = 0;
+	client_t *c;
+
+	if (game_reported || !sv.active || cls.demoplayback || sv.time < 5)
+		return;
+	for (i = 0, c = svs.clients; i < svs.maxclients; i++, c++) {
+		if (!c->active || !c->spawned || !c->edict)
+			continue;
+		players++;
+		if (c->edict->v.health <= 0) {
+			// a downed player waiting for a revive isn't out
+			eval_t *d = eval_downed ? GETEDICTFIELDVALUE(c->edict, eval_downed) : NULL;
+			if (!d || !d->_float)
+				dead++;
+		}
+	}
+	if (players && dead == players)
+		PS3_Scores_GameOver();
 }
 
 // cl_parse.c, at svc_intermission (seat 0): the game is over
@@ -316,6 +344,9 @@ void PS3_Scores_GameOver(void)
 	char nonce_raw[16], *line, build[64], *nl;
 	int kills = 0, i;
 
+	if (game_reported)
+		return;		// once a game
+	game_reported = 1;
 	result_text[0] = 0;
 	if (!sv.active || cls.demoplayback || !ps3_leaderboard.value)
 		return;

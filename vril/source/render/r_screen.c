@@ -993,7 +993,7 @@ SCR_UpdateScreen(void)
         Draw_FillByColor(0, full_h / 2 - 1, full_w, 2, 0, 0, 0, 255);	// between the views
 
 #ifdef __PS3__
-    if (cl.intermission && !LoadingScreen_IsWaiting()) {
+    if ((cl.intermission || (cls.state == ca_connected && cl.stats[STAT_HEALTH] <= 0)) && !LoadingScreen_IsWaiting()) {
         // game over: where the score went (ps3_scores.c)
         extern const char *PS3_Scores_Result(void);
         const char *r = PS3_Scores_Result();
