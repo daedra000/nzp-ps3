@@ -56,7 +56,7 @@ ENGINE_SOURCES := $(wildcard source/*.c) $(wildcard source/menu/*.c) \
 PS3_SOURCES := \
 	$(PLAT)/common.c $(PLAT)/sys_ps3.c $(PLAT)/in_ps3.c $(PLAT)/snd_ps3.c \
 	$(PLAT)/music_ps3.c $(PLAT)/net_main.c $(PLAT)/net_ps3.c $(PLAT)/ps3_video.c $(PLAT)/ps3_crash.c \
-	$(PLAT)/ps3_mapdl.c $(PLAT)/ps3_https.c $(PLAT)/ps3_scores.c \
+	$(PLAT)/ps3_mapdl.c $(PLAT)/ps3_https.c $(PLAT)/ps3_scores.c $(PLAT)/ps3_board.c \
 	$(wildcard $(PLAT)/gl/*.c) $(wildcard $(PLAT)/rsx/*.c)
 
 SOURCES := $(ENGINE_SOURCES) $(PS3_SOURCES)

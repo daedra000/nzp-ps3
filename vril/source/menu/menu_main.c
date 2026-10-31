@@ -88,12 +88,15 @@ void Menu_Main_Draw (void)
 		Menu_DrawButton(2, 1, "SPLIT SCREEN", !PS3_Input_PlayerReady(1) ?
 			"Player 2: press any button on the second controller." : "Two Players, Two Controllers.", Menu_SplitScreen);
 		Menu_DrawButton(3, 2, "DOWNLOAD MAPS", "Download Custom Maps", Menu_MapDownload_Set);
-#define MAIN_IDX(n) ((n) + 2)
-#define MAIN_ROW(n) ((n) + 1)
+		Menu_DrawButton(4, 3, "LEADERBOARDS", "Top Rounds at ps3.world", Menu_Leaderboard_Set);
+#define MAIN_IDX(n) ((n) + 3)
+#define MAIN_ROW(n) ((n) + 2)
+#define QUIT_ROW(n) ((n) + 1)	/* the quit box's buttons stay where they were */
 #else
 		Menu_DrawGreyButton(2, "COOPERATIVE");
 #define MAIN_IDX(n) (n)
 #define MAIN_ROW(n) (n)
+#define QUIT_ROW(n) (n)
 #endif
 
 		Menu_DrawDivider(MAIN_ROW(3));
@@ -118,6 +121,7 @@ void Menu_Main_Draw (void)
 #ifdef __PS3__
 		Menu_DrawGreyButton(2, "SPLIT SCREEN");
 		Menu_DrawGreyButton(3, "DOWNLOAD MAPS");
+		Menu_DrawGreyButton(4, "LEADERBOARDS");
 #else
 		Menu_DrawGreyButton(2, "COOPERATIVE");
 #endif
@@ -137,7 +141,7 @@ void Menu_Main_Draw (void)
 		// Draw Sub Menu
     	Menu_DrawSubMenu("Are you sure you want to quit?", "You will lose any progress that you have made.");
 
-		Menu_DrawButton (MAIN_ROW(7), 0, "GET ME OUTTA HERE!", "", Menu_Quit);
-		Menu_DrawButton (MAIN_ROW(8), 1, "I WILL PERSEVERE", "", Menu_ExitSubMenu);
+		Menu_DrawButton (QUIT_ROW(7), 0, "GET ME OUTTA HERE!", "", Menu_Quit);
+		Menu_DrawButton (QUIT_ROW(8), 1, "I WILL PERSEVERE", "", Menu_ExitSubMenu);
 	}
 }

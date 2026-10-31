@@ -373,6 +373,9 @@ void Menu_SetPreviousMenu (void)
 		case m_mapdownload:
 			Menu_MapDownload_Set();
 			break;
+		case m_leaderboard:
+			Menu_Leaderboard_Set();
+			break;
 #endif
 		case m_pause:
 			Menu_Pause_Set();
