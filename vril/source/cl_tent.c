@@ -564,6 +564,8 @@ static struct model_s *CL_WorldWeaponModel (const char *vmodel)
 	return NULL;
 }
 
+#include "player_hands.h"
+
 void CL_AddPlayerWeapons (void)
 {
 	int i, n = cl_numvisedicts;
@@ -603,16 +605,27 @@ void CL_AddPlayerWeapons (void)
 		aim[2] = 0;
 		AngleVectors (aim, fwd, right, up);
 
-		// a hand's height: below the eyes, which drop when crouched or prone
-		// (first look on the console: low, near the belly; the hand is higher and
-		// further out to the right)
-		// (second look: at the shoulder; third: in the belly, under the arms.
-		// player.mdl's hands reach ~27 forward, ~6 right of its middle, so the gun
-		// goes out at the hands, between those two heights)
-		height = ed->v.view_ofs[2] - 12;
-		VectorMA (pl->origin, 24, fwd, gun->origin);
-		VectorMA (gun->origin, 5, right, gun->origin);
-		gun->origin[2] += height;
+		{
+			// in the hand: player.mdl's hand, frame by frame (player_hands.h, from
+			// the model's own vertices), so it follows every animation. A fixed spot
+			// in front of the player never sat right.
+			vec3_t yaw_only, f, r, u;
+			int frame = pl->frame;
+			yaw_only[0] = 0; yaw_only[1] = pl->angles[1]; yaw_only[2] = 0;
+			AngleVectors (yaw_only, f, r, u);
+			if (!strcmp (pl->model->name, "models/player.mdl") && frame >= 0 && frame < PLAYER_HAND_FRAMES) {
+				const float *h = player_hand[frame];
+				// model space: x forward, y left, z up
+				VectorMA (pl->origin, h[0], f, gun->origin);
+				VectorMA (gun->origin, -h[1], r, gun->origin);
+				VectorMA (gun->origin, h[2], u, gun->origin);
+			} else {
+				height = ed->v.view_ofs[2] - 12;
+				VectorMA (pl->origin, 24, fwd, gun->origin);
+				VectorMA (gun->origin, 5, right, gun->origin);
+				gun->origin[2] += height;
+			}
+		}
 
 		gun->angles[0] = -aim[0];	// models pitch the other way to views
 		// the g_ models point along +x like any Quake model (g_colt: grip at -x, muzzle
