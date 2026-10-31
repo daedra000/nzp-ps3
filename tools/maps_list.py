@@ -24,6 +24,12 @@ MAX_ZIP = 300 * 1024 * 1024
 # any direct link to a .zip: GitHub attachments, archive.org, Dropbox (dl=1)...
 ZIP_RE = re.compile(r'https?://[^\s)"\'<>\]]+?\.zip(?:\?dl=[01])?(?=[\s)"\'<>\]]|$)', re.I)
 LINK_RE = re.compile(r'https?://([^/\s)"\'<>\]]+)')
+# threads left out on purpose, with the reason the list gives
+SKIP_THREADS = {
+    158: "multi-map beta archive (56 old beta maps in one 195 MB zip)",
+}
+# the game tracks at most 16 maps from one download (ps3_mapdl.c new_bsps)
+MAX_BSPS = 16
 OTHER_PLATFORMS = re.compile(r'psp|3ds|ctr|vita|psvita|nspire|switch|nx\b|wii', re.I)
 
 
@@ -185,6 +191,10 @@ def main():
         text = (d["body"] or "") + "\n" + "\n".join(
             c["body"] or "" for c in reversed(d["comments"]["nodes"]) if (c["author"] or {}).get("login") == me)
         url = pick_zip(text)
+        if d["number"] in SKIP_THREADS:
+            print("  skip #%d %s: %s" % (d["number"], d["title"], SKIP_THREADS[d["number"]]))
+            skipped.append({"file": url or "", "reason": SKIP_THREADS[d["number"]], "thread": d["url"]})
+            continue
         if not url:
             hosts = sorted(set(LINK_RE.findall(text)) - {"github.com", "user-images.githubusercontent.com"})
             print("  no zip #%d %s  hosts: %s" % (d["number"], d["title"], " ".join(hosts)[:200]))
@@ -206,6 +216,10 @@ def main():
                 skipped.append({"file": url, "reason": r, "thread": d["url"]})
                 continue
             size, bsps, sha, bsp_sha = r
+        if len(bsps) > MAX_BSPS:
+            print("  skip #%d %s: %d maps in one zip" % (d["number"], d["title"], len(bsps)))
+            skipped.append({"file": url, "reason": "map pack: %d maps in one zip" % len(bsps), "thread": d["url"]})
+            continue
         bsp = bsps[0]
         if bsp.lower() in seen_bsp:
             continue
