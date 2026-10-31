@@ -1,0 +1,2353 @@
+{
+ "source": "https://github.com/nzp-team/nzportable/discussions",
+ "maps": [
+  {
+   "name": "\"Testi\"",
+   "author": "MotoLegacy",
+   "version": "",
+   "file": "https://archive.org/download/nzp_testi/nzp_testi.zip",
+   "size": 3961526,
+   "sha256": "9c470cfce626ae37c1cd97ade417f76e70322cc94dc1c1121153b809c4cddd0e",
+   "bsp_sha256": {
+    "testi": "268cd2d3ff030b93e801390dc350d48425a87f4260574e28ed66f3b5a20535c7"
+   },
+   "bsp": "testi",
+   "bsps": [
+    "testi"
+   ],
+   "desc": [
+    "This is a manual migration of forum user",
+    "oldschool125's map release Testi. Below",
+    "contains the original post content. You can",
+    "view the original post here. So it's been a",
+    "long time,but i was really busy with work,and",
+    "this is just a quick map that i worked on when"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/164",
+   "date": "2023-02-01T19:00:13Z",
+   "thumb": "thumbs/7a943b93e3b1.jpg"
+  },
+  {
+   "name": "\"Trapped in NZ:P\"",
+   "author": "MotoLegacy",
+   "version": "",
+   "file": "https://github.com/nzp-team/nzportable/files/13694079/cypress_challenge.zip",
+   "size": 889775,
+   "sha256": "42ca086ba8285b85a84e72b736d42ef67490f31707cb90998c2b281503f98a97",
+   "bsp_sha256": {
+    "cypress_challenge": "f8e2d605bddc009693bfb1513a98978748148349222a2ff779f6c09980670d33"
+   },
+   "bsp": "cypress_challenge",
+   "bsps": [
+    "cypress_challenge"
+   ],
+   "desc": [
+    "I'm not really one to hype things up.",
+    "Essentially, this is a challenge/box map with",
+    "a goofy story taking place between Der Riese",
+    "and Kino der Toten, where the cast is trapped",
+    "inside of an NZ:P box map by a mysterious",
+    "force. The story is very crude, so stay away"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/537",
+   "date": "2023-12-16T22:02:57Z",
+   "thumb": "thumbs/a5ccad78ba7d.jpg"
+  },
+  {
+   "name": "1923",
+   "author": "masterpl4n",
+   "version": "",
+   "file": "https://github.com/nzp-team/nzportable/files/13982617/1923V1.1.zip",
+   "size": 761954,
+   "sha256": "6ed64045de18e7d6fade1a2b4052521dfb38faadc2864aa78446859b0adf2fea",
+   "bsp_sha256": {
+    "1923": "870232a95e8cba2b5024d5d02fe9666ecdceeed540bc4870f5c2a4ca3ed2e722"
+   },
+   "bsp": "1923",
+   "bsps": [
+    "1923"
+   ],
+   "desc": [
+    "DOWNLOAD HERE 1923 A small stereotypical house",
+    "map set in 1923. My first proper NZP map!",
+    "PLEASE NOTIFY ME OF ANY BUGS! Story: There are",
+    "zombies FEATURES: 3 Perks Claustrophobic",
+    "Layout Bugs! (probably) Time-period accurate",
+    "weaponry A cool shed barrier thing I'm proud"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/517",
+   "date": "2023-12-06T02:39:37Z",
+   "thumb": "thumbs/3310f9e0f634.jpg"
+  },
+  {
+   "name": "2tand NZP Reboot Map",
+   "author": "MotoLegacy",
+   "version": "",
+   "file": "https://github.com/nzp-team/nzportable/files/12147956/2tand.zip",
+   "size": 2221248,
+   "sha256": "c1f3e381d6d32406d944df4ca6e66d60cd0f33192564c8d0169d5ff890ff8f3c",
+   "bsp_sha256": {
+    "2tand": "f0ac2dddc560a8cdd489ba707f83838573d1cbf76e82eb401d805fbb94131a81"
+   },
+   "bsp": "2tand",
+   "bsps": [
+    "2tand"
+   ],
+   "desc": [
+    "This is a manual migration of forum user",
+    "BCDeshiG's map release 2tand. Below contains",
+    "the original post content. You can view the",
+    "original post here. Another challenge map akin",
+    "to the warehouse starting room. There are 4",
+    "perks in this map along with mystery box and"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/324",
+   "date": "2023-07-24T16:22:24Z",
+   "thumb": "thumbs/84d594687bde.jpg"
+  },
+  {
+   "name": "Alley",
+   "author": "M0THRAK",
+   "version": "1.2",
+   "file": "https://archive.org/download/alley_202604/Alley.zip",
+   "size": 1516965,
+   "sha256": "4f9588874b7ac0d2e514f722a47844aa955abe364e08311ff3a1b9eba6c24e0c",
+   "bsp_sha256": {
+    "alley": "620136636b1d9c2a6da3cf4704de3516f0ae54d2290523bc19f4dba4bad5a4a7"
+   },
+   "bsp": "alley",
+   "bsps": [
+    "alley"
+   ],
+   "desc": [
+    "Alley Alley is a map based on the CoD: World",
+    "at War Custom map: Alley. It's decently fast",
+    "paced and you can buy most perks and",
+    "pack-a-punch within round 10 easily. Download",
+    "Install by extracting contents in your root",
+    "NZ:P folder. Changelogs/updates - v1.1 1."
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/1393",
+   "date": "2026-04-13T06:03:27Z",
+   "thumb": "thumbs/db3c1052f086.jpg"
+  },
+  {
+   "name": "Alleyway",
+   "author": "Paindeluxe",
+   "version": "",
+   "file": "https://github.com/nzp-team/nzportable/files/10611034/Alleyway.zip",
+   "size": 444157,
+   "sha256": "5e9ed99ce3613097a4973a6cda5fdda9a7948e97ef5620c586763e2bb5bcab86",
+   "bsp_sha256": {
+    "Alleyway": "41d46be16c8eacc5567dead6cca4ac8a2439d8fea4841fe864f44be5ff7e64a4"
+   },
+   "bsp": "Alleyway",
+   "bsps": [
+    "Alleyway",
+    "Alleyway"
+   ],
+   "desc": [
+    "Greetings this is my Map that was inspired by",
+    "the beginning Alleyway of Left for Dead's",
+    "Mercy Hospital Campaign This is a small map so",
+    "it's good for simply killing zombies for a",
+    "short while. DOWNLOAD"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/173",
+   "date": "2023-02-04T20:52:08Z"
+  },
+  {
+   "name": "Andes",
+   "author": "vichoca9",
+   "version": "",
+   "file": "https://archive.org/download/andes_202406/andes.zip",
+   "size": 2777320,
+   "sha256": "4eef9c4dc18a5b350c4560b433dd48135a133ec94c9ae9587ab4e98cb16cd1ad",
+   "bsp_sha256": {
+    "andes": "b58b6354dd122f342f83caf7bad5e0aa57f1f834bef7f2bffe8783a769ed7fa9"
+   },
+   "bsp": "andes",
+   "bsps": [
+    "andes"
+   ],
+   "desc": [
+    "This is my very first map! I tried to take",
+    "inspiration from a real life place (failed",
+    "doing so jeje), but also for testing what can",
+    "be done by mapping. Have fun! There are easter",
+    "eggs, and one buyable ending. DOWNLOAD"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/772",
+   "date": "2024-06-09T03:56:52Z",
+   "thumb": "thumbs/0ad833e96bf6.jpg"
+  },
+  {
+   "name": "Apartment v1",
+   "author": "glitcheking",
+   "version": "1",
+   "file": "https://github.com/nzp-team/nzportable/files/13427875/apartment.zip",
+   "size": 5359783,
+   "sha256": "00e92e7c17f88b9aa56023adfd6cb9a01d34f068fe3718d5932c4c8ff8728498",
+   "bsp_sha256": {
+    "apartment": "b11ba2c23bb1c51b4bc76fe6f83a36fe53d160d4ff6d37f645ea2d54eeb2ce69"
+   },
+   "bsp": "apartment",
+   "bsps": [
+    "apartment"
+   ],
+   "desc": [
+    "This is one of my firts ever maps from years",
+    "ago Its cald APARTMENT ITS AL INDOORS SO BE",
+    "AWARE YOU MIGHT GET KILLED FAST THIS MAP",
+    "FEATURES. PAP 8 WALLBUY GUNS MYSTERY BOX ALL",
+    "PERKS AND MORE TO COME I AM PLANNING TO MAKE",
+    "IT INTO A BIGGER MAP WITH EASTER EGGS AND"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/474",
+   "date": "2023-11-21T15:15:51Z",
+   "thumb": "thumbs/6a027921ae4f.jpg"
+  },
+  {
+   "name": "Aperture",
+   "author": "acronmd",
+   "version": "",
+   "file": "https://archive.org/download/aperture_20240608/Aperture.zip",
+   "size": 1032575,
+   "sha256": "9c9511135479e6f7f8f203f1393a9cd9f6fe23def28d389cae4b9d79a3c84693",
+   "bsp_sha256": {
+    "Aperture": "69ede5b21b7783958f4db4c62d0167ad50f1d492ea9494538d4bd0c90740b9e9"
+   },
+   "bsp": "Aperture",
+   "bsps": [
+    "Aperture"
+   ],
+   "desc": [
+    "This is my first attempt at making a map! Or",
+    "mapping anything really, I don't know of any",
+    "bugs and I've tested on a New 3DS, Vita, and",
+    "PC and have gotten good performance (although",
+    "visually, it's designed with NX/VITA and PC in",
+    "mind because of transparent glass and brighter"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/770",
+   "date": "2024-06-06T03:25:01Z",
+   "thumb": "thumbs/22c1ce95894a.jpg"
+  },
+  {
+   "name": "Area 2-13 (1.10)",
+   "author": "DerpedCrusader",
+   "version": "",
+   "file": "https://archive.org/download/area2-13_202404/area_2-13_1.10.zip",
+   "size": 2252005,
+   "sha256": "37e7993561e8396a10d40ffd42c41eddf2960b79065f1b83ed92512d81dab26e",
+   "bsp_sha256": {
+    "HalfCrapUncut": "ea324a215106ae2d41d6ba04f86d47b698a8a2ae86c04f412bbb721243f689ef"
+   },
+   "bsp": "HalfCrapUncut",
+   "bsps": [
+    "HalfCrapUncut"
+   ],
+   "desc": [
+    "Long in the works, the half life themed map",
+    "finally releases its a decently \"large\" sized",
+    "map, in NZP terms i tried to make sure it has",
+    "everything - all perks - pap - teleporter -",
+    "traps Screenshots Download Source files",
+    "(requires Halflife.wad from commercial copy of"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/308",
+   "date": "2023-07-04T18:34:34Z",
+   "thumb": "thumbs/045361bcc8a6.jpg"
+  },
+  {
+   "name": "Azure Purgatory",
+   "author": "Blake-Izayoi",
+   "version": "",
+   "file": "https://archive.org/download/azure-purgatory-nzp/AzurePurgatory.zip",
+   "size": 925856,
+   "sha256": "febf9e6ea0cef7aea43b36df2fda4180b9f8a34df72a56d63353cff6245a3186",
+   "bsp_sha256": {
+    "AzurePurgatory": "2539ef8c35e6c3107a201bfdae642d6178fcbfe5abff7f5419cfcca161731066"
+   },
+   "bsp": "AzurePurgatory",
+   "bsps": [
+    "AzurePurgatory"
+   ],
+   "desc": [
+    "My first original map release. Uses the",
+    "ikblue.wad as well as an expanded pack of said",
+    "wad as the main theming. Has the World at War",
+    "perks, Mule Kick, and Pack-a-Punch. Mule Kick",
+    "& Pack-a-Punch are locked behind an easter",
+    "egg. Tight corridors and hallways make it so"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/898",
+   "date": "2024-09-12T22:41:19Z",
+   "thumb": "thumbs/b1eeeea8e94b.jpg"
+  },
+  {
+   "name": "Blake Izayoi's Apartment",
+   "author": "Blake-Izayoi",
+   "version": "",
+   "file": "https://archive.org/download/izayoi-apartment/IzayoiApartment.zip",
+   "size": 1399930,
+   "sha256": "add95558a2d494e74b321337869549231188908a6f2993fd2469d10b77ed4dc1",
+   "bsp_sha256": {
+    "IzayoiApartment": "799078718839957a960664054a874b5b0ed8c606944349e2fad9a7fd53bed63e"
+   },
+   "bsp": "IzayoiApartment",
+   "bsps": [
+    "IzayoiApartment"
+   ],
+   "desc": [
+    "To attempt to get used to the mapping software",
+    "and general map creation pipeline, I've",
+    "recreated my own living space as a small",
+    "playable map. There's the mystery box and the",
+    "four World at War perks available. The map has",
+    "been tested both on PC as well as 3DS. How"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/892",
+   "date": "2024-08-30T17:21:23Z",
+   "thumb": "thumbs/6cea7942a8b8.jpg"
+  },
+  {
+   "name": "BO2 TOWN",
+   "author": "glitcheking",
+   "version": "",
+   "file": "https://archive.org/download/town-update/town%20update.zip",
+   "size": 6655293,
+   "sha256": "2ef79d5624d151e7c5a72a5714866f2c676f0a1de1c246a5f9eb20f285d49ec0",
+   "bsp_sha256": {
+    "town": "baa498875273b7bcff9a1406c36e355490da7180510dceaf21c052eb2b1a7921"
+   },
+   "bsp": "town",
+   "bsps": [
+    "town"
+   ],
+   "desc": [
+    "NEW UPDATE 27/08/2024 This is a remake of",
+    "black ops 2 town The map is fully working on",
+    "pc and psp! i optimized it a bit more changed",
+    "the textures also made it more diffecult can",
+    "you find a way to open the vault!! The map",
+    "FEATURES. PAP. 13 WALLBUY GUNS. DOGS. CUSTOM"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/470",
+   "date": "2023-11-20T23:32:20Z",
+   "thumb": "thumbs/18942ea223d4.jpg"
+  },
+  {
+   "name": "Buried",
+   "author": "TaborScott",
+   "version": "1",
+   "file": "https://archive.org/download/buried_202407/Buried.zip",
+   "size": 608148,
+   "sha256": "7297d0777ff8a0a8fdcb986469874e0a68d676562900ef73c4060e20e0db4810",
+   "bsp_sha256": {
+    "Buried": "4d47619e5f4d4c3597c8da38f5f82eb3f3095951cdec5c53c0913c1ae6cb17ba"
+   },
+   "bsp": "Buried",
+   "bsps": [
+    "Buried"
+   ],
+   "desc": [
+    "Are you afraid of dark, tight spaces? Confront",
+    "your deepest fears as you battle the undead in",
+    "an underground obstacle course of mental",
+    "challenges. You are now 'Buried'. DOWNLOAD FOR",
+    "WINDOWS Buried... Buried Buried Buried! The",
+    "fan-favourite, obliteratingly fun map, set in"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/854",
+   "date": "2024-07-25T13:49:04Z",
+   "thumb": "thumbs/ebe6e676e8c5.jpg"
+  },
+  {
+   "name": "BusDepot v1.0",
+   "author": "MLY22",
+   "version": "1.0",
+   "file": "https://archive.org/download/busdepot/busdepot.zip",
+   "size": 928367,
+   "sha256": "a12cc242c866b573da0bc532a1ced8789f7b09bdae5f151cedf3a65a7fe85268",
+   "bsp_sha256": {
+    "busdepot": "287dd04813d85cccfba56522286244e2593b6e3d8b6494bcd7b273d9da68d2d1"
+   },
+   "bsp": "busdepot",
+   "bsps": [
+    "busdepot"
+   ],
+   "desc": [
+    "DOWNLOAD i couldn't find a stable version of",
+    "busdepot in custom maps so i decide to do it",
+    "myself, hope you like it if you want to try",
+    "it. the map is easy, very easy. it doesn't",
+    "have any easter eggs, but it has two ubication",
+    "of mystery box, quick revive, doble tap,"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/1471",
+   "date": "2026-07-25T17:57:57Z",
+   "thumb": "thumbs/53249d3bed7f.jpg"
+  },
+  {
+   "name": "Cabin (first map) by Ralz",
+   "author": "KennethFay",
+   "version": "",
+   "file": "https://archive.org/download/cabin_20240919/Cabin.zip",
+   "size": 308480,
+   "sha256": "19b0fa130de5aa7967f180ab04551a53dda9c8cf5d536c8732c748a764cb6d58",
+   "bsp_sha256": {
+    "forestmc": "d642c51c71c4c71abddd9fa24050a0c41d3a9ff7cd210a46fbcfebdd6a4b5c62"
+   },
+   "bsp": "forestmc",
+   "bsps": [
+    "forestmc"
+   ],
+   "desc": [
+    "DOWNLOAD My First NZP map!! So proud to post",
+    "this online lmao I decided to go after a",
+    "darker look when posting this map, originally",
+    "it was way brigher lmaoo Anyways, i hope you",
+    "have fun with it!!! Edit: corrected an issue",
+    "related to the file not being a \".zip\" but"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/902",
+   "date": "2024-09-19T04:53:20Z",
+   "thumb": "thumbs/b87efc72710e.jpg"
+  },
+  {
+   "name": "Cavern",
+   "author": "MotoLegacy",
+   "version": "",
+   "file": "https://archive.org/download/nzp_cavern/nzp_cavern.zip",
+   "size": 1671980,
+   "sha256": "f442f332bb7da89e2f878407314f6067966690aeb7877ad9b32522974e01ac19",
+   "bsp_sha256": {
+    "Cavern": "a360b5378e5a327d0891838e3aa136d7e1b1bc1f907eb878146bd4751c421414"
+   },
+   "bsp": "Cavern",
+   "bsps": [
+    "Cavern"
+   ],
+   "desc": [
+    "This is a manual migration of forum user",
+    "Naievil's map release Cavern. Below contains",
+    "the original post content. You can view the",
+    "original post here. Hey everyone, This map is",
+    "called Cavern, a hole somewhere in the western",
+    "US that is used as a sort of mine. This map"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/162",
+   "date": "2023-02-01T18:11:42Z",
+   "thumb": "thumbs/85e2b4c22cb6.jpg"
+  },
+  {
+   "name": "Church of Utter Madness",
+   "author": "MotoLegacy",
+   "version": "",
+   "file": "https://github.com/nzp-team/nzportable/files/12148029/cum.zip",
+   "size": 2063453,
+   "sha256": "4dc47426e24d64ac17efeff12083815df5c80b4b9c106fa72c810d690057f45c",
+   "bsp_sha256": {
+    "cum": "03ade0a3e7d2a2f41154a915f5b86c37e90fb93f492c697c85402b38d25a88a0"
+   },
+   "bsp": "cum",
+   "bsps": [
+    "cum"
+   ],
+   "desc": [
+    "This is a manual migration of forum user",
+    "DerpedCrusaders's map release cum. Below",
+    "contains the original post content. You can",
+    "view the original post here Wow, crazy, I made",
+    "a map, who would have guessed its a church",
+    "Features: Open Areas Pretty scenery Many"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/326",
+   "date": "2023-07-24T16:34:14Z",
+   "thumb": "thumbs/53e382d069e1.jpg"
+  },
+  {
+   "name": "Church of Utter Madness v1.1",
+   "author": "DerpedCrusader",
+   "version": "1.1",
+   "file": "https://archive.org/download/derpchurch/derpchurch.zip",
+   "size": 4615133,
+   "sha256": "a94885f30416adc8b901a1aa42c7ba53c443eaa77dba2fe900dfb52af4cf1433",
+   "bsp_sha256": {
+    "derp_cum": "026b3e423aa8a159b53ce89e2bd0648155e7c93c0ca6ab940a578d7d28c43285"
+   },
+   "bsp": "derp_cum",
+   "bsps": [
+    "derp_cum"
+   ],
+   "desc": [
+    "Church of Utter Madness!! wow crazy, I made an",
+    "update to a map, who would have guessed it?",
+    "Explore this haunted church, venture into the",
+    "catacombs Features: - Open Areas - Many Perks",
+    "- guns? perchance. - Custom Barricades/sounds",
+    "- Easy... like boring almost.... i'll get"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/1372",
+   "date": "2026-02-21T05:52:54Z",
+   "thumb": "thumbs/1f405a7b677b.jpg"
+  },
+  {
+   "name": "City",
+   "author": "Paindeluxe",
+   "version": "",
+   "file": "https://github.com/nzp-team/nzportable/files/10825460/City.zip",
+   "size": 823666,
+   "sha256": "28d72155bcfc43dc4490113a7f82f61bb76b8144f3be6f98cd172e1f3afda748",
+   "bsp_sha256": {
+    "city": "08430077c8475b1feede315e531c36c7a5d471f8091497647647b6c0e699c98f",
+    "citynight": "3980eb17ccc88f700417d2b4aa2a1f4d3afca3af2d026b18c063124a809edad6"
+   },
+   "bsp": "city",
+   "bsps": [
+    "city",
+    "citynight"
+   ],
+   "desc": [
+    "Info about the Map After the failed experiment",
+    "named Tag der Untoten I decided to make a",
+    "better map and basically a sequel to Alleyway",
+    "called City. This Map features a Day and Night",
+    "version. It's rather long and it contains",
+    "Random Perks to hopefully spice up gameplay a"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/213",
+   "date": "2023-02-24T14:59:20Z",
+   "thumb": "thumbs/6873d62a62a8.jpg"
+  },
+  {
+   "name": "Compact",
+   "author": "Paindeluxe",
+   "version": "",
+   "file": "https://github.com/nzp-team/nzportable/files/10609724/Compact.zip",
+   "size": 2927004,
+   "sha256": "f4e2cfd1587889fa088c4528ac46f97c28c8b154c5fb3dd27ebe7c48e99d0d29",
+   "bsp_sha256": {
+    "compact": "25fda037435902be23f6cdb8701844809282dbf9407645de409d33de8b4ef0cc"
+   },
+   "bsp": "compact",
+   "bsps": [
+    "compact",
+    "compact"
+   ],
+   "desc": [
+    "This is a Map that got Ported over to the",
+    "newest NZP Version before I ported it, it was",
+    "unable to be played on the newest Version.",
+    "I'll let Dreize the map creator explain his",
+    "map. Here is another map I have made. It is",
+    "called Compact, the reasoning behind that is"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/175",
+   "date": "2023-02-04T21:17:45Z"
+  },
+  {
+   "name": "Corner",
+   "author": "MotoLegacy",
+   "version": "",
+   "file": "https://archive.org/download/nzp_corner/nzp_corner.zip",
+   "size": 167758,
+   "sha256": "1335f18f992b085e3ca182615946ba1f0536d0b3f94f411af9b2e4fabd8fb184",
+   "bsp_sha256": {
+    "Corner": "51dd36b1d215a6ac718c1579c158c0dc36806bec862eaed215fc5ccdc7d7e35d"
+   },
+   "bsp": "Corner",
+   "bsps": [
+    "Corner"
+   ],
+   "desc": [
+    "This is a manual migration of forum user",
+    "Naievil's map release Corner. Below contains",
+    "the original post content. You can view the",
+    "original post here. Hey everyone, This is a",
+    "quick build, a very small map, used mainly for",
+    "goofing around on the PSP when you want a"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/161",
+   "date": "2023-02-01T17:58:13Z",
+   "thumb": "thumbs/4e37595105f3.jpg"
+  },
+  {
+   "name": "Croft Manor",
+   "author": "F0mx",
+   "version": "",
+   "file": "https://archive.org/download/croft-manor/Croft_Manor.zip",
+   "size": 15738491,
+   "sha256": "ca1800f33dc3d2346442b5978b22e4bcd2dfe11091204e5fba04298cbd8b47b8",
+   "bsp_sha256": {
+    "TR2_Manor": "b0d961507eef5d69bf76d4f486691bbd90db1218c493f8b7191079f8cfe8bd3d"
+   },
+   "bsp": "TR2_Manor",
+   "bsps": [
+    "TR2_Manor"
+   ],
+   "desc": [
+    "CROFT MANOR Despite all of her adventures,",
+    "nothing could have prepared Lara for the",
+    "horrors of element 115... And now, zombies on",
+    "her doorstep, she is fighting for survival",
+    "once again... The iconic home level from Tomb",
+    "Raider 2 reimagined as an NZP map. Borrows"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/963",
+   "date": "2024-11-07T12:21:53Z",
+   "thumb": "thumbs/926fd1f17123.jpg"
+  },
+  {
+   "name": "Das Alte Haus",
+   "author": "M0THRAK",
+   "version": "1.2",
+   "file": "https://archive.org/download/das-alte-haus_202605/Das%20Alte%20Haus.zip",
+   "size": 5263984,
+   "sha256": "4c51f8a0d967d44596ed6b7e2ed423322c6aaeb8f4931630628f4c7cbb4e8dc1",
+   "bsp_sha256": {
+    "Das-Alte-Haus": "e0f523e37c1cd71aedcacf3e109ad5317cdab5efc85cbf5c61e2807b2837d253"
+   },
+   "bsp": "Das-Alte-Haus",
+   "bsps": [
+    "Das-Alte-Haus"
+   ],
+   "desc": [
+    "This is a remake of a CoD: World at War custom",
+    "zombies map: \"DAS ALTE HAUS\", by ItzValiant.",
+    "Features 1. Teddy bear song Kevin Sherwood -",
+    "The One (Instrumental) 2. Kino der Toten style",
+    "Pack-A-Punch 3. The four core perks (Speed",
+    "Cola, Quick Revive, Double Tap 2.0 and"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/1440",
+   "date": "2026-05-28T21:34:56Z",
+   "thumb": "thumbs/2ab0986fabe5.jpg"
+  },
+  {
+   "name": "Dein Sturz",
+   "author": "Paindeluxe",
+   "version": "",
+   "file": "https://github.com/nzp-team/nzportable/files/10609714/Dein.Sturz.zip",
+   "size": 552954,
+   "sha256": "f68fa929786765add2814bf9b90e8e22190b8c4b969eee03d5c646b9599238ca",
+   "bsp_sha256": {
+    "Dein_Sturz": "75c1eb8f1fc335d75d69df06445796a88e00e0ffae931e5c91b2c9ae541b0b4e"
+   },
+   "bsp": "Dein_Sturz",
+   "bsps": [
+    "Dein_Sturz"
+   ],
+   "desc": [
+    "This is my second Map called Dein Sturz this",
+    "was inspired by the Call of Duty: Black Ops 2",
+    "Zombies Map \"Die Rise\" It features a pretty",
+    "view onto the Streets. It's overall a pretty",
+    "decently sized Map. Pain deluxe before",
+    "aquiring the PSP \"Making maps crossplatform"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/174",
+   "date": "2023-02-04T21:02:23Z"
+  },
+  {
+   "name": "DER RIESE",
+   "author": "glitcheking",
+   "version": "",
+   "file": "https://archive.org/download/derriese_20240825_1215/derriese.zip",
+   "size": 8027657,
+   "sha256": "125d41c998b5bd52651e882f04bcf982a5b58b9429de21fbc7baee930bb86d91",
+   "bsp_sha256": {
+    "derriese": "bc164e5002e1ae368963c293c1fc9ea6d668493118292034cb569fb4e669cb15"
+   },
+   "bsp": "derriese",
+   "bsps": [
+    "derriese"
+   ],
+   "desc": [
+    "Yes yes ! Here it is after some hard work DER",
+    "RIESE full version for pc The map is fuly",
+    "working on pc have not tested it on hand held",
+    "devices but i wil make a psp version of it",
+    "soon! have fun playing can you find al the",
+    "hidden teddys to open the secret room hint"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/885",
+   "date": "2024-08-25T13:00:30Z",
+   "thumb": "thumbs/e7ce4f2b151c.jpg"
+  },
+  {
+   "name": "Detention v1.1",
+   "author": "headachez",
+   "version": "1.1",
+   "file": "https://github.com/nzp-team/nzportable/files/15139075/Detention.zip",
+   "size": 2284580,
+   "sha256": "5f275d0275c89bf1b1287ffc4d5b0cc2f24f938d9608a0e5939c32e20f917a6f",
+   "bsp_sha256": {
+    "detention": "6039701d637e01e0a764fa0d91d7adbeb3a8b07650f386c539b91048885aaec4"
+   },
+   "bsp": "detention",
+   "bsps": [
+    "detention"
+   ],
+   "desc": [
+    "You fell asleep during class... What kind of",
+    "nightmare is this? map inspired by graduation",
+    "from project lazarus (a map inspired by",
+    "verruckt lol) patch notes: 1.1: fixed fog and",
+    "map not being sealed DOWNLOAD"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/711",
+   "date": "2024-04-23T10:46:04Z",
+   "thumb": "thumbs/44cbfdbff4b1.jpg"
+  },
+  {
+   "name": "Devhall.bsp",
+   "author": "mapkidd",
+   "version": "",
+   "file": "https://archive.org/download/Devhall/Devhall.zip",
+   "size": 91606,
+   "sha256": "1aa30da288413c4fd914c82ad6e6a4271aeb38c84af7429a67ac4451a8faee40",
+   "bsp_sha256": {
+    "devhall1": "0d75168c2d43918f2d5efcbe3277b18cc757966b7822ae1a9a7164e155e1982f"
+   },
+   "bsp": "devhall1",
+   "bsps": [
+    "devhall1"
+   ],
+   "desc": [
+    "--- DEVHALL --- did you ever need a pretty",
+    "basic 2-story house made of just developer",
+    "textures with randomized perks and a PaP in",
+    "the spawnroom? probably not, but look no",
+    "further; for i have made such a map! --- D O W",
+    "N L O A D <--- current issues: - camping on"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/1017",
+   "date": "2024-12-07T21:02:37Z",
+   "thumb": "thumbs/6f4f07590659.jpg"
+  },
+  {
+   "name": "Die Verlorenen",
+   "author": "ImTander",
+   "version": "",
+   "file": "https://archive.org/download/die-verlorenen_202403/Die%20Verlorenen.zip",
+   "size": 1268181,
+   "sha256": "f6cf00842bc75c50a05378220ae2d51343ac65422c0a4a1085022b7002da55ba",
+   "bsp_sha256": {
+    "die_verlorenen": "fb8deb4d9bdb21308594e48c919c4337bca2c7279fc9f95796e38abc36e337a0"
+   },
+   "bsp": "die_verlorenen",
+   "bsps": [
+    "die_verlorenen"
+   ],
+   "desc": [
+    "Welcome to my first ever custom map! Inspired",
+    "by some of the smaller more difficult maps in",
+    "the series, I tried to make a map that felt",
+    "like a classic zombies map with a small &",
+    "loose story that you can piece together by",
+    "looking at things around the map. If you find"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/686",
+   "date": "2024-03-20T00:50:01Z",
+   "thumb": "thumbs/63f5cff8d8cc.jpg"
+  },
+  {
+   "name": "Einrichtung",
+   "author": "panicmanic2410",
+   "version": "",
+   "file": "https://github.com/nzp-team/nzportable/files/12328380/Einrichtung.zip",
+   "size": 3900220,
+   "sha256": "a0bc6eafa321187e8c2425924bbae0f81cdfd9b6ef40e1749439187969debe22",
+   "bsp_sha256": {
+    "Einrichtung": "66d5bc0b541feafeadb7a0d6183da4a647e42679a3f379bf4c559e92758084f1"
+   },
+   "bsp": "Einrichtung",
+   "bsps": [
+    "Einrichtung"
+   ],
+   "desc": [
+    "My first map, built it off from an abandoned",
+    "map by Oraki5 with its source files released.",
+    "It has given me some good footing with map",
+    "making for NZP. Hope you guys like it!",
+    "Features: PaP, mystery box, two paths, all",
+    "perks with their stingers set, custom ambience"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/336",
+   "date": "2023-08-12T04:12:48Z",
+   "thumb": "thumbs/f56e0e47beb9.jpg"
+  },
+  {
+   "name": "Elevator",
+   "author": "qloakongithub",
+   "version": "",
+   "file": "https://archive.org/download/elevator-v-1/Elevator-v1.zip",
+   "size": 587549,
+   "sha256": "6d28413a9c93c64afaf6d82f08353174e51c7490c7c6deb5e136a879a30235fe",
+   "bsp_sha256": {
+    "Elevator": "bac6f97478176a00e128b41c50dda008ee0a369b7e4ddd3870723141d6f63363"
+   },
+   "bsp": "Elevator",
+   "bsps": [
+    "Elevator"
+   ],
+   "desc": [
+    "Elevator You've just accepted your first job",
+    "as a repairman; at a hotel in Munich called",
+    "Sterben Hotel. You were hired to board up the",
+    "windows on the higher floors due to them not",
+    "being used anymore. However, while on the",
+    "elevator up, it suddenly stops on a"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/1058",
+   "date": "2024-12-23T08:44:03Z",
+   "thumb": "thumbs/0b94d7c597ef.jpg"
+  },
+  {
+   "name": "Evil Tower",
+   "author": "Jeyphr",
+   "version": "",
+   "file": "https://archive.org/download/screenshot-2026-09-28-002729/evil.zip",
+   "size": 1529435,
+   "sha256": "c44a8963aff897780668ca283d2e20aacd6520933068d65dcbc100be8af2cbdd",
+   "bsp_sha256": {
+    "evil": "b69f547f96d67e0138ceec862c5cbe6dc6fd0130a68032a2269deb15382fd6d7"
+   },
+   "bsp": "evil",
+   "bsps": [
+    "evil"
+   ],
+   "desc": [
+    "Micro Maps Madness 2! Micro Map Madness is a",
+    "mapping jam where mappers have 1 week to",
+    "release a fully realized map. Since there are",
+    "three weeks in October, there will be new map",
+    "releases at the end of every single week. I",
+    "know a lot of people were requesting a tower"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/1645",
+   "date": "2026-10-02T17:52:01Z",
+   "thumb": "thumbs/7ecf55fe7fba.jpg"
+  },
+  {
+   "name": "Facility",
+   "author": "MotoLegacy",
+   "version": "1.02",
+   "file": "https://github.com/nzp-team/nzportable/files/12147853/Facility.zip",
+   "size": 685645,
+   "sha256": "4cd7b0103848a673e6db328d520d56616d75e0e59f086ac89ace3a352a8eae06",
+   "bsp_sha256": {
+    "Facility": "7deb3840ccb72d887ef31b9f14ee4b0fab02d132652d9338d7505e9fe93a1854"
+   },
+   "bsp": "Facility",
+   "bsps": [
+    "Facility"
+   ],
+   "desc": [
+    "This is a manual migration of forum user",
+    "Naievil's map release Facility. Below contains",
+    "the original post content. You can view the",
+    "original post here. Hello everyone. Thanks for",
+    "taking the time to look into this map. I",
+    "understand that the new Demo hasn't attracted"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/322",
+   "date": "2023-07-24T16:10:21Z",
+   "thumb": "thumbs/45fcbb9ebdba.jpg"
+  },
+  {
+   "name": "Facility V2",
+   "author": "Jeyphr",
+   "version": "2",
+   "file": "https://archive.org/download/ftwo_20260601/jphr_ftwo%281.2.5b%29.zip",
+   "size": 6055129,
+   "sha256": "264f98696119d9f463ce7afecd421d4f8b6ecd39a1adda98163c7598831bc4c6",
+   "bsp_sha256": {
+    "jphr_ftwo": "f90ee980c310c07aadee618bcf6266601316485373a9c50e5fd0d02c380b3454"
+   },
+   "bsp": "jphr_ftwo",
+   "bsps": [
+    "jphr_ftwo"
+   ],
+   "desc": [
+    "I SAID I'D RELEASE IT THIS SUMMER (June 1st)",
+    "An abandoned research facility has been",
+    "overrun by Zombies. Unlock its secrets to",
+    "survive. If you are gonna play this map,",
+    "feedback would be greatly appreciated! Links -",
+    "MAP DOWNLOAD UPDATES! 1. Fixed the RayGun EE"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/1444",
+   "date": "2026-06-01T04:17:48Z",
+   "thumb": "thumbs/f6a4662f0cea.jpg"
+  },
+  {
+   "name": "Farmhouse (from SAS Zombie Assault 3)",
+   "author": "Revnova",
+   "version": "",
+   "file": "https://github.com/user-attachments/files/15858920/Farmhouse.zip",
+   "size": 183252,
+   "sha256": "08bc55a7d5e87e4ff1e8b4a69cb4936922c9261e10fed838f369cda088d9e5e8",
+   "bsp_sha256": {
+    "farmhouse": "d961bef2dd81ee96b569976fef8976d4cc6d5fca03d9e933649e489991bcac2d"
+   },
+   "bsp": "farmhouse",
+   "bsps": [
+    "farmhouse"
+   ],
+   "desc": [
+    "This is a migration of slugparty's map release",
+    "farmhouse. Below is mostly the original post.",
+    "You can find the original post here YOU",
+    "ALREADY KNOW WHAT IT IS (updated 6/21/2016)",
+    "Download Here Thanks so much to DouchDagger",
+    "for the suggestion! I hope to update this map"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/782",
+   "date": "2024-06-16T16:07:11Z",
+   "thumb": "thumbs/6983092b280c.jpg"
+  },
+  {
+   "name": "Final Stand",
+   "author": "McLyntree",
+   "version": "",
+   "file": "https://archive.org/download/final-stand_202506/FinalStand.zip",
+   "size": 3794458,
+   "sha256": "1f10020c5f567c5e4d2e175db2f77c22d57b2d6caff768119703e9271e8caf80",
+   "bsp_sha256": {
+    "FinalStand": "8e6cb6cd92222d906f1cd003a625c455dda925c512175efd7f16725c4074a496"
+   },
+   "bsp": "FinalStand",
+   "bsps": [
+    "FinalStand"
+   ],
+   "desc": [
+    "Final Stand A marine recon unit seeks refuge",
+    "at the ruined Hohenlychen Sanatorium following",
+    "the outbreak in Wittenau, mounting a fleeting",
+    "defense against waves of the relentless",
+    "undead... My first mapping endeavor is",
+    "available to play (excluding some final"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/771",
+   "date": "2024-06-06T07:37:04Z",
+   "thumb": "thumbs/6e3b41c9813a.jpg"
+  },
+  {
+   "name": "Freddy Fazbear's Pizza",
+   "author": "panicmanic2410",
+   "version": "",
+   "file": "https://github.com/nzp-team/nzportable/files/12528521/FNAF_PC.zip",
+   "size": 4380509,
+   "sha256": "57554c47f9eb42f1daf47fc79a9989a87361163ea1468beb07384868a32c6737",
+   "bsp_sha256": {
+    "FNAF": "4b68c027e97b5287796c0d5c1b0c4659ac4e9cb8aa64a60053a41c7cd57bfcb1"
+   },
+   "bsp": "FNAF",
+   "bsps": [
+    "FNAF"
+   ],
+   "desc": [
+    "Thought to toss my hat in the ring again with",
+    "map making, but this time something more fun",
+    "for me! Welcome to a night at Freddy Fazbear's",
+    "Pizza! FEATURES: Pack-A-Punch, all",
+    "Perk-A-Colas, Bouncing Betties, Electric Traps",
+    "and custom models and audio! DOWNLOAD PC PSP"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/340",
+   "date": "2023-08-25T19:42:32Z",
+   "thumb": "thumbs/1d9c227c4925.jpg"
+  },
+  {
+   "name": "Halloween",
+   "author": "endis-offical",
+   "version": "",
+   "file": "https://archive.org/download/mmm-2-end-1s-halloween/MMM2_end1s_halloween.zip",
+   "size": 614463,
+   "sha256": "ca46099455c1fe6e0017975a1ead7eb677965183d97c3cceb286d5cecd24930d",
+   "bsp_sha256": {
+    "MMM2_end1s_halloween": "39fdee5eee0d89cbb7cda69769ab5045359898fc6bcc86c95b345b1d90965cad"
+   },
+   "bsp": "MMM2_end1s_halloween",
+   "bsps": [
+    "MMM2_end1s_halloween"
+   ],
+   "desc": [
+    "You are stuck going door to door trick or",
+    "treating to survive. This map was made in",
+    "around a week for MMM2. DOWNLOAD Screenies"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/1655",
+   "date": "2026-10-09T17:13:47Z",
+   "thumb": "thumbs/b86daff63313.jpg"
+  },
+  {
+   "name": "Harvest Festival Map v1.1",
+   "author": "DrTinkletits",
+   "version": "1.1",
+   "file": "https://archive.org/download/harvest-festival/Harvest_Festival_1.1.zip",
+   "size": 7501663,
+   "sha256": "9afed8bced1a1ea29497b3e26f84bd9ea9e2c8d04d53881a782dd7909a3255eb",
+   "bsp_sha256": {
+    "tink_HarvestFestival": "e9cb96851a93de039b5f603d51f789240c42cc76471c6df324e0b79d8a9af946"
+   },
+   "bsp": "tink_HarvestFestival",
+   "bsps": [
+    "tink_HarvestFestival"
+   ],
+   "desc": [
+    "DOWNLOAD Harvest Festival is a map based on a",
+    "family farm with a corn maze. Packed with mini",
+    "games and easter eggs. Uses the new Pumpkin",
+    "and Tractor models from Derped Crusader. Enjoy",
+    "the Halloween vibes! Larger sized map. Full",
+    "Corn maze. Can you guess the maze image?"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/1288",
+   "date": "2025-10-31T14:38:00Z",
+   "thumb": "thumbs/379071b45ec8.jpg"
+  },
+  {
+   "name": "Haus Uberleben",
+   "author": "ImTander",
+   "version": "",
+   "file": "https://archive.org/download/haus-uberleben/Haus-Uberleben.zip",
+   "size": 796644,
+   "sha256": "5cb0ce16bd80a42f9e1fba8eff6593e0d5168a28cb5d6219909ac84038064b4c",
+   "bsp_sha256": {
+    "HausUberleben": "150dc1275f53db749c5e01cc822db9b714afba60ba58a5b6d716c8992cb2d2dd"
+   },
+   "bsp": "HausUberleben",
+   "bsps": [
+    "HausUberleben"
+   ],
+   "desc": [
+    "Welcome, to Haus Uberleben! This is a small",
+    "map with barely enough room to breathe, but",
+    "just enough to kill zombies! How long can you",
+    "last? Map Features : - The four core perks -",
+    "Random Perk machine spawn - Free Perk EE -",
+    "Buyable ending - Unlockable PaP Perk limit is"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/1376",
+   "date": "2026-03-02T03:08:08Z",
+   "thumb": "thumbs/5ca54c11a382.jpg"
+  },
+  {
+   "name": "Honey, I've Shrunk the Nacht",
+   "author": "Jeyphr",
+   "version": "",
+   "file": "https://archive.org/download/smol-nacht-jack-files/Honey%2C%20I%27ve%20Shrunk%20the%20Nacht.zip",
+   "size": 742179,
+   "sha256": "42e7b1fe75621b9cb85e0d579d798fff1ea9d68475595b6da056a41cbb8684bb",
+   "bsp_sha256": {
+    "smolNacht": "3ba15b6b32f17c631606cfe51d40bd1b0cec416a8635114c554f9dcfb240edf0"
+   },
+   "bsp": "smolNacht",
+   "bsps": [
+    "smolNacht"
+   ],
+   "desc": [
+    "God Damn It! I accidentally left it out to dry",
+    "forgetting that it would rain all night, and",
+    "now it's like 60% smaller and I'm not sure",
+    "what to do. MAP DOWNLOAD <<< J.A.C.K Project",
+    "Files --- SCREENIES --- UPDATE LOG - Release",
+    "1.0"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/1217",
+   "date": "2025-07-22T17:22:54Z",
+   "thumb": "thumbs/8113d8917bea.jpg"
+  },
+  {
+   "name": "Inside Peach's Castle 1F",
+   "author": "JCR64",
+   "version": "",
+   "file": "https://github.com/user-attachments/files/17333741/sm64_insidecastle1f.zip",
+   "size": 2972824,
+   "sha256": "72961691729cab128ae4ce6a94c3702ad66a77b71791ce3f0a5d6ddcb403ed16",
+   "bsp_sha256": {
+    "sm64_insidecastle1f": "bd03bede4318dca6a2e5710d67b6f7fc23b41360eeb965de2b4dfada33d8a443"
+   },
+   "bsp": "sm64_insidecastle1f",
+   "bsps": [
+    "sm64_insidecastle1f"
+   ],
+   "desc": [
+    "Another N64 remake, this time Inside Peach's",
+    "Castle from Super Mario 64, just the 1F. Much",
+    "smaller scale than the other remakes so",
+    "hopefully it plays nicer on non-FTE platforms.",
+    "Also included is a retextured version using",
+    "textures from Knave texture pack for Quake"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/936",
+   "date": "2024-10-10T20:20:32Z",
+   "thumb": "thumbs/7bbe5291174d.jpg"
+  },
+  {
+   "name": "Isolation",
+   "author": "TheLungy",
+   "version": "",
+   "file": "https://archive.org/download/nzp-isolation_20240824_0250/NZP%20Isolation.zip",
+   "size": 1277146,
+   "sha256": "42d1c23a52509068c539bf87c385a933eea3201908da821863314b3563e29a4c",
+   "bsp_sha256": {
+    "Isolation": "2f7c98987dd548943461844e9e748578f73adcbc8f92d3865073af7e5e6c96ae"
+   },
+   "bsp": "Isolation",
+   "bsps": [
+    "Isolation"
+   ],
+   "desc": [
+    "Hey all, this is my first map titled",
+    "Isolation. Features: Teleporter/Zapper",
+    "Trap/PAP Buyable ending (Jeep in garage)",
+    "Easter Eggs Easter Eggs Spoilers! 1. There are",
+    "three teddy bears scattered around the map.",
+    "When all three have been shot, a hidden room"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/882",
+   "date": "2024-08-22T23:41:44Z",
+   "thumb": "thumbs/4dbedf205d92.jpg"
+  },
+  {
+   "name": "Kakariko Village",
+   "author": "JCR64",
+   "version": "",
+   "file": "https://archive.org/download/nzp_kakarikovillage_oot64_pc/kakarikovillage_oot64.zip",
+   "size": 25781072,
+   "sha256": "9fbbb4706c90fb1ffccbb5f063ab94a0b3cf1056be340145e0c4a0e1168f8d3b",
+   "bsp_sha256": {
+    "kakarikovillage_oot64": "d90efea0e0af827102e90ee3abe42a65889d124b3d816f30500f39c1a3e1c73a"
+   },
+   "bsp": "kakarikovillage_oot64",
+   "bsps": [
+    "kakarikovillage_oot64"
+   ],
+   "desc": [
+    "Another N64 remake, this time Kakariko Village",
+    "from The Legend of Zelda: Ocarina of Time.",
+    "Only tested on FTE/PC, so again no guarantees",
+    "for other platforms. Easter Eggs: - Find the",
+    "Cuccos to unlock Pack-a-Punch machine - Reach",
+    "round 20 for a buyable ending and some music"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/906",
+   "date": "2024-09-21T21:44:47Z",
+   "thumb": "thumbs/9077f72daafb.jpg"
+  },
+  {
+   "name": "Kino der Toten (For realsies)",
+   "author": "MotoLegacy",
+   "version": "",
+   "file": "https://archive.org/download/kino_20251029/kino.zip",
+   "size": 4339684,
+   "sha256": "d606ef211f4920546180b270552a1410c237d472f3170cfa8a4ebc29dbc8a62e",
+   "bsp_sha256": {
+    "nzp_kinodertoten": "8ece15ea7055678093a2fb1c8b22e6bac808c0567a7df1e377e0daf90ebffe1a"
+   },
+   "bsp": "nzp_kinodertoten",
+   "bsps": [
+    "nzp_kinodertoten"
+   ],
+   "desc": [
+    "Hey guys. To be frank, I got a little tired of",
+    "people asking for Kino der Toten to be added",
+    "to the game when it was already kinda sorta",
+    "ready-to-go and only needed a few hours of",
+    "work left to be playable. I've decided to be",
+    "even more generous than I already had been and"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/708",
+   "date": "2024-04-21T00:28:54Z",
+   "thumb": "thumbs/fa98d96990a5.jpg"
+  },
+  {
+   "name": "Land v1.2",
+   "author": "MotoLegacy",
+   "version": "1.2",
+   "file": "https://archive.org/download/nzp_land/nzp_land.zip",
+   "size": 495718,
+   "sha256": "91abf67ae447cb84d63438a074394bbaacd73ed9623ce412f8249bd4ea1b3b66",
+   "bsp_sha256": {
+    "land": "36c05f3332810cd37c0a958b305c99af3faf6a979c2b1b4333f09a06479594ca"
+   },
+   "bsp": "land",
+   "bsps": [
+    "land"
+   ],
+   "desc": [
+    "This is a manual migration of forum user",
+    "oldschool125's map release land. Below",
+    "contains the original post content. You can",
+    "view the original post here. Hi guys today i'm",
+    "gonna show the hard work that we was working",
+    "on me and Naievil, Hope u guys enjoy ! Here is"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/160",
+   "date": "2023-02-01T17:42:14Z",
+   "thumb": "thumbs/33a786a29491.jpg"
+  },
+  {
+   "name": "LAST MAN STANDING",
+   "author": "Jeyphr",
+   "version": "",
+   "file": "https://archive.org/download/lastManStanding_v1/Last%20Man%20Standing%20%28v1.5%29.zip",
+   "size": 717667,
+   "sha256": "a5a4178235642d92adedff589c280194f72dbe3f5a1d94deadd6f0e24ae73737",
+   "bsp_sha256": {
+    "LastManStanding": "9979aa23aa82c39a276135e79266bbebaa0cc21750f3c603ebd5b6c609eeb586"
+   },
+   "bsp": "LastManStanding",
+   "bsps": [
+    "LastManStanding"
+   ],
+   "desc": [
+    "WELCOME TO LAST MAN STANDING! 1st official",
+    "uploaded map babey! Verse against your friends",
+    "in this chaotic single-room zombie survival",
+    "challenge. DOWNLOAD LINK <<< J.A.C.K Project",
+    "Files --- SCREENIES --- Update Log - Added",
+    "simple optimization techniques - Removed"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/795",
+   "date": "2024-06-22T00:53:09Z",
+   "thumb": "thumbs/e83b40c645e4.jpg"
+  },
+  {
+   "name": "LAST MAN STANDING 3",
+   "author": "Jeyphr",
+   "version": "",
+   "file": "https://archive.org/download/last-man-standing-3/LastManStanding3_v3.zip",
+   "size": 13274722,
+   "sha256": "fdc57450a27ec07df3aeaacb13a0560f519e249c6983786e2706be48d9acfd7a",
+   "bsp_sha256": {
+    "LastManStanding3": "827e3c4f32d2f233efea359e1a5ad3e5ae6bbe225c7b2506dcdad5790e0b7caa"
+   },
+   "bsp": "LastManStanding3",
+   "bsps": [
+    "LastManStanding3"
+   ],
+   "desc": [
+    "Welcome to Last Man Standing! Face against",
+    "your friends in this chaotic Revelations",
+    "inspired map! Choose your perks carefully, as",
+    "once you've dropped in, there's no going back.",
+    "LINKS Map Download < Video Playthrough J.A.C.K",
+    "Files SCREENIES"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/1144",
+   "date": "2025-05-01T00:51:49Z",
+   "thumb": "thumbs/5a3a9f9046e8.jpg"
+  },
+  {
+   "name": "LAST MAN STANDING 4",
+   "author": "Jeyphr",
+   "version": "",
+   "file": "https://archive.org/download/lms-4-jack-files/LastManStanding%204.zip",
+   "size": 1310169,
+   "sha256": "6212e03b406ec3c90a8598dc471360fafa81484fc05ae78e476fd459a35e77ec",
+   "bsp_sha256": {
+    "lms4": "3cf5bfbbfc9a8203bb1cb16f6684c50b7258732174ecee17f6871dc257cac3c0"
+   },
+   "bsp": "lms4",
+   "bsps": [
+    "lms4"
+   ],
+   "desc": [
+    "THE FINALE OF LAST MAN STANDING It's game over",
+    "man... GAME OVER The final installment of the",
+    "Last Man Standing series! Face against your",
+    "friends and be the last man standing! I am",
+    "officially out of ideas... DOWNLOAD LINK <<<",
+    "J.A.C.K Project Files --- SCREENIES --- Update"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/1218",
+   "date": "2025-07-26T14:47:26Z",
+   "thumb": "thumbs/4c666828db66.jpg"
+  },
+  {
+   "name": "Last Man Standing Resurrected",
+   "author": "Jeyphr",
+   "version": "",
+   "file": "https://archive.org/download/jphr_lmsrv1.0/jphr_lmsr%28v1.0%29.zip",
+   "size": 1438216,
+   "sha256": "cc756d26a79da28fbfe85402f25e3a4c175db8d446901f00102325c6082e6dae",
+   "bsp_sha256": {
+    "jphr_lmsr": "1072f036bc06d5343e7a5e86b3cde1885e5ebab556ad6269216e582443025a4c"
+   },
+   "bsp": "jphr_lmsr",
+   "bsps": [
+    "jphr_lmsr"
+   ],
+   "desc": [
+    "Micro Maps Madness 2! Test your mettle in this",
+    "chaotic tribute to no mans land! If you are",
+    "gonna play this map, feedback would be greatly",
+    "appreciated! --- THIS MAP USES FEATURES THAT",
+    "ONLY WORK IN THE LATEST VERSION OF NZP (VRIL).",
+    "EXPERIENCES MAY VARY ON OTHER ENGINES MAP"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/1667",
+   "date": "2026-10-19T01:03:19Z",
+   "thumb": "thumbs/0c4e0334a975.jpg"
+  },
+  {
+   "name": "LOOP V2",
+   "author": "Jeyphr",
+   "version": "2",
+   "file": "https://archive.org/download/loop-v-2-jack-files/loop_v2.zip",
+   "size": 2211497,
+   "sha256": "08031b65c08270a7de41c4a92ef261e4b17b91681819e47d9a5c4fe725f5a653",
+   "bsp_sha256": {
+    "loopV2": "9b6abfa043050a1413d1fa12f2da08b1f83fcc2f3d873c721d56606b93a83faf"
+   },
+   "bsp": "loopV2",
+   "bsps": [
+    "loopV2"
+   ],
+   "desc": [
+    "A fun little teaser for what's in store! MAP",
+    "DOWNLOAD << J.A.C.K Project files Developer",
+    "Commentary This map is a short, fun teaser for",
+    "my upcoming map, Simulacra 2. This map started",
+    "as a spiritual successor to one of NZP's base",
+    "maps, loop, after I was struck with"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/1180",
+   "date": "2025-06-20T01:42:25Z",
+   "thumb": "thumbs/63177da7eae8.jpg"
+  },
+  {
+   "name": "Monkey Meadow",
+   "author": "Jeyphr",
+   "version": "",
+   "file": "https://archive.org/download/blns_20260318/blns.zip",
+   "size": 1668919,
+   "sha256": "21181218af5678d61020225b416b269a490933cc303d6014d16041bb1518919e",
+   "bsp_sha256": {
+    "blns": "5e1a870fe24099b477efadac5502360e591c5adc8f0479bed772bb9a28f999e4"
+   },
+   "bsp": "blns",
+   "bsps": [
+    "blns"
+   ],
+   "desc": [
+    "April Fools! This was my map submission for",
+    "the 2026 April Fools event on Blade0 and I's",
+    "dedicated server for FTE. (Be sure to check it",
+    "out!) Wanted to shoot for something a little",
+    "wacky, and what's more wacky than shooting",
+    "zombies in tower defense formation? Be sure to"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/1388",
+   "date": "2026-03-30T23:22:16Z",
+   "thumb": "thumbs/9958c13f3e62.jpg"
+  },
+  {
+   "name": "Nacht 2.0",
+   "author": "ImTander",
+   "version": "",
+   "file": "https://archive.org/download/nacht-2.0_202403/Nacht%202.0.zip",
+   "size": 780946,
+   "sha256": "5242c867a6a85bc7aec1df0e71de2c4cf74baa36a01c398c4dd6f3c96cbc6502",
+   "bsp_sha256": {
+    "nacht2": "7cfb6d91e0f316cd8b161fb147433ae8f4b9b95e06a9fb9e14ffe78564a2dffe"
+   },
+   "bsp": "nacht2",
+   "bsps": [
+    "nacht2"
+   ],
+   "desc": [
+    "Nacht der Untoten 2.0! What is it? Simple",
+    "really, just Nacht with perks & PaP! This is",
+    "just built on the standard Nacht that comes",
+    "with the game, so credit for the map still",
+    "really goes out to the NZ:P Team, I didn't do",
+    "much. What's new? - the four core perks -"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/688",
+   "date": "2024-03-23T04:28:30Z",
+   "thumb": "thumbs/38b901dff38e.jpg"
+  },
+  {
+   "name": "Nacht der Untoten Plus",
+   "author": "M0THRAK",
+   "version": "1.1",
+   "file": "https://archive.org/download/ndu_20260522/ndu%2B.zip",
+   "size": 833684,
+   "sha256": "a60204cbceeec973353a49ffd33e319c50482b6aa66c27acdae547ad32f0fd4a",
+   "bsp_sha256": {
+    "ndu+": "db63855c42aa08fed6d981cd059232a609776f73b27b962f64a6b78bdf04af88"
+   },
+   "bsp": "ndu+",
+   "bsps": [
+    "ndu+"
+   ],
+   "desc": [
+    "Nacht der Untoten Plus A light revamp of Nacht",
+    "der Untoten, adding more perks and a",
+    "Pack-A-Punch easter egg. Keep in mind this",
+    "does pretty much ruin the difficulty of Nacht.",
+    "I just made this out of boredom. Download",
+    "Install by extracting contents in your root"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/1432",
+   "date": "2026-05-22T06:53:37Z",
+   "thumb": "thumbs/8ade513d8e4f.jpg"
+  },
+  {
+   "name": "Nacht der Untoten: Revamp",
+   "author": "mapkidd",
+   "version": "",
+   "file": "https://archive.org/download/ndu-revamp/NDU%20REVAMP.zip",
+   "size": 453904,
+   "sha256": "0dd5248b09869a708f775031af5647a067a0fbd02d17b475b6f0e3be77afc16c",
+   "bsp_sha256": {
+    "modded_ndu": "d672973d8ed7b7d6a1a4753bb52e9d25a7ad8988a95ab846bf7f510d650cb7ea"
+   },
+   "bsp": "modded_ndu",
+   "bsps": [
+    "modded_ndu"
+   ],
+   "desc": [
+    "--- DOWNLOAD <--- instructions to install: 1.",
+    "extract the zip (if you haven't already) 2.",
+    "drop the files in ''(where you have NZP",
+    "installed)\\nzp\\maps\\'' OR drop the ''maps''",
+    "folder in ''(where you have NZP",
+    "installed)\\nzp\\'' (MAKE SURE YOU DON'T"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/1023",
+   "date": "2024-12-12T11:47:02Z",
+   "thumb": "thumbs/b656d27b0ac0.jpg"
+  },
+  {
+   "name": "No Man's Land",
+   "author": "M0THRAK",
+   "version": "1.6",
+   "file": "https://archive.org/download/no-mans-land_202606/No%20Man%27s%20Land.zip",
+   "size": 3616041,
+   "sha256": "7625121026d4e2d9039246adeb9be692ddc9d2277b53e34338caadab6e70eb54",
+   "bsp_sha256": {
+    "nml": "0ef62820dc5faf7b23ef4a730cf14213ebb7a6bd129947cfb8c47b0b90657fba"
+   },
+   "bsp": "nml",
+   "bsps": [
+    "nml"
+   ],
+   "desc": [
+    "No Man's Land No Man's Land, is a map based on",
+    "the spawn room from the Call of Duty: Black",
+    "Ops map: Moon. KEEP IN MIND, THIS MAP IS NOT",
+    "THE ENTIRETY OF MOON! Instructions/gameplay",
+    "features: - Use the power switch the alert the",
+    "horde - Every five rounds, more zombie spawns"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/1450",
+   "date": "2026-06-21T18:34:14Z",
+   "thumb": "thumbs/361b3aacf185.jpg"
+  },
+  {
+   "name": "One Room",
+   "author": "TaborScott",
+   "version": "",
+   "file": "https://archive.org/download/one-room/OneRoom.zip",
+   "size": 1795959,
+   "sha256": "95f1f9a373a741647c96fe3de2f67e93b279dd851ded01d707dc5b0a592e06ab",
+   "bsp_sha256": {
+    "OneRoom": "14f123bf1a407ac08a097bacf6fcd91726488444641fd47d911a958ed9e9442c"
+   },
+   "bsp": "OneRoom",
+   "bsps": [
+    "OneRoom"
+   ],
+   "desc": [
+    "A rushed, terrible version of the One Room",
+    "Challenge. Any bugs/glitches found report on",
+    "the discussion... :) If there's any problems",
+    "with setup let me know! Download FUTURE PLANS:",
+    "CUSTOM SKINS END GAME BUTTON MUSIC CUSTOM GUN",
+    "SOUNDS REVAMP OF START ROOM"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/844",
+   "date": "2024-07-16T15:34:22Z",
+   "thumb": "thumbs/5e12ea116250.jpg"
+  },
+  {
+   "name": "Perish",
+   "author": "Jeyphr",
+   "version": "",
+   "file": "https://archive.org/download/perish_202504/Perish_v2.zip",
+   "size": 1032191,
+   "sha256": "f3e494a024fc0aff5549ba97d755174463fd3bb72e1441512c8658a40af232b4",
+   "bsp_sha256": {
+    "DevCubeChallenge": "857e3ac52994cfa3213e74ed72e41d8034f18bbae4d19020d3b8652a932375bc"
+   },
+   "bsp": "DevCubeChallenge",
+   "bsps": [
+    "DevCubeChallenge"
+   ],
+   "desc": [
+    "You are going to die. This is my third map",
+    "that I've uploaded to this board, and I'm",
+    "really proud of it. I was requested from one",
+    "of my Discord friends to make a map using only",
+    "Dev Textures, their example being cporange.",
+    "Not only have I delivered on that front, I"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/1133",
+   "date": "2025-04-20T20:04:48Z",
+   "thumb": "thumbs/0f515292593c.jpg"
+  },
+  {
+   "name": "Perk or Gun",
+   "author": "Jeyphr",
+   "version": "",
+   "file": "https://archive.org/download/pog-thumb/Perk%20Or%20Gun.zip",
+   "size": 1036491,
+   "sha256": "4658e67d8f5a5eb70f7520089415f31de7345a16e05d88e4b93f8e26fe685fc0",
+   "bsp_sha256": {
+    "pog": "743edfbdc1e49950cf6672be2010a99eedac6ef21171ebac2c00900b63d2386e"
+   },
+   "bsp": "pog",
+   "bsps": [
+    "pog"
+   ],
+   "desc": [
+    "WELCOME TO PERK OR GUN Challenge yourself to",
+    "complete one of the hardest hallway maps to",
+    "grace NZP! Each hallway segment has two doors",
+    "that either lead to a perk machine or a gun.",
+    "Choose Wisely! Find all the teddy bears for a",
+    "reward. Map Download << Video Playthrough"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/1157",
+   "date": "2025-05-21T17:07:09Z",
+   "thumb": "thumbs/ecac7244db43.jpg"
+  },
+  {
+   "name": "Poop of the Dead",
+   "author": "Jeyphr",
+   "version": "",
+   "file": "https://archive.org/download/potd_20260131/nzp.zip",
+   "size": 873909,
+   "sha256": "31cb1afdf5a2655ec71cdd46b266ed02a8e3b8a46436fa9cbf5f6647ded5af8d",
+   "bsp_sha256": {
+    "potd": "9286c7e71299fc5181928d82db4bc44f5574b76247f1aa14dd4b8d401ece344c"
+   },
+   "bsp": "potd",
+   "bsps": [
+    "potd"
+   ],
+   "desc": [
+    "Do you think god stays in heaven because he",
+    "too lives in fear of what he's created? This",
+    "is the start of a new series starting in",
+    "February, 2026 called MICRO MAP MADNESS where",
+    "I will be uploading a new (small) at the start",
+    "of every week of February. (4 maps) If you are"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/1352",
+   "date": "2026-01-31T21:50:01Z",
+   "thumb": "thumbs/3dd56648355b.jpg"
+  },
+  {
+   "name": "Project Gemini Map 01: Sunken Bar",
+   "author": "Evilslayer506",
+   "version": "",
+   "file": "https://github.com/Evilslayer506/Sunken-Bar/archive/refs/heads/main.zip",
+   "size": 33522314,
+   "sha256": "c818b71424119d3a5cb33e52239e85bfcdac8e5d85c73dda78cd9778a60fb308",
+   "bsp_sha256": {
+    "NB1": "2a95db55d80d5020c7d913ed2d524bc8a3a1e43e86f161f3298e17b90de22860"
+   },
+   "bsp": "NB1",
+   "bsps": [
+    "NB1"
+   ],
+   "desc": [
+    "This is first map of the \"Project: Gemini\"",
+    "Storyline (Title Not Final) for Nazi Zombies:",
+    "Portable where you're trapped in a bar that",
+    "got caught in a sinkhole and now needs to find",
+    "whatever it takes to survive... Created by:",
+    "Evilslayer506 & Nickbear Map Design:"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/954",
+   "date": "2024-10-28T10:58:36Z",
+   "thumb": "thumbs/fd66b4c2f014.jpg"
+  },
+  {
+   "name": "Pump",
+   "author": "MotoLegacy",
+   "version": "",
+   "file": "https://archive.org/download/nzp_pump/nzp_pump.zip",
+   "size": 1835448,
+   "sha256": "9c7397410dce80e175a2b9637079807ad7847c31fc43ca63b2c0a416774ab572",
+   "bsp_sha256": {
+    "Pump": "8dd274fe46947aa69b6a07995ba568d631edfc9005d304756ce13ea595bc34c6"
+   },
+   "bsp": "Pump",
+   "bsps": [
+    "Pump"
+   ],
+   "desc": [
+    "This is a manual migration of forum user",
+    "Naievil & oldschool125's map release Pump.",
+    "Below contains the original post content. You",
+    "can view the original post here. This project",
+    "was formerly known as \"Station.\" Hey guys,",
+    "Anass-nzp125 and I have finished a map that is"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/166",
+   "date": "2023-02-02T01:16:52Z",
+   "thumb": "thumbs/1f676f2f7e39.jpg"
+  },
+  {
+   "name": "Rev's Adventure Part I",
+   "author": "Revnova",
+   "version": "",
+   "file": "https://github.com/user-attachments/files/17333109/Revs-Adventure-1.zip",
+   "size": 16183238,
+   "sha256": "97d07770dba80976c7ca247f86ecb671af584d7acd4ab7d984e34c08bfd811c0",
+   "bsp_sha256": {
+    "Revs-Adventure-1": "cc697d228f81a80a3b350d315ee59209da107c32d5b3a261f01ad1093f1f6690"
+   },
+   "bsp": "Revs-Adventure-1",
+   "bsps": [
+    "Revs-Adventure-1"
+   ],
+   "desc": [
+    "Download Here This map's custom content are",
+    "textures and perk machine sounds. Currently",
+    "includes: 1. Power 2. 1Mbox Spot 3. 6 Perks 4.",
+    "3 Teddys 5. EE Song 6. Coop Spawns 7. 6 Wall",
+    "Weapons 8. Pack-a-Punch 9. 2 Locations to dive",
+    "from 10. Grenade/Betty Wall Buys 11. Ending"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/391",
+   "date": "2023-10-07T06:50:43Z",
+   "thumb": "thumbs/c6b3e249f946.jpg"
+  },
+  {
+   "name": "RWBY_B.A.",
+   "author": "MLY22",
+   "version": "",
+   "file": "https://archive.org/download/rwby_20260815/RWBY.zip",
+   "size": 1721003,
+   "sha256": "cf7736a98aecfcf49cc68b92a2cfc71eb70973b7f034edb276809767255956ac",
+   "bsp_sha256": {
+    "RWBY": "e2973b2c109d192a9b2599585a94986e6645cf0880ce23d6e4e715e82b3ef30e"
+   },
+   "bsp": "RWBY",
+   "bsps": [
+    "RWBY"
+   ],
+   "desc": [
+    "DOWNLOAD A map inspired by RWBY, it is set in",
+    "Beacon Academy. the map has pap, jugger,",
+    "stamin-up, quick-revive, speed-cola, PHD and",
+    "one mystery box it has 2 wall buys, a bowie",
+    "knife wall buy and a mysterious wall buy",
+    "(easter egg) it also contains a main easter"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/1502",
+   "date": "2026-08-15T13:02:03Z",
+   "thumb": "thumbs/5638661344fd.jpg"
+  },
+  {
+   "name": "SAS: Zombie Assault 3's Airbase",
+   "author": "Revnova",
+   "version": "",
+   "file": "https://github.com/nzp-team/nzportable/files/14269611/Airbase.zip",
+   "size": 12693790,
+   "sha256": "6d4872dfc9d3086249f4861bb23647b30b75391c999a89cc551861c1bf904940",
+   "bsp_sha256": {
+    "Airbase": "74d9e1bd9ae275819024ad02fc231edf97ef135df84719d43b991feeb178ece9"
+   },
+   "bsp": "Airbase",
+   "bsps": [
+    "Airbase"
+   ],
+   "desc": [
+    "Download Here This is based off a map from",
+    "SAS: Zombie Assault 3. Airbase. Its just a",
+    "quick map. so its not very detailed. its has:",
+    "1. the basic 4 perks 2. wall buys 3. 1 buyable",
+    "door 4. the mystery box 5. Dogs have fun",
+    "Screenshots"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/655",
+   "date": "2024-02-13T00:11:30Z",
+   "thumb": "thumbs/cb424d7ee934.jpg"
+  },
+  {
+   "name": "Shipment",
+   "author": "LexiAshe",
+   "version": "",
+   "file": "https://github.com/nzp-team/nzportable/files/15069365/lexi_shipment.zip",
+   "size": 839004,
+   "sha256": "f4f251c612eb9bfd0efb4da9c3006b653a90f00a8281f7af4e19edeaf7fc62ce",
+   "bsp_sha256": {
+    "lexi_shipment": "700a8affb7e8e6ae2026f3e8ee5a5e1d2b19ea9535690616a5f5cba4de3645bd"
+   },
+   "bsp": "lexi_shipment",
+   "bsps": [
+    "lexi_shipment"
+   ],
+   "desc": [
+    "I wanted to challenge myself to see if I could",
+    "make an entire zombie map in one day. This was",
+    "the result! It's Shipment from Call of Duty 4!",
+    "I've tested it as much as I could but, I'm",
+    "past my time limit now so there are bound to",
+    "be lots of mistakes/bugs in this build, so"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/710",
+   "date": "2024-04-22T23:15:53Z",
+   "thumb": "thumbs/6c7e0bd9bf9e.jpg"
+  },
+  {
+   "name": "Shipment Survival",
+   "author": "Blake-Izayoi",
+   "version": "1.1",
+   "file": "https://archive.org/download/shipment_3939/shipment.zip",
+   "size": 13192561,
+   "sha256": "14ddd83c4f86081e588fc65122bd5f58b8ceb0aac6965e51022eb6e0dde02646",
+   "bsp_sha256": {
+    "shipment": "c059c22949f0a22bb1f20a078a543877de2f02c19711fd3820b4b0c9b1507521"
+   },
+   "bsp": "shipment",
+   "bsps": [
+    "shipment"
+   ],
+   "desc": [
+    "Shipment is a classic map, originally made for",
+    "Call of Duty 4: Modern Warfare. Now, you can",
+    "play it as a NZ:P map! Started initially as a",
+    "4 hour speedmap challenge, this map was",
+    "finished in just 2 days! The four original",
+    "World at War perks are available, as well as"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/1513",
+   "date": "2026-08-23T04:16:53Z",
+   "thumb": "thumbs/e7194503e3df.jpg"
+  },
+  {
+   "name": "Simulacra",
+   "author": "Jeyphr",
+   "version": "",
+   "file": "https://archive.org/download/simulacra_202407/Simulacra%20V1.5.zip",
+   "size": 2756594,
+   "sha256": "bde28bfc28c8c127d22fb65b390baf997712e4d2eb77b65177733c94d4503f21",
+   "bsp_sha256": {
+    "simulacra": "154cd98bd169288ecc3ad2aff79d7077c97d1a854f2c7031c13e2f559fd93f30"
+   },
+   "bsp": "simulacra",
+   "bsps": [
+    "simulacra"
+   ],
+   "desc": [
+    "WELCOME TO SIMULACRA Simulated American town",
+    "located in a German viral testing facility. Do",
+    "you have what it takes to survive? DOWNLOAD",
+    "LINK <<< PROJECT FILES VIDEO SHOWCASE",
+    "SCREENSHOTS: --- --- UPDATE LOG: - Fixed a",
+    "model error bug caused by not assigning a"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/858",
+   "date": "2024-07-31T01:30:03Z",
+   "thumb": "thumbs/c250fe8d3b87.jpg"
+  },
+  {
+   "name": "slide_kitsune (slide and surfing map for NZP)",
+   "author": "bigjackson",
+   "version": "",
+   "file": "https://github.com/bigjackson/nzpmapsrepo/raw/main/slide_kitsune.zip",
+   "size": 885416,
+   "sha256": "3bfe9236c065368d83a4928bdd7c33f1e19e3c5ec16d5002c6c81db3648e6fdd",
+   "bsp_sha256": {
+    "slide_kitsune": "ec93671270cd4248fb82758cdc910cac6f7ecb9f96141c681c18d5ef14342972"
+   },
+   "bsp": "slide_kitsune",
+   "bsps": [
+    "slide_kitsune"
+   ],
+   "desc": [
+    "slidekitsune is a NZP map that uses map",
+    "geometry in most surf maps in GoldSrc/Source.",
+    "This map allows you to slide down ramps and",
+    "surf them. Required commands for the map to",
+    "work: svairaccelerate 800 svaccelerate 100 god",
+    "DOWNLOAD HERE<<"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/706",
+   "date": "2024-04-20T04:25:59Z",
+   "thumb": "thumbs/a4aa396bcd0e.jpg"
+  },
+  {
+   "name": "Small House",
+   "author": "Bobthebob5",
+   "version": "",
+   "file": "https://github.com/nzp-team/nzportable/files/15462612/Small.House.zip",
+   "size": 620377,
+   "sha256": "68aaad891684874b4debcdbe8cc2b195d443b97baffd4c96941d81384f3b3af1",
+   "bsp_sha256": {
+    "smallhouse": "037628dee49662f0e9a2ce92aa463e6fb7d3ad821b0fbe72220c3a70ed32b6f0"
+   },
+   "bsp": "smallhouse",
+   "bsps": [
+    "smallhouse"
+   ],
+   "desc": [
+    "Just as the title suggests its a small house.",
+    "Its a small house, they are trespassing. My",
+    "first map so it doesnt contain anything",
+    "special in terms of easter eggs or anything,",
+    "more of a test to learn trenchbroom. DOWNLOAD",
+    "Its a small map and was tested on: New 3ds psp"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/750",
+   "date": "2024-05-28T00:54:07Z",
+   "thumb": "thumbs/94d6feb5be25.jpg"
+  },
+  {
+   "name": "Sniper Range",
+   "author": "Bobthebob5",
+   "version": "",
+   "file": "https://github.com/user-attachments/files/15749908/Sniperange.zip",
+   "size": 442712,
+   "sha256": "49d81ad96f0cc4907ed7702bde232b665a8adca8a07f7948156ae737978ba454",
+   "bsp_sha256": {
+    "SniperRange": "2cac749083d6c665fb261cb875d09cd0cc6e9f48e3e5b1b0d0fff69efc9cbdc0"
+   },
+   "bsp": "SniperRange",
+   "bsps": [
+    "SniperRange"
+   ],
+   "desc": [
+    "A fun map idea I wanted to execute. One room",
+    "and zombies coming. Use the snipers and aim",
+    "for the head! DOWNLOAD Tested on PC and PSP",
+    "3000"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/755",
+   "date": "2024-05-29T03:05:29Z",
+   "thumb": "thumbs/0b2e40959971.jpg"
+  },
+  {
+   "name": "Snowisuke",
+   "author": "bigjackson",
+   "version": "",
+   "file": "https://github.com/bigjackson/nzpmapsrepo/raw/main/snowisuke.zip",
+   "size": 861699,
+   "sha256": "db7684e1f5aa51f73fb1beadadcc3f524cb38aaab4b885963a30fb8dd0dbc615",
+   "bsp_sha256": {
+    "snowisuke": "ae32f9ab2c7b14827994cb1adf20c490643742db76cd989ace35d282488fab8e"
+   },
+   "bsp": "snowisuke",
+   "bsps": [
+    "snowisuke"
+   ],
+   "desc": [
+    "Welcome to Not Lithuania Mountain, where",
+    "Snowisuke takes place. snowisuke is a map i've",
+    "been making for a while, honestly just because",
+    "of lack of ideas, i feel like there's too many",
+    "trees. skybox: striga from the NZP discord",
+    "(i'll change it to a github tag if they want"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/763",
+   "date": "2024-06-04T02:18:50Z",
+   "thumb": "thumbs/2002d1b02855.jpg"
+  },
+  {
+   "name": "Stairway to Heaven",
+   "author": "Jeyphr",
+   "version": "",
+   "file": "https://archive.org/download/sth_20260207/sth_v1.1.zip",
+   "size": 1531725,
+   "sha256": "3ecd658943c42dbcb68b8f338049b66288466f78f3e304beafa47418e1291c70",
+   "bsp_sha256": {
+    "sth": "f27e18fd6c1ef75513c26779a055693a990de25e3df0924e60891f983d816084"
+   },
+   "bsp": "sth",
+   "bsps": [
+    "sth"
+   ],
+   "desc": [
+    "Will you ascend from Darkness? This is the",
+    "second map in a quadrilogy called MICRO MAP",
+    "MADNESS where I upload a map at the start of",
+    "every week February 2026! This one's a doozy.",
+    "It's easily the hardest map I've ever released",
+    "to the workshop. I will be very impressed if"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/1364",
+   "date": "2026-02-07T21:38:31Z",
+   "thumb": "thumbs/36517abbad7d.jpg"
+  },
+  {
+   "name": "Stuck in the Trenches",
+   "author": "Jeyphr",
+   "version": "",
+   "file": "https://archive.org/download/sitt_20260210/sitt.zip",
+   "size": 721525,
+   "sha256": "582648c58e88bfe92e55159a103658b24bb8bd4719a4e57fec0feb02dc87b202",
+   "bsp_sha256": {
+    "sitt": "838956c5507784e8fbce7191b948c56ef3a3b1a392956f022b3dfedee9eaa92a"
+   },
+   "bsp": "sitt",
+   "bsps": [
+    "sitt"
+   ],
+   "desc": [
+    "This is the Final Stand! This is the third map",
+    "in the quadrilogy of MICRO MAP MADNESS. I",
+    "wanted to go back to the roots of Zombies,",
+    "more specifically, the tower-defense style",
+    "gameplay of Nacht Der Untoten. Less train-y",
+    "more camp-y, hunker down and see how long you"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/1366",
+   "date": "2026-02-13T11:14:17Z",
+   "thumb": "thumbs/a8f815a161ff.jpg"
+  },
+  {
+   "name": "Super Zombie Bros",
+   "author": "notrickzdumbo",
+   "version": "",
+   "file": "https://github.com/nzp-team/nzportable/files/11923879/SuperZombieBros.zip",
+   "size": 218452,
+   "sha256": "fcdedea66e7c5973ce1c7e9edff180e8b4fb2bd565d37768f9514a43c03da7fb",
+   "bsp_sha256": {
+    "SuperZombieBros": "c6d38e8410ddeb9a0ee7f6069dc649061fd494f1305183d1f22ef261ace831cb"
+   },
+   "bsp": "SuperZombieBros",
+   "bsps": [
+    "SuperZombieBros"
+   ],
+   "desc": [
+    "Here it is. A Super Mario Bros map for NZP.",
+    "Enjoy! And expect more maps from me :D Notes -",
+    "There are two levels to the map. The ground",
+    "section and the underground section - It has",
+    "Pack a Punch and all perks - There is a",
+    "buyable ending - Games start a bit slow due to"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/307",
+   "date": "2023-06-30T23:34:30Z",
+   "thumb": "thumbs/77bfa28dc3f1.jpg"
+  },
+  {
+   "name": "Tag der Untoten",
+   "author": "Paindeluxe",
+   "version": "",
+   "file": "https://github.com/nzp-team/nzportable/files/10777366/TdU.zip",
+   "size": 170125,
+   "sha256": "d8af274c39352f536f5c0a322aed91db13e054d267cd83eb7ba45a4d4b289392",
+   "bsp_sha256": {
+    "TdU": "b61cb3c6493fe84598e914833c49bea07c87b5a8681e16a0a53c02fc084b828f"
+   },
+   "bsp": "TdU",
+   "bsps": [
+    "TdU"
+   ],
+   "desc": [
+    "Greetings this is my Map that is inspired by",
+    "the Call of Duty: Cold War \"remake\" of Nacht",
+    "der Untoten This is a pretty decently sized",
+    "map so it's very easy although due to it being",
+    "located in Nacht der Untoten we got no",
+    "Perks... DISCLAIMER! This is unfinished and"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/199",
+   "date": "2023-02-19T16:22:34Z"
+  },
+  {
+   "name": "Teddy Survival",
+   "author": "MotoLegacy",
+   "version": "",
+   "file": "https://github.com/nzp-team/nzportable/files/12147743/Teddy_Survival.zip",
+   "size": 508123,
+   "sha256": "d6d84e7a515288e63fddcbd4d2ce4049453d2fbccbc3a00daaa8099801c8ed63",
+   "bsp_sha256": {
+    "Teddy_Survival": "408cb54a501ea7a9b712f301751e5b4f920b92d22c6585fe7e2441643fde9005"
+   },
+   "bsp": "Teddy_Survival",
+   "bsps": [
+    "Teddy_Survival"
+   ],
+   "desc": [
+    "This is a manual migration of forum user",
+    "oldschool125's map release TeddySurvival.",
+    "Below contains the original post content. You",
+    "can view the original post here. So lately I",
+    "started working on this map on my free time",
+    ".Here is some pictures : Features: All perks"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/321",
+   "date": "2023-07-24T16:02:58Z",
+   "thumb": "thumbs/31d76c5f6a23.jpg"
+  },
+  {
+   "name": "The Pit",
+   "author": "ImTander",
+   "version": "",
+   "file": "https://archive.org/download/the-pit_nzp/The%20Pit.zip",
+   "size": 583239,
+   "sha256": "556ef52e4cee2ff4c19e5fa0da7166a3e666dff3fad152af818e277154fdac0d",
+   "bsp_sha256": {
+    "the_pit": "22dcda82f83e8b3cef570265efeaccfc61350ae54b1ae0fee90ee1e0cdef2a9d"
+   },
+   "bsp": "the_pit",
+   "bsps": [
+    "the_pit"
+   ],
+   "desc": [
+    "Hello! Welcome to my second custom map, The",
+    "Pit! I wanted to make a simple/basic map that",
+    "could be played smoothly across all platforms,",
+    "and so I came up with a simple challenge map!",
+    "Great for small/short play sessions! How long",
+    "can you survive in \"The Pit\", with zombies"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/687",
+   "date": "2024-03-21T04:21:08Z",
+   "thumb": "thumbs/a799a724ee1c.jpg"
+  },
+  {
+   "name": "The Thingy",
+   "author": "Revnova",
+   "version": "",
+   "file": "https://github.com/user-attachments/files/18112211/those-damned-norwegians.zip",
+   "size": 889385,
+   "sha256": "70f894c8b34d468488cb2a67a40147aed21e750513229f3a55be7964c5e7b268",
+   "bsp_sha256": {
+    "those-damned-norwegians": "c15a1a0b74735e61d99bc480e5101fb54cf2a79437e7e1035eda8cf9e40f959b"
+   },
+   "bsp": "those-damned-norwegians",
+   "bsps": [
+    "those-damned-norwegians"
+   ],
+   "desc": [
+    "Still a W.I.P. Currently frames drop when",
+    "you're inside the hangar looking back at",
+    "spawn. This map does not work on anything",
+    "other than FTE (PC). Download Here (day)",
+    "Download Here (night) its a snow map inspired",
+    "by John Carpenter's The Thing. but this is my"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/894",
+   "date": "2024-09-07T03:45:45Z",
+   "thumb": "thumbs/23a7dab57c55.jpg"
+  },
+  {
+   "name": "TOILETTEN",
+   "author": "Symerzen",
+   "version": "",
+   "file": "https://archive.org/download/toiletten_202405/TOILETTEN.zip",
+   "size": 284932,
+   "sha256": "1ce5d58096f7e7d77b5e1fc52153fb7dfb143b4013ed4a685d9b04600dae8fe5",
+   "bsp_sha256": {
+    "TOILETTEN": "3f52c772dc1d1468af4d006e71ebdae7640bd93f4aa83ec28cc96d13eb019ac3"
+   },
+   "bsp": "TOILETTEN",
+   "bsps": [
+    "TOILETTEN"
+   ],
+   "desc": [
+    "A map made in a few days to practice with map",
+    "making. Comes with short 2 part Easter egg and",
+    "buyable ending. Should be fine in Co-op,",
+    "tested with 1-2 people but 4 should be",
+    "possible. DOWNLOAD"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/739",
+   "date": "2024-05-23T04:43:01Z",
+   "thumb": "thumbs/a677c41d497e.jpg"
+  },
+  {
+   "name": "Tram",
+   "author": "qloakongithub",
+   "version": "",
+   "file": "https://archive.org/download/tram_nzp/Tram.zip",
+   "size": 630990,
+   "sha256": "73753ff9faebb894a9bf56617bc5c1e855bb3bdc4c63ba17f107efab656e4f79",
+   "bsp_sha256": {
+    "Tram": "146e5f3102badbbbc99e0e16abbad75fa58be960bcd4c706fad9b3df64f439d7"
+   },
+   "bsp": "Tram",
+   "bsps": [
+    "Tram"
+   ],
+   "desc": [
+    "As a new map maker for NZP, this is my first",
+    "map! It is set in a tram, with 2 windows, a",
+    "Pack-a-Punch machine, a Mystery Box, Quick",
+    "Revive, and a random Perk! This map is based",
+    "on the ending of Half-Life 1; where you are",
+    "given a choice between becoming an employee of"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/1057",
+   "date": "2024-12-22T05:36:19Z",
+   "thumb": "thumbs/4bee9088f33b.jpg"
+  },
+  {
+   "name": "Trenches demo(First map)",
+   "author": "endis-offical",
+   "version": "",
+   "file": "https://github.com/user-attachments/files/31785352/Trenches_demo.zip",
+   "size": 1902115,
+   "sha256": "0374099ebe307b9d5d9d1d8748bba59cf5f0b041f34eb6ea0c30f4fd9c42adfe",
+   "bsp_sha256": {
+    "Trenches_demo": "e011ddb633cb4231fb6616940ae9acef8da8bc9b9652816a9c1452015d074ce5"
+   },
+   "bsp": "Trenches_demo",
+   "bsps": [
+    "Trenches_demo"
+   ],
+   "desc": [
+    "Your communications have been cut off and your",
+    "trench is overun by zombies Can you survive? I",
+    "made this map in like 2 days. I made it to see",
+    "how a trench setting would feel like in NZ:p.",
+    "Feel free to share feedback it would be",
+    "greatly appreciated. I will probably start"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/1546",
+   "date": "2026-09-03T09:47:51Z",
+   "thumb": "thumbs/e5daecbddd00.jpg"
+  },
+  {
+   "name": "TS2 Compound Remake",
+   "author": "masterpl4n",
+   "version": "",
+   "file": "https://github.com/user-attachments/files/16534543/ts2zombies.zip",
+   "size": 156719,
+   "sha256": "c8d74f44141cad3d21854a1917346e379531cd8f0b16fd391643f7b9cf04d4ba",
+   "bsp_sha256": {
+    "ts2zombies": "10899cbd00ff899a9524b1d134729de328ac54f222ef9aaaae334bea2ff4a4ed"
+   },
+   "bsp": "ts2zombies",
+   "bsps": [
+    "ts2zombies"
+   ],
+   "desc": [
+    "DOWNLOAD HERE Based on the classic challenge",
+    "from TimeSplitters 2 shown here. Not a direct",
+    "port, had to remove the stairs for game flow",
+    "reasons, but still accurate enough. There's a",
+    "secret room with PAP and Speed Cola, can you",
+    "find it? Tested on PC and PSP 1000."
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/864",
+   "date": "2024-08-07T21:59:09Z",
+   "thumb": "thumbs/970c185f170f.jpg"
+  },
+  {
+   "name": "Warhaus NZP Reboot",
+   "author": "MotoLegacy",
+   "version": "",
+   "file": "https://github.com/nzp-team/nzportable/files/12147986/Warhaus.zip",
+   "size": 463105,
+   "sha256": "8b3ee5342a9b2b04dbe9744b52e81621f128d77ecfd2d143d8c93464b86d25c8",
+   "bsp_sha256": {
+    "Warhaus": "8bd9741f280a0589dc3cd2629e63fb131f883208d7811eacc4192f79c81e4266"
+   },
+   "bsp": "Warhaus",
+   "bsps": [
+    "Warhaus"
+   ],
+   "desc": [
+    "This is a manual migration of forum user",
+    "BCDeshiG's map release Warhaus. Below contains",
+    "the original post content. You can view the",
+    "original post here. A Discount version of",
+    "warehouse. More compact, optimised with added",
+    "perks and wall weapons. In general harder than"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/325",
+   "date": "2023-07-24T16:26:59Z",
+   "thumb": "thumbs/1918803a2bc9.jpg"
+  },
+  {
+   "name": "Warhead",
+   "author": "Jeyphr",
+   "version": "",
+   "file": "https://archive.org/download/warhead_20260220/jphr_warhead%28v2.0%29.zip",
+   "size": 3704310,
+   "sha256": "a5a725a26f4d84da6017e5d97ffa66560073a8db81d9f41a7dc4b8835b5b01bc",
+   "bsp_sha256": {
+    "jphr_warhead": "f45cab8f72a87c021affbeb94a6e2f3a7bd5a547c99d7a13c02433d0c69a5283"
+   },
+   "bsp": "jphr_warhead",
+   "bsps": [
+    "jphr_warhead"
+   ],
+   "desc": [
+    "THE FINALE OF MICRO MAP MADNESS This is the",
+    "final map in the quadrilogy of Micro Mad",
+    "Madness! It's a short teaser for my next map",
+    "to be released (hopefully) this Halloween! If",
+    "you are gonna play this map, feedback would be",
+    "greatly appreciated! Links MAP DOWNLOAD"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/1371",
+   "date": "2026-02-20T18:40:41Z",
+   "thumb": "thumbs/9e7f5e94de1e.jpg"
+  },
+  {
+   "name": "Wood Hut Remastered",
+   "author": "MotoLegacy",
+   "version": "",
+   "file": "https://github.com/nzp-team/nzportable/files/12148064/WoodHut_Remastered.zip",
+   "size": 340894,
+   "sha256": "77b8af61e609aad844c93f946693243455eb2faa982a1789e0519ea7a0db8703",
+   "bsp_sha256": {
+    "WoodHut_Remastered": "360f0a9b3daebe958d2c4c6b922f69c0f39ac090e99a72236e62ea6580ce026d"
+   },
+   "bsp": "WoodHut_Remastered",
+   "bsps": [
+    "WoodHut_Remastered"
+   ],
+   "desc": [
+    "This is a manual migration of forum user true",
+    "nightmare's map release WoodHutRemastered.",
+    "Below contains the original post content. You",
+    "can view the original post here Kept you",
+    "waiting? 10 months ago I got asked by",
+    "MotoLegacy to make new mapping tutorials using"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/327",
+   "date": "2023-07-24T16:39:50Z",
+   "thumb": "thumbs/27ba5677be67.jpg"
+  },
+  {
+   "name": "Woodhut",
+   "author": "MotoLegacy",
+   "version": "",
+   "file": "https://archive.org/download/nzp_woodhut/nzp_woodhut.zip",
+   "size": 134227,
+   "sha256": "5571caa52715d764a9d87b89d31bb0adf2b09955fad3b0598dab1f58cd9c0115",
+   "bsp_sha256": {
+    "woodhut": "1cb904d0e35d334940ddcd8b0a93282e6943a5dfa44fcabf821358a3494008d8"
+   },
+   "bsp": "woodhut",
+   "bsps": [
+    "woodhut"
+   ],
+   "desc": [
+    "This is a manual migration of forum user",
+    "TrueNightmare and Naievil's map release",
+    "Woodhut. Below contains the original post",
+    "content. You can view the original post here.",
+    "Hey everyone, Thank you all very much for your",
+    "support and compliments on my pursuits with"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/163",
+   "date": "2023-02-01T18:25:07Z",
+   "thumb": "thumbs/ea391daf10d9.jpg"
+  },
+  {
+   "name": "Yellowpill",
+   "author": "toiletman74",
+   "version": "",
+   "file": "https://github.com/nzp-team/nzportable/files/11154750/yellowpill.zip",
+   "size": 221149,
+   "sha256": "f0aceadff58c3a28b74b8411380388f27d3ae7766fb73b2cdb15f9e20a7b92f4",
+   "bsp_sha256": {
+    "Yellowpill": "29a3561631c1bc4b14520681505c26d857073c626b052606995cf3c26381a7ba"
+   },
+   "bsp": "Yellowpill",
+   "bsps": [
+    "Yellowpill"
+   ],
+   "desc": [
+    "They say that the gateway to the real world is",
+    "in the hit game from the 80s pac-man. Are you",
+    "in? Map preview: The layout looks like this",
+    "TAKE THE YELLOWPILL DOWNLOAD (This is a",
+    "version with no dogs for if you get bugs with",
+    "dogs)"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/255",
+   "date": "2023-03-17T22:22:11Z",
+   "thumb": "thumbs/386f6df62815.jpg"
+  },
+  {
+   "name": "Yukon Yard",
+   "author": "Blake-Izayoi",
+   "version": "1.0",
+   "file": "https://archive.org/download/yukon-yard/YukonYard.zip",
+   "size": 7229926,
+   "sha256": "ffb2a174370afc5345df3820f25c41f9feb2f934e3a562b3d5c62a0f01bb9823",
+   "bsp_sha256": {
+    "YukonYard": "5248324b69935c1b577e2ac2a4ad591f417c934dff324ff3176c2a33fb9f2c98"
+   },
+   "bsp": "YukonYard",
+   "bsps": [
+    "YukonYard"
+   ],
+   "desc": [
+    "Welcome to Yukon Yard, a place out in the",
+    "vast, cold Yukon! Originally a lumber yard,",
+    "this place has been taken over by the undead.",
+    "Can you take it back? Or will you join their",
+    "ranks? Featuring the four World at War perks",
+    "as well as Stamin-up & Mule Kick, this is a"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/1526",
+   "date": "2026-08-31T01:40:38Z",
+   "thumb": "thumbs/a002f24fbb1d.jpg"
+  },
+  {
+   "name": "ZIMMER DER VERDAMMTEN",
+   "author": "PinguProductions",
+   "version": "",
+   "file": "https://archive.org/download/zimmer_der_verdammten/zimmer_der_verdammten.zip",
+   "size": 16582921,
+   "sha256": "214100c9e498a24425f8bb890ac2371c2dfd7a45b88e199ce30dc965ec617561",
+   "bsp_sha256": {
+    "zimmer_der_verdammten": "9df8522cd7740bbac068c2acda97b2d591a1f296d488e936675800b4eb0f9e05"
+   },
+   "bsp": "zimmer_der_verdammten",
+   "bsps": [
+    "zimmer_der_verdammten"
+   ],
+   "desc": [
+    "DOWNLOAD CHANGELOG (click to expand) v1.2: The",
+    "spawner that caused problems in some ports has",
+    "been fixed + all easter eggs should now be",
+    "available on every platform! v1.1: Now it",
+    "should run on all platforms!! (tested on",
+    "Switch, working) + additional music files no"
+   ],
+   "thread": "https://github.com/nzp-team/nzportable/discussions/1254",
+   "date": "2025-09-25T19:29:06Z",
+   "thumb": "thumbs/23c463c55419.jpg"
+  }
+ ],
+ "skipped": [
+  {
+   "file": "https://github.com/nzp-team/nzportable/files/13628694/FightClubSource.zip",
+   "reason": "no .bsp",
+   "thread": "https://github.com/nzp-team/nzportable/discussions/523"
+  },
+  {
+   "file": "https://archive.org/download/nzp_beta_archive_repack/bcdeshig_beta_archive_repack.zip",
+   "reason": "multi-map beta archive (56 old beta maps in one 195 MB zip)",
+   "thread": "https://github.com/nzp-team/nzportable/discussions/158"
+  },
+  {
+   "file": "https://github.com/nzp-team/nzportable/files/13624180/Source.zip",
+   "reason": "no .bsp",
+   "thread": "https://github.com/nzp-team/nzportable/discussions/283"
+  }
+ ]
+}
