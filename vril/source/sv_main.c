@@ -1237,6 +1237,9 @@ void SV_SpawnServer (char *server)
 	Con_DPrintf ("SpawnServer: %s\n",server);
 	svs.changelevel_issued = false;		// now safe to issue another
 
+	// leaderboard: note this game's settings as it starts
+	{ extern void PS3_Scores_GameStart (void); PS3_Scores_GameStart (); }
+
 	// split screen: two players, and player 2 joins once player 1 is in
 	CL_Seats_Drop ();
 	if (cls.state != ca_dedicated)
@@ -1430,6 +1433,7 @@ void SV_RestartServer (void)
 	Con_DPrintf ("RestartServer: %s\n", sv.name);
 	// split screen: player 2 leaves and rejoins after player 1 (it doesn't run
 	// the "reconnect" stuffed below: it would get the new server's signons at 4)
+	{ extern void PS3_Scores_GameStart (void); PS3_Scores_GameStart (); }
 	CL_Seats_Drop ();
 	SV_SendReconnect ();
 	S_StopAllSounds (true);

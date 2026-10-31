@@ -291,6 +291,15 @@ void PS3_Scores_Retry(void)
 	Kick();
 }
 
+// Only classic games from round 1 count. Noted as each game starts
+// (SV_SpawnServer, SV_RestartServer), so changing a setting mid-game doesn't count.
+static int game_ranked;
+void PS3_Scores_GameStart(void)
+{
+	extern cvar_t sv_gamemode, sv_startround;
+	game_ranked = (int)sv_gamemode.value == GAMEMODE_CLASSIC && (int)sv_startround.value <= 1;
+}
+
 // cl_parse.c, at svc_intermission (seat 0): the game is over
 void PS3_Scores_GameOver(void)
 {
@@ -301,6 +310,12 @@ void PS3_Scores_GameOver(void)
 	result_text[0] = 0;
 	if (!sv.active || cls.demoplayback || !ps3_leaderboard.value)
 		return;
+	if (!game_ranked) {
+		PS3_Log("scores: not sent (only classic games from round 1 count)");
+		snprintf(result_text, sizeof(result_text), "Not on the leaderboard: classic mode from round 1 only");
+		result_seq++;
+		return;
+	}
 	if (!NZP_SCORE_KEY[0]) {
 		PS3_Log("scores: this build has no leaderboard key");
 		return;
