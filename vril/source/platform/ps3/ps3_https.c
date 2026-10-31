@@ -341,11 +341,56 @@ static int Url_Parse(const char *in, url_t *u)
 
 /*
 ===================
-PS3_HttpGet
+PS3_HttpRequest: GET, or POST with a body. With status_out, any status's
+body is read (the caller looks at it, e.g. a 400's JSON error); without it,
+only a 200 counts. Redirects are followed for GET only.
+
+The downloader's worker and the score sender each run on their own thread:
+one request at a time (the connection's buffer is static).
 ===================
 */
+#include <sys/mutex.h>
+static sys_mutex_t	http_lock;
+static int			http_lock_made;
+
+static int HttpRequest(const char *method, const char *url_in, const char *body, int body_len,
+	const char *ctype, http_sink_t sink, void *ctx, volatile unsigned long long *got,
+	volatile unsigned long long *total, volatile int *cancel, char *err, int errsize, int *status_out);
+
+// at start-up, before any thread makes a request
+void PS3_Http_Init(void)
+{
+	sys_mutex_attr_t attr;
+	if (http_lock_made)
+		return;
+	sysMutexAttrInitialize(attr);
+	if (sysMutexCreate(&http_lock, &attr) == 0)
+		http_lock_made = 1;
+}
+
+int PS3_HttpRequest(const char *method, const char *url_in, const char *body, int body_len,
+	const char *ctype, http_sink_t sink, void *ctx, volatile unsigned long long *got,
+	volatile unsigned long long *total, volatile int *cancel, char *err, int errsize, int *status_out)
+{
+	int ok;
+
+	if (http_lock_made)
+		sysMutexLock(http_lock, 0);
+	ok = HttpRequest(method, url_in, body, body_len, ctype, sink, ctx, got, total, cancel, err, errsize, status_out);
+	if (http_lock_made)
+		sysMutexUnlock(http_lock);
+	return ok;
+}
+
 int PS3_HttpGet(const char *url_in, http_sink_t sink, void *ctx, volatile unsigned long long *got,
 	volatile unsigned long long *total, volatile int *cancel, char *err, int errsize)
+{
+	return PS3_HttpRequest("GET", url_in, NULL, 0, NULL, sink, ctx, got, total, cancel, err, errsize, NULL);
+}
+
+static int HttpRequest(const char *method, const char *url_in, const char *body, int body_len,
+	const char *ctype, http_sink_t sink, void *ctx, volatile unsigned long long *got,
+	volatile unsigned long long *total, volatile int *cancel, char *err, int errsize, int *status_out)
 {
 	static conn_t c;		// 16 KB buffer: off the worker's stack
 	static url_t u;
@@ -353,6 +398,8 @@ int PS3_HttpGet(const char *url_in, http_sink_t sink, void *ctx, volatile unsign
 	int redirects = 0, status, chunked, ok = 0;
 	long long length;
 
+	if (status_out)
+		*status_out = 0;
 	*got = 0;
 	*total = 0;
 	err[0] = 0;
@@ -372,9 +419,14 @@ again:
 	if (!Conn_Open(&c, u.host, u.port, u.tls, err, errsize))
 		return 0;
 
-	snprintf(line, sizeof(line), "GET %s HTTP/1.1\r\nHost: %s\r\nUser-Agent: " USER_AGENT
-		"\r\nAccept: */*\r\nAccept-Encoding: identity\r\nConnection: close\r\n\r\n", u.path, u.host);
-	if (!Conn_Write(&c, line, strlen(line))) {
+	if (body)
+		snprintf(line, sizeof(line), "%s %s HTTP/1.1\r\nHost: %s\r\nUser-Agent: " USER_AGENT
+			"\r\nAccept: */*\r\nAccept-Encoding: identity\r\nContent-Type: %s\r\nContent-Length: %d"
+			"\r\nConnection: close\r\n\r\n", method, u.path, u.host, ctype ? ctype : "application/json", body_len);
+	else
+		snprintf(line, sizeof(line), "%s %s HTTP/1.1\r\nHost: %s\r\nUser-Agent: " USER_AGENT
+			"\r\nAccept: */*\r\nAccept-Encoding: identity\r\nConnection: close\r\n\r\n", method, u.path, u.host);
+	if (!Conn_Write(&c, line, strlen(line)) || (body && body_len && !Conn_Write(&c, body, body_len))) {
 		SetErr(err, errsize, "Request to %s failed", u.host);
 		goto done;
 	}
@@ -408,7 +460,9 @@ again:
 		}
 	}
 
-	if (status >= 300 && status < 400 && location[0]) {
+	if (status_out)
+		*status_out = status;
+	if (status >= 300 && status < 400 && location[0] && !body) {
 		Conn_Close(&c);
 		// never from HTTPS down to plain HTTP (a redirect could otherwise
 		// hand the download to anyone on the way)
@@ -423,7 +477,7 @@ again:
 		}
 		goto again;
 	}
-	if (status != 200) {
+	if (status != 200 && !status_out) {
 		SetErr(err, errsize, "%s said %d", u.host, status);
 		PS3_Log("https: %s%s: status %d", u.host, u.path, status);
 		goto done;

@@ -1366,6 +1366,12 @@ void CL_ParseServerMessage (void)
 			cl.intermission = 1;
 			cl.completed_time = cl.time;
 			vid.recalc_refdef = true;	// go to full screen
+#ifdef __PS3__
+			if (!CL_SeatIsQuiet ()) {
+				extern void PS3_Scores_GameOver (void);
+				PS3_Scores_GameOver ();		// the online leaderboard (ps3_scores.c)
+			}
+#endif
 			break;
 
 		case svc_finale:

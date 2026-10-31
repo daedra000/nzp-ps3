@@ -770,6 +770,13 @@ void _Host_Frame (float time)
 	// if ((host_framecount % 120) == 0) Con_Printf ("%.2fkB free \n", pspSdkTotalFreeUserMemSize()/1024.f);
 
 	host_framecount++;
+#ifdef __PS3__
+	{
+		// scores that couldn't be sent last time (once, soon after start)
+		extern void PS3_Scores_Retry (void);
+		PS3_Scores_Retry ();
+	}
+#endif
 }
 
 

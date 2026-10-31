@@ -860,7 +860,10 @@ Menu side
 */
 void PS3_MapDL_Init(void)
 {
+	extern void PS3_Scores_Init(void);
+	PS3_Http_Init();
 	Cvar_RegisterVariable(&ps3_maps_url);
+	PS3_Scores_Init();
 }
 
 void PS3_MapDL_FetchList(void)

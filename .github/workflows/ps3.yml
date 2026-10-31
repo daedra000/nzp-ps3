@@ -229,6 +229,9 @@ jobs:
 
       - name: Build
         working-directory: vril
+        env:
+          # ps3.world leaderboard signing key (repo secret); empty = no scores sent
+          NZP_SCORE_KEY: ${{ secrets.NZP_SCORE_KEY }}
         run: |
           set -o pipefail
           ppu-gcc --version | head -1

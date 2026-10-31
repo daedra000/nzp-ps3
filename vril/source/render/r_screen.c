@@ -992,6 +992,22 @@ SCR_UpdateScreen(void)
     if (split)
         Draw_FillByColor(0, full_h / 2 - 1, full_w, 2, 0, 0, 0, 255);	// between the views
 
+#ifdef __PS3__
+    if (cl.intermission && !LoadingScreen_IsWaiting()) {
+        // game over: where the score went (ps3_scores.c)
+        extern const char *PS3_Scores_Result(void);
+        const char *r = PS3_Scores_Result();
+        if (r && r[0]) {
+            const char *site = "ps3.world/leaderboards";
+            int y = vid.height - 30 * vid.scale;
+            Draw_ColoredString((vid.width - getTextWidth((char *) r, vid.scale)) / 2, y, (char *) r,
+              255, 255, 0, 255, vid.scale);
+            Draw_ColoredString((vid.width - getTextWidth((char *) site, vid.scale)) / 2, y + 11 * vid.scale,
+              (char *) site, 200, 200, 200, 255, vid.scale);
+        }
+    }
+#endif
+
     if (!LoadingScreen_IsWaiting()) {
         // muff - to show FPS on screen
         SCR_DrawFPS();

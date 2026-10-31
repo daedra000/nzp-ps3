@@ -56,7 +56,7 @@ ENGINE_SOURCES := $(wildcard source/*.c) $(wildcard source/menu/*.c) \
 PS3_SOURCES := \
 	$(PLAT)/common.c $(PLAT)/sys_ps3.c $(PLAT)/in_ps3.c $(PLAT)/snd_ps3.c \
 	$(PLAT)/music_ps3.c $(PLAT)/net_main.c $(PLAT)/net_ps3.c $(PLAT)/ps3_video.c $(PLAT)/ps3_crash.c \
-	$(PLAT)/ps3_mapdl.c $(PLAT)/ps3_https.c \
+	$(PLAT)/ps3_mapdl.c $(PLAT)/ps3_https.c $(PLAT)/ps3_scores.c \
 	$(wildcard $(PLAT)/gl/*.c) $(wildcard $(PLAT)/rsx/*.c)
 
 SOURCES := $(ENGINE_SOURCES) $(PS3_SOURCES)
@@ -65,7 +65,14 @@ OBJECTS := $(patsubst %.c,$(OBJDIR)/%.o,$(SOURCES)) $(OBJDIR)/$(PLAT)/ps3_setjmp
 #---------------------------------------------------------------------------------
 # Flags
 #---------------------------------------------------------------------------------
-DEFINES := -DGLQUAKE -D__PS3__ -DPLATFORM_DIRECTORY=ps3 -DPLATFORM_RENDERER=gl \
+# the leaderboard's signing key (ps3_scores.c): CI passes the repo's
+# NZP_SCORE_KEY secret; without it the game doesn't send scores
+NZP_SCORE_KEY ?=
+ifneq ($(strip $(NZP_SCORE_KEY)),)
+SCORE_DEFINE := -DNZP_SCORE_KEY='"$(NZP_SCORE_KEY)"'
+endif
+
+DEFINES := $(SCORE_DEFINE) -DGLQUAKE -D__PS3__ -DPLATFORM_DIRECTORY=ps3 -DPLATFORM_RENDERER=gl \
 	-DMAX_AI_COUNT=24 -DPLATFORM_USES_GENERIC_GLYPHS -DPLATFORM_SUPPORTS_RUMBLE \
 	-DPLATFORM_KEYBOARD_OSK -DPS3_APP_DIR='"/dev_hdd0/game/$(APPID)/USRDIR"'
 
