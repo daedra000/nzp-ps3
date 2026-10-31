@@ -15,7 +15,7 @@ as thumbs/<key>.jpg next to maps.json (pictures already there are kept).
 
   GITHUB_TOKEN=... python3 maps_list.py old_maps.json out_dir/
 """
-import datetime, hashlib, io, json, os, re, struct, sys, urllib.request, zipfile
+import datetime, hashlib, io, json, os, re, struct, sys, unicodedata, urllib.request, zipfile
 
 REPO_OWNER, REPO_NAME, CATEGORY = "nzp-team", "nzportable", "Map Releases"
 TOKEN = os.environ["GITHUB_TOKEN"]
@@ -110,19 +110,25 @@ def version_of(title, body):
     return m.group(1) if m else ""
 
 
+def plain(t):
+    """The game's menu font is ASCII: accents to plain letters, curly quotes and dashes to ASCII."""
+    t = str(t).translate({0x2018: "'", 0x2019: "'", 0x201c: '"', 0x201d: '"', 0x2013: '-', 0x2014: '-', 0x2026: '...'})
+    return unicodedata.normalize('NFKD', t).encode('ascii', 'ignore').decode()
+
+
 def desc_of(body):
     text = re.sub(r'<[^>]+>|!\[[^\]]*\]\([^)]*\)|\[([^\]]*)\]\([^)]*\)', r'\1', body)
     text = re.sub(r'https?://\S+|[#*_`>|]', '', text)
-    words, lines, cur = text.split(), [], ""
+    words, lines, cur = plain(text).split(), [], ""
     for w in words:
         if len(cur) + len(w) + 1 > 46:
             lines.append(cur)
             cur = w
-            if len(lines) == 4:
+            if len(lines) == 6:
                 break
         else:
             cur = (cur + " " + w).strip()
-    if cur and len(lines) < 4:
+    if cur and len(lines) < 6:
         lines.append(cur)
     return lines
 
@@ -212,8 +218,8 @@ def main():
         else:
             date = d.get("createdAt", "")
         entry = {
-            "name": clean_title(d["title"])[:60],
-            "author": (d["author"] or {}).get("login", ""),
+            "name": plain(clean_title(d["title"]))[:60],
+            "author": plain((d["author"] or {}).get("login", "")),
             "version": version_of(d["title"], d["body"]),
             "file": url,
             "size": size,

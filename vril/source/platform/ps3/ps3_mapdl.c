@@ -141,11 +141,46 @@ static qboolean Http_Get(const char *url, FILE *fp, char *mem, u32 memcap, u32 *
 List
 ===================
 */
+// The menu font is ASCII: UTF-8 letters become their plain letter
+// ("Untöten" -> "Untoten", it drew garbage), quotes and dashes their ASCII
+// ones, anything else is dropped.
+static void FoldAscii(char *dst, int size, const char *s)
+{
+	// U+00C0..U+00FF
+	static const char latin1[] =
+		"AAAAAAACEEEEIIII" "DNOOOOOxOUUUUYTs" "aaaaaaaceeeeiiii" "dnooooo/ouuuuyty";
+	const unsigned char *p = (const unsigned char *)s;
+	int n = 0;
+
+	while (*p && n < size - 1) {
+		unsigned c = *p;
+		if (c < 0x80) {
+			dst[n++] = (char)c;
+			p++;
+		} else if (c == 0xC3 && p[1] >= 0x80 && p[1] <= 0xBF) {
+			dst[n++] = latin1[(p[1] - 0x80) & 63];
+			p += 2;
+		} else if (c == 0xE2 && p[1] == 0x80 && p[2]) {
+			unsigned d = p[2];
+			if (d == 0x98 || d == 0x99) dst[n++] = '\'';
+			else if (d == 0x9C || d == 0x9D) dst[n++] = '"';
+			else if (d == 0x93 || d == 0x94) dst[n++] = '-';
+			else if (d == 0xA6 && n < size - 3) { dst[n++] = '.'; dst[n++] = '.'; dst[n++] = '.'; }
+			p += 3;
+		} else {
+			// skip the whole sequence
+			p++;
+			while ((*p & 0xC0) == 0x80) p++;
+		}
+	}
+	dst[n] = 0;
+}
+
 static void CopyStr(char *dst, int size, cJSON *item)
 {
 	dst[0] = 0;
 	if (cJSON_IsString(item) && item->valuestring)
-		snprintf(dst, size, "%s", item->valuestring);
+		FoldAscii(dst, size, item->valuestring);
 	else if (cJSON_IsNumber(item))
 		snprintf(dst, size, "%g", item->valuedouble);
 }

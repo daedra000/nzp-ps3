@@ -172,12 +172,34 @@ static void Menu_MapDownload_Size (char *out, int size, unsigned long long bytes
 // one line of the right-hand panel, centered like the map descriptions
 static int dl_line_y0;		// pixels: where line 0 goes (under the picture, if there is one)
 
-static void Menu_MapDownload_Line (int line, char *text, int r, int g, int b)
+static int dl_x_center(void)
 {
 	int image_width = vid.width / 3;
 	int map_region_center = (150 + (((vid.width - 150) / 2) + 2));
-	int x = map_region_center - ((image_width / vid.scale) / 2) + image_width / 2;
-	int y = (dl_line_y0 ? dl_line_y0 : 40 * vid.scale) + line * 12 * vid.scale;
+	return map_region_center - ((image_width / vid.scale) / 2) + image_width / 2;
+}
+
+// the panel's text width, in pixels
+static int dl_text_width(void)
+{
+	return vid.width - 6 * vid.scale - (150 + 6) * vid.scale;
+}
+
+// the lowest y a line can start at: above the footer bar and its help text
+static int dl_bottom(void)
+{
+	return vid.height - (big_bar_height + small_bar_height + 2) * vid.scale - 12 * vid.scale;
+}
+
+static void Menu_MapDownload_LineAt (int y, char *text, int r, int g, int b);
+static void Menu_MapDownload_Line (int line, char *text, int r, int g, int b)
+{
+	Menu_MapDownload_LineAt((dl_line_y0 ? dl_line_y0 : 40 * vid.scale) + line * 12 * vid.scale, text, r, g, b);
+}
+
+static void Menu_MapDownload_LineAt (int y, char *text, int r, int g, int b)
+{
+	int x = dl_x_center();
 	int left = (150 + 6) * vid.scale, right = vid.width - 6 * vid.scale, w;
 	char fit[160];
 
@@ -201,50 +223,105 @@ static void Menu_MapDownload_Line (int line, char *text, int r, int g, int b)
 	Menu_DrawStringCentered(x, y, fit, r, g, b, 255);
 }
 
+// word-wraps text to the panel's width; returns the number of lines
+static int Menu_MapDownload_Wrap (const char *text, char out[][96], int max)
+{
+	int n = 0, w = dl_text_width();
+	const char *p = text;
+	char line[96], test[200];
+
+	line[0] = 0;
+	while (*p && n < max) {
+		char word[96];
+		int len = 0;
+		while (*p == ' ') p++;
+		if (!*p) break;
+		while (p[len] && p[len] != ' ' && len < 95) { word[len] = p[len]; len++; }
+		word[len] = 0;
+		snprintf(test, sizeof(test), "%s%s%s", line, line[0] ? " " : "", word);
+		if (strlen(test) < 96 && getTextWidth(test, vid.scale) <= w) {
+			snprintf(line, sizeof(line), "%s", test);
+			p += len;
+		} else if (line[0]) {
+			snprintf(out[n++], 96, "%s", line);	// line full: the word starts the next
+			line[0] = 0;
+		} else {
+			// a word wider than the panel: cut it
+			while (len > 1 && getTextWidth(word, vid.scale) > w) word[--len] = 0;
+			snprintf(out[n++], 96, "%s", word);
+			p += len;
+		}
+	}
+	if (line[0] && n < max)
+		snprintf(out[n++], 96, "%s", line);
+	else if (line[0] || (*p && n == max && n > 0)) {
+		// more text than room: show it goes on
+		int l = strlen(out[n - 1]);
+		while (l > 0 && getTextWidth(out[n - 1], vid.scale) + getTextWidth("..", vid.scale) > w)
+			out[n - 1][--l] = 0;
+		strncat(out[n - 1], "..", 95 - l);
+	}
+	return n;
+}
+
 static void Menu_MapDownload_Info (int i)
 {
 	mapdl_entry_t *e = PS3_MapDL_Entry(i);
-	char buf[160], a[32], b[32];
+	char buf[160], a[32], b[32], desc[MAPDL_DESC_LINES * 64 + 8], wrapped[12][96];
 	unsigned long long got, total;
-	int line = 0, st = PS3_MapDL_State(), img, desc_lines = MAPDL_DESC_LINES;
+	int st = PS3_MapDL_State(), img, y, lh = 12 * vid.scale, gap = 5 * vid.scale;
+	int status_y, room, n;
 
 	if (!e)
 		return;
 	img = Menu_MapDownload_Thumb(e, i);
+	y = 40 * vid.scale;
 	if (e->thumb_key[0]) {
-		// the picture where CUSTOM MAPS shows one; the text under it
-		int image_width = vid.width / 3, image_height = vid.height / 3;
-		int x = (150 + (((vid.width - 150) / 2) + 2)) - ((image_width / vid.scale) / 2);
+		// the picture, a quarter of the screen (a third left no room for the text)
+		int image_width = vid.width / 4, image_height = vid.height / 4;
+		int x = dl_x_center() - image_width / 2;
 		if (img >= 0) {
 			UI_SetAlignment(UI_ANCHOR_LEFT, UI_ANCHOR_TOP);
-			Menu_DrawPicStretch(x, 40 * vid.scale, img, image_width, image_height);
+			Menu_DrawPicStretch(x, y, img, image_width, image_height);
 			Menu_DrawMapBorder(x / vid.scale, 40, image_width, image_height);
 		}
-		dl_line_y0 = 40 * vid.scale + image_height + 6 * vid.scale;
-		desc_lines = 2;
+		y += image_height + 6 * vid.scale;
 	}
 	snprintf(buf, sizeof(buf), "%s", e->name);
 	strtoupper(buf);
-	Menu_MapDownload_Line(line++, buf, 255, 255, 0);
-	if (e->author[0]) {
-		snprintf(buf, sizeof(buf), "by %s", e->author);
-		Menu_MapDownload_Line(line++, buf, 255, 255, 255);
-	}
+	Menu_MapDownload_LineAt(y, buf, 255, 255, 0);
+	y += lh;
+
+	// "by author   Version 1.2   444 KB" on one line
 	buf[0] = 0;
+	if (e->author[0])
+		snprintf(buf, sizeof(buf), "by %s", e->author);
 	if (e->version[0])
-		snprintf(buf, sizeof(buf), "Version %s", e->version);
+		snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "%sVersion %s", buf[0] ? "   " : "", e->version);
 	if (e->size) {
 		Menu_MapDownload_Size(a, sizeof(a), e->size);
 		snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "%s%s", buf[0] ? "   " : "", a);
 	}
-	if (buf[0])
-		Menu_MapDownload_Line(line++, buf, 200, 200, 200);
-	line++;
-	for (int j = 0; j < desc_lines; j++)
-		if (e->desc[j][0])
-			Menu_MapDownload_Line(line++, e->desc[j], 255, 255, 255);
-	line++;
+	if (buf[0]) {
+		Menu_MapDownload_LineAt(y, buf, 200, 200, 200);
+		y += lh;
+	}
+	y += gap;
 
+	// the status goes at the bottom (two lines while downloading), the
+	// description fills what's between
+	status_y = dl_bottom() - lh;
+	room = (status_y - gap - y) / lh;
+	if (room > 12) room = 12;
+	desc[0] = 0;
+	for (int j = 0; j < MAPDL_DESC_LINES; j++)
+		if (e->desc[j][0])
+			snprintf(desc + strlen(desc), sizeof(desc) - strlen(desc), "%s%s", desc[0] ? " " : "", e->desc[j]);
+	n = room > 0 ? Menu_MapDownload_Wrap(desc, wrapped, room) : 0;
+	for (int j = 0; j < n; j++, y += lh)
+		Menu_MapDownload_LineAt(y, wrapped[j], 255, 255, 255);
+
+	y = status_y;
 	if (PS3_MapDL_Active() == i && st != MAPDL_IDLE) {
 		PS3_MapDL_Progress(&got, &total);
 		switch (st) {
@@ -252,35 +329,33 @@ static void Menu_MapDownload_Info (int i)
 			Menu_MapDownload_Size(a, sizeof(a), got);
 			if (total) {
 				Menu_MapDownload_Size(b, sizeof(b), total);
-				snprintf(buf, sizeof(buf), "DOWNLOADING %d%%  (%s / %s)", (int)(got * 100 / total), a, b);
+				snprintf(buf, sizeof(buf), "DOWNLOADING %d%%  (%s / %s)  - press to cancel", (int)(got * 100 / total), a, b);
 			} else {
-				snprintf(buf, sizeof(buf), "DOWNLOADING  %s", a);
+				snprintf(buf, sizeof(buf), "DOWNLOADING  %s  - press to cancel", a);
 			}
-			Menu_MapDownload_Line(line++, buf, 255, 255, 0);
-			Menu_MapDownload_Line(line++, "Press again to cancel", 160, 160, 160);
+			Menu_MapDownload_LineAt(y, buf, 255, 255, 0);
 			return;
 		case MAPDL_EXTRACTING:
 			snprintf(buf, sizeof(buf), "INSTALLING  %llu / %llu files", got, total);
-			Menu_MapDownload_Line(line++, buf, 255, 255, 0);
+			Menu_MapDownload_LineAt(y, buf, 255, 255, 0);
 			return;
 		case MAPDL_DONE:
-			Menu_MapDownload_Line(line++, "INSTALLED! Find it in SOLO > CUSTOM MAPS", 0, 255, 0);
+			Menu_MapDownload_LineAt(y, "INSTALLED! Find it in SOLO > CUSTOM MAPS", 0, 255, 0);
 			return;
 		case MAPDL_FAILED:
-			snprintf(buf, sizeof(buf), "FAILED: %s", PS3_MapDL_Message());
-			Menu_MapDownload_Line(line++, buf, 255, 64, 64);
-			Menu_MapDownload_Line(line++, "Press to try again", 160, 160, 160);
+			snprintf(buf, sizeof(buf), "FAILED: %s - press to retry", PS3_MapDL_Message());
+			Menu_MapDownload_LineAt(y, buf, 255, 64, 64);
 			return;
 		}
 	}
 	if (Menu_MapDownload_Busy())
-		Menu_MapDownload_Line(line++, "Another map is downloading", 160, 160, 160);
+		Menu_MapDownload_LineAt(y, "Another map is downloading", 160, 160, 160);
 	else if (e->update)
-		Menu_MapDownload_Line(line++, "UPDATE AVAILABLE  (press to update)", 255, 255, 0);
+		Menu_MapDownload_LineAt(y, "UPDATE AVAILABLE  (press to update)", 255, 255, 0);
 	else if (e->installed)
-		Menu_MapDownload_Line(line++, "INSTALLED  (press to download again)", 0, 255, 0);
+		Menu_MapDownload_LineAt(y, "INSTALLED  (press to download again)", 0, 255, 0);
 	else
-		Menu_MapDownload_Line(line++, "Press to download", 255, 255, 255);
+		Menu_MapDownload_LineAt(y, "Press to download", 255, 255, 255);
 }
 
 /*
