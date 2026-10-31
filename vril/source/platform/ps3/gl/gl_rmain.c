@@ -328,8 +328,11 @@ mspriteframe_t *R_GetSpriteFrame (entity_t *currententity)
 
 	if ((frame >= psprite->numframes) || (frame < 0))
 	{
-		Con_Printf ("R_DrawSprite: no such frame %d\n", frame);
-		frame = 0;
+		// the QC's Wunderwaffe spark (tesla.qc) picks rint(random()*3): 0-3 on a
+		// 3-frame sprite. Wrap it quietly, as other engines do, instead of
+		// printing "no such frame 3" on every shot.
+		Con_DPrintf ("R_DrawSprite: no such frame %d\n", frame);
+		frame = psprite->numframes > 0 ? ((frame % psprite->numframes) + psprite->numframes) % psprite->numframes : 0;
 	}
 
 	if (psprite->frames[frame].type == SPR_SINGLE)
