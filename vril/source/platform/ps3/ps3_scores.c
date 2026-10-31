@@ -33,6 +33,8 @@ ps3_leaderboard 0 turns it off.
 #define SCORES_URL	"https://ps3.world/api/scores"
 
 cvar_t ps3_leaderboard = {"ps3_leaderboard", "1", true};
+// split screen: player 2's name on the boards ("Dan + Sam")
+cvar_t ps3_name2 = {"ps3_name2", "Player 2", true};
 
 static sys_mutex_t	queue_lock;
 static int			queue_lock_made;
@@ -181,9 +183,14 @@ static int SendLine(const char *line)
 		cJSON_AddStringToObject(o, "mapsum", mapsum);
 	}
 	// what ps3.world signs too: game|map|mapsum|value|value2|seconds|players|name|build|ts|nonce
+	// and, for split screen, |name2
 	snprintf(text, sizeof(text), "%s|%s|%s|%d|%d|%d|%d|%s|%s|%d|%s",
 		Str(o, "game"), Str(o, "map"), mapsum, Int(o, "value"), Int(o, "value2"), Int(o, "seconds"),
 		Int(o, "players"), Str(o, "name"), Str(o, "build"), Int(o, "ts"), Str(o, "nonce"));
+	if (cJSON_GetObjectItem(o, "name2")) {
+		size_t l = strlen(text);
+		snprintf(text + l, sizeof(text) - l, "|%s", Str(o, "name2"));
+	}
 	if (!md || mbedtls_md_hmac(md, (const unsigned char *)NZP_SCORE_KEY, strlen(NZP_SCORE_KEY),
 			(const unsigned char *)text, strlen(text), mac) != 0) {
 		cJSON_Delete(o);
@@ -202,7 +209,8 @@ static int SendLine(const char *line)
 		PS3_Log("scores: %s round %d sent: #%d on %s", Str(o, "map"), Int(o, "value"),
 			Int(reply, "rank"), Str(reply, "map_name"));
 		if (!strcmp(Str(o, "nonce"), last_nonce)) {
-			snprintf(result_text, sizeof(result_text), "You placed #%d on %s", Int(reply, "rank"), Str(reply, "map_name"));
+			snprintf(result_text, sizeof(result_text), "You placed #%d on %s%s", Int(reply, "rank"), Str(reply, "map_name"),
+				!strcmp(Str(reply, "mode"), "duo") ? " (split screen)" : "");
 			result_seq++;
 		}
 	} else if (ok && status >= 400 && status < 500 && status != 429) {
@@ -276,6 +284,7 @@ void PS3_Scores_Init(void)
 	sys_mutex_attr_t attr;
 
 	Cvar_RegisterVariable(&ps3_leaderboard);
+	Cvar_RegisterVariable(&ps3_name2);
 	sysMutexAttrInitialize(attr);
 	if (sysMutexCreate(&queue_lock, &attr) == 0)
 		queue_lock_made = 1;
@@ -341,6 +350,8 @@ void PS3_Scores_GameOver(void)
 	cJSON_AddNumberToObject(o, "seconds", (int)sv.time);
 	cJSON_AddNumberToObject(o, "players", cl_numseats > 1 ? cl_numseats : 1);
 	cJSON_AddStringToObject(o, "name", cl_name.string);
+	if (cl_numseats > 1)
+		cJSON_AddStringToObject(o, "name2", ps3_name2.string);
 	cJSON_AddStringToObject(o, "build", build);
 	cJSON_AddNumberToObject(o, "ts", (double)time(NULL));
 	cJSON_AddStringToObject(o, "nonce", last_nonce);
