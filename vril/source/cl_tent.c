@@ -606,13 +606,16 @@ void CL_AddPlayerWeapons (void)
 		// a hand's height: below the eyes, which drop when crouched or prone
 		// (first look on the console: low, near the belly; the hand is higher and
 		// further out to the right)
-		height = ed->v.view_ofs[2] - 8;
-		VectorMA (pl->origin, 10, fwd, gun->origin);
-		VectorMA (gun->origin, 13, right, gun->origin);
+		// (second look: at the shoulder, so lower and a little in, where the hands are)
+		height = ed->v.view_ofs[2] - 18;
+		VectorMA (pl->origin, 12, fwd, gun->origin);
+		VectorMA (gun->origin, 8, right, gun->origin);
 		gun->origin[2] += height;
 
 		gun->angles[0] = -aim[0];	// models pitch the other way to views
-		gun->angles[1] = aim[1] + 90;	// the g_ models point along their side (it pointed right)
+		// the g_ models point along +x like any Quake model (g_colt: grip at -x, muzzle
+		// at +x), so no turn; the +90 here had it pointing out of the player's left side
+		gun->angles[1] = aim[1];
 		gun->angles[2] = 0;
 		gun->model = m;
 		gun->frame = 0;
