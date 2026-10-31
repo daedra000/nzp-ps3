@@ -326,12 +326,10 @@ void PS3_Scores_Frame(void)
 		if (!c->active || !c->spawned || !c->edict)
 			continue;
 		players++;
-		if (c->edict->v.health <= 0) {
-			// a downed player waiting for a revive isn't out
-			eval_t *d = eval_downed ? GETEDICTFIELDVALUE(c->edict, eval_downed) : NULL;
-			if (!d || !d->_float)
-				dead++;
-		}
+		// downed players are at 19 health; only the QC's EndGameSetup (damage.qc)
+		// puts everyone at 0, and it marks them downed too, so downed can't be checked
+		if (c->edict->v.health <= 0)
+			dead++;
 	}
 	if (players && dead == players)
 		PS3_Scores_GameOver();
