@@ -2893,4 +2893,7 @@ HUD_RegisterSeatVars(void)
     SEAT_VAR(hud_toast_text);
     SEAT_VAR(crosshair_pulse_grenade);
     SEAT_VAR(doubletap_has_damage_buff);
+    // each player's own perk icons (one buying Jugg gave both HUDs the icon)
+    SEAT_VAR(perk_order);
+    SEAT_VAR(current_perk_order);
 }
